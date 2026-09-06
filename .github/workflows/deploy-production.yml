@@ -1,0 +1,29 @@
+name: Deploy Production
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://kspdowa.in
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -p ${{ secrets.SSH_PORT || '22' }} -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy with rsync
+        run: |
+          rsync -avz --exclude '.git' --exclude '.github' -e "ssh -p ${{ secrets.SSH_PORT || '22' }} -i ~/.ssh/id_rsa" ./ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/home/u278446798/domains/kspdowa.in/public_html/
