@@ -25,7 +25,6 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -p $SSH_PORT -H $SSH_HOST >> ~/.ssh/known_hosts
 
       - name: Deploy with rsync
         env:
@@ -33,4 +32,4 @@ jobs:
           SSH_HOST: kspdowa.in
           SSH_PORT: 65002
         run: |
-          rsync -avz --exclude '.git' --exclude '.github' -e "ssh -p $SSH_PORT -i ~/.ssh/id_rsa" ./ $SSH_USER@$SSH_HOST:/home/u278446798/domains/kspdowa.in/public_html/preview/
+          rsync -avz --exclude '.git' --exclude '.github' -e "ssh -p $SSH_PORT -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" ./ $SSH_USER@$SSH_HOST:/home/u278446798/domains/kspdowa.in/public_html/preview/
