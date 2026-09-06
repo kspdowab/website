@@ -44,8 +44,13 @@ ServerSignature Off
 # Block access to sensitive file types
 # ----------------------------------------------------------
 <FilesMatch "\.(sql|log|sh|bash|env|secret\.php|ini|cfg|bak|swp|git)$">
-    Order Allow,Deny
-    Deny from all
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order Allow,Deny
+        Deny from all
+    </IfModule>
 </FilesMatch>
 
 # ----------------------------------------------------------
@@ -86,8 +91,13 @@ ServerSignature Off
 # Protect .htaccess itself
 # ----------------------------------------------------------
 <Files ".htaccess">
-    Order Allow,Deny
-    Deny from all
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order Allow,Deny
+        Deny from all
+    </IfModule>
 </Files>
 
 # ----------------------------------------------------------

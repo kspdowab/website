@@ -53,30 +53,116 @@ function fail(string $msg): void { echo "\033[31m  [FAIL]\033[0m {$msg}\n"; }
  * Split a SQL file into individual statements.
  * Handles:
  *  - Single-line -- comments
- *  - Multi-line comment blocks (not common in our DDL files)
+ *  - Multi-line comment blocks
  *  - Trailing whitespace
+ *  - Semicolons and comment markers that appear INSIDE quoted string
+ *    literals (e.g. a COMMENT '...unit; NULL = statewide' value) — these
+ *    must not be treated as statement terminators or comment starts.
+ *    A naive explode(';', $sql) / line-based comment strip corrupts any
+ *    statement whose string literal happens to contain ';', '--' or '/*'.
  */
 function splitSql(string $sql): array
 {
-    // Remove block comments /* … */
-    $sql = preg_replace('/\/\*.*?\*\//s', '', $sql);
+    $statements    = [];
+    $current       = '';
+    $length        = strlen($sql);
+    $inSingle      = false; // inside '...'
+    $inDouble      = false; // inside "..."
+    $inBacktick    = false; // inside `...`
+    $inLineComment = false; // after -- until end of line
+    $inBlockComment = false; // inside /* ... */
 
-    // Split on semicolon (statement terminator)
-    $raw        = explode(';', $sql);
-    $statements = [];
+    for ($i = 0; $i < $length; $i++) {
+        $ch   = $sql[$i];
+        $next = ($i + 1 < $length) ? $sql[$i + 1] : '';
 
-    foreach ($raw as $chunk) {
-        // Remove single-line comments
-        $lines = explode("\n", $chunk);
-        $clean = [];
-        foreach ($lines as $line) {
-            $stripped = preg_replace('/--[^\n]*$/', '', $line);
-            $clean[]  = $stripped;
+        if ($inLineComment) {
+            if ($ch === "\n") {
+                $inLineComment = false;
+                $current .= $ch;
+            }
+            continue;
         }
-        $stmt = trim(implode("\n", $clean));
-        if ($stmt !== '') {
-            $statements[] = $stmt;
+
+        if ($inBlockComment) {
+            if ($ch === '*' && $next === '/') {
+                $inBlockComment = false;
+                $i++;
+            }
+            continue;
         }
+
+        if ($inSingle || $inDouble) {
+            $quoteChar = $inSingle ? "'" : '"';
+            $current .= $ch;
+            if ($ch === '\\' && $i + 1 < $length) {
+                // Escaped character — copy it verbatim, skip reinterpretation
+                $current .= $sql[$i + 1];
+                $i++;
+                continue;
+            }
+            if ($ch === $quoteChar) {
+                if ($next === $quoteChar) {
+                    // Doubled quote ('' or "") — escaped quote, stay inside string
+                    $current .= $next;
+                    $i++;
+                } else {
+                    $inSingle = false;
+                    $inDouble = false;
+                }
+            }
+            continue;
+        }
+
+        if ($inBacktick) {
+            $current .= $ch;
+            if ($ch === '`') {
+                $inBacktick = false;
+            }
+            continue;
+        }
+
+        // Not currently inside a string, identifier, or comment
+        if ($ch === '-' && $next === '-') {
+            $inLineComment = true;
+            $i++;
+            continue;
+        }
+        if ($ch === '/' && $next === '*') {
+            $inBlockComment = true;
+            $i++;
+            continue;
+        }
+        if ($ch === "'") {
+            $inSingle = true;
+            $current .= $ch;
+            continue;
+        }
+        if ($ch === '"') {
+            $inDouble = true;
+            $current .= $ch;
+            continue;
+        }
+        if ($ch === '`') {
+            $inBacktick = true;
+            $current .= $ch;
+            continue;
+        }
+        if ($ch === ';') {
+            $stmt = trim($current);
+            if ($stmt !== '') {
+                $statements[] = $stmt;
+            }
+            $current = '';
+            continue;
+        }
+
+        $current .= $ch;
+    }
+
+    $stmt = trim($current);
+    if ($stmt !== '') {
+        $statements[] = $stmt;
     }
 
     return $statements;
@@ -154,9 +240,19 @@ foreach ($files as $filePath) {
 
     $statements = splitSql($sql);
 
+    // NOTE: These migrations are DDL (CREATE TABLE / ALTER TABLE). MySQL and
+    // MariaDB do not support transactional DDL — every DDL statement causes
+    // an implicit COMMIT on the server, silently ending any PDO transaction
+    // wrapped around it. Wrapping this loop in beginTransaction()/commit()
+    // therefore does not provide atomicity (the CREATE TABLE statements are
+    // already permanently applied the moment they run) and, worse, makes
+    // Database::commit() throw "There is no active transaction" — reporting
+    // a hard FAILURE for a migration that actually succeeded. So DDL
+    // execution here is intentionally NOT wrapped in a transaction; if a
+    // statement fails partway through a migration file, the statements
+    // before it remain applied (as they would under MySQL regardless) and
+    // this script stops so the file can be reviewed and fixed by hand.
     try {
-        Database::beginTransaction();
-
         foreach ($statements as $stmt) {
             Database::getInstance()->exec($stmt);
         }
@@ -167,16 +263,15 @@ foreach ($files as $filePath) {
             [$migration]
         );
 
-        Database::commit();
-
         ok("done");
         $appliedCount++;
     } catch (Throwable $e) {
-        Database::rollBack();
         fail("FAILED\n");
         echo "         ERROR: " . $e->getMessage() . "\n";
-        echo "         The failed migration has been rolled back.\n";
-        echo "         Fix the issue and re-run the migration runner.\n\n";
+        echo "         MySQL/MariaDB does not roll back DDL — statements in\n";
+        echo "         this file that ran before the failure remain applied.\n";
+        echo "         Fix the issue, then re-run the migration runner; it\n";
+        echo "         will skip already-applied migrations automatically.\n\n";
         exit(1);
     }
 }

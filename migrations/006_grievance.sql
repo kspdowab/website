@@ -78,9 +78,7 @@ CREATE TABLE IF NOT EXISTS `grievances` (
   `current_assignee`           BIGINT UNSIGNED  NULL COMMENT 'Currently responsible officer user_id',
   `current_authority`          BIGINT UNSIGNED  NULL COMMENT 'Current government authority being pursued',
   `current_status`             VARCHAR(50)      NOT NULL DEFAULT 'Submitted'
-                                 COMMENT 'Submitted|Under Verification|Accepted|Under Review|'
-                                         'Forwarded|Pending|Clarification Required|'
-                                         'Action Taken|Resolved|Rejected|Closed|Reopened',
+                                 COMMENT 'Submitted|Under Verification|Accepted|Under Review|Forwarded|Pending|Clarification Required|Action Taken|Resolved|Rejected|Closed|Reopened',
   `submitted_at`               DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `last_updated_at`            DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `closed_at`                  DATETIME         NULL,
@@ -132,8 +130,7 @@ CREATE TABLE IF NOT EXISTS `grievance_events` (
   `performed_by`      BIGINT UNSIGNED  NOT NULL,
   `association_level` ENUM('member','taluk','district','state') NOT NULL,
   `event_type`        VARCHAR(100)     NOT NULL
-                        COMMENT 'SUBMIT|VERIFY|ACCEPT|REVIEW|FORWARD|ESCALATE|ASSIGN|'
-                                'REMARK|STATUS_CHANGE|CLOSE|REOPEN|DOCUMENT_UPLOAD',
+                        COMMENT 'SUBMIT|VERIFY|ACCEPT|REVIEW|FORWARD|ESCALATE|ASSIGN|REMARK|STATUS_CHANGE|CLOSE|REOPEN|DOCUMENT_UPLOAD',
   `old_status`        VARCHAR(50)      NULL,
   `new_status`        VARCHAR(50)      NULL,
   `old_authority`     BIGINT UNSIGNED  NULL,

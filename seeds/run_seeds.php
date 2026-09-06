@@ -32,22 +32,114 @@ function info(string $msg): void { echo $msg . "\n"; }
 function ok(string $msg): void   { echo "\033[32m  [OK]\033[0m  {$msg}\n"; }
 function fail(string $msg): void { echo "\033[31m  [FAIL]\033[0m {$msg}\n"; }
 
+/**
+ * Split a SQL file into individual statements, respecting quoted string
+ * literals and comments. A naive explode(';', $sql) / line-based comment
+ * strip corrupts any statement whose string literal happens to contain
+ * ';', '--' or '/*' (this bit migrations/003_rbac.sql, whose COMMENT text
+ * contains a semicolon) — so this scans character-by-character and only
+ * treats ';', '--' and '/* *\/' as terminators/comments when they are not
+ * inside a '...'/"..."/`...` literal.
+ */
 function splitSql(string $sql): array
 {
-    $sql        = preg_replace('/\/\*.*?\*\//s', '', $sql);
-    $raw        = explode(';', $sql);
-    $statements = [];
+    $statements    = [];
+    $current       = '';
+    $length        = strlen($sql);
+    $inSingle      = false;
+    $inDouble      = false;
+    $inBacktick    = false;
+    $inLineComment = false;
+    $inBlockComment = false;
 
-    foreach ($raw as $chunk) {
-        $lines = explode("\n", $chunk);
-        $clean = [];
-        foreach ($lines as $line) {
-            $clean[] = preg_replace('/--[^\n]*$/', '', $line);
+    for ($i = 0; $i < $length; $i++) {
+        $ch   = $sql[$i];
+        $next = ($i + 1 < $length) ? $sql[$i + 1] : '';
+
+        if ($inLineComment) {
+            if ($ch === "\n") {
+                $inLineComment = false;
+                $current .= $ch;
+            }
+            continue;
         }
-        $stmt = trim(implode("\n", $clean));
-        if ($stmt !== '') {
-            $statements[] = $stmt;
+
+        if ($inBlockComment) {
+            if ($ch === '*' && $next === '/') {
+                $inBlockComment = false;
+                $i++;
+            }
+            continue;
         }
+
+        if ($inSingle || $inDouble) {
+            $quoteChar = $inSingle ? "'" : '"';
+            $current .= $ch;
+            if ($ch === '\\' && $i + 1 < $length) {
+                $current .= $sql[$i + 1];
+                $i++;
+                continue;
+            }
+            if ($ch === $quoteChar) {
+                if ($next === $quoteChar) {
+                    $current .= $next;
+                    $i++;
+                } else {
+                    $inSingle = false;
+                    $inDouble = false;
+                }
+            }
+            continue;
+        }
+
+        if ($inBacktick) {
+            $current .= $ch;
+            if ($ch === '`') {
+                $inBacktick = false;
+            }
+            continue;
+        }
+
+        if ($ch === '-' && $next === '-') {
+            $inLineComment = true;
+            $i++;
+            continue;
+        }
+        if ($ch === '/' && $next === '*') {
+            $inBlockComment = true;
+            $i++;
+            continue;
+        }
+        if ($ch === "'") {
+            $inSingle = true;
+            $current .= $ch;
+            continue;
+        }
+        if ($ch === '"') {
+            $inDouble = true;
+            $current .= $ch;
+            continue;
+        }
+        if ($ch === '`') {
+            $inBacktick = true;
+            $current .= $ch;
+            continue;
+        }
+        if ($ch === ';') {
+            $stmt = trim($current);
+            if ($stmt !== '') {
+                $statements[] = $stmt;
+            }
+            $current = '';
+            continue;
+        }
+
+        $current .= $ch;
+    }
+
+    $stmt = trim($current);
+    if ($stmt !== '') {
+        $statements[] = $stmt;
     }
 
     return $statements;

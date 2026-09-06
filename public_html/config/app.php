@@ -30,12 +30,29 @@ define('BASE_URL', 'https://yourdomain.com/');
 
 // ------------------------------------------------------------------
 // Paths (all absolute, no trailing slash)
+// Guarded with defined() checks: bootstrap.php (the standard entry
+// point for every page) already defines these constants before
+// requiring this file. Redefining them unconditionally here throws
+// "Constant already defined" warnings on every single request, and
+// in APP_ENV=development (where such warnings are echoed to output)
+// this happens early enough to break session cookie handling for
+// the rest of the request. Mirrors the guard pattern in bootstrap.php.
 // ------------------------------------------------------------------
-define('PUBLIC_HTML', dirname(__DIR__));    // .../public_html
-define('CONFIG_DIR',  __DIR__);            // .../public_html/config
-define('INCLUDES_DIR', PUBLIC_HTML . '/includes');
-define('UPLOADS_DIR',  PUBLIC_HTML . '/uploads');
-define('PROJECT_ROOT', dirname(PUBLIC_HTML)); // workspace root
+if (!defined('PUBLIC_HTML')) {
+    define('PUBLIC_HTML', dirname(__DIR__));    // .../public_html
+}
+if (!defined('CONFIG_DIR')) {
+    define('CONFIG_DIR', __DIR__);              // .../public_html/config
+}
+if (!defined('INCLUDES_DIR')) {
+    define('INCLUDES_DIR', PUBLIC_HTML . '/includes');
+}
+if (!defined('UPLOADS_DIR')) {
+    define('UPLOADS_DIR', PUBLIC_HTML . '/uploads');
+}
+if (!defined('PROJECT_ROOT')) {
+    define('PROJECT_ROOT', dirname(PUBLIC_HTML)); // workspace root
+}
 
 // ------------------------------------------------------------------
 // Timezone and locale

@@ -35,6 +35,15 @@ if (PHP_SAPI !== 'cli') {
     exit("Smoke test can only be run from the command line.\n");
 }
 
+// Buffer all output for the remainder of the script. Without this, the many
+// pass()/section() echoes printed by earlier sections count as output sent
+// to the client — which in PHP CLI marks headers_sent() true — so by the
+// time section 8 exercises a real Session::start() (via CSRF::getToken()),
+// session_name()/session_set_cookie_params()/session_start() all fail with
+// "headers already sent" and the test reports a false failure. Buffering
+// defers the actual flush until shutdown, after session functions have run.
+ob_start();
+
 // ---------------------------------------------------------------------------
 // Bootstrap (minimal — avoid starting session in CLI)
 // ---------------------------------------------------------------------------
