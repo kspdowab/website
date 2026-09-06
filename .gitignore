@@ -1,0 +1,44 @@
+# KSPDOWA — Git Ignore
+# =============================================================
+# CRITICAL: Never commit database credentials or secrets.
+# =============================================================
+
+# Database secret file (copy from db.secret.example.php and fill in credentials)
+public_html/config/db.secret.php
+
+# Environment/local config overrides
+.env
+.env.local
+*.local.php
+
+# PHP error logs
+*.log
+error_log
+
+# IDE / editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Uploaded files (do not commit user content to source control)
+public_html/uploads/members/
+public_html/uploads/documents/
+public_html/uploads/grievances/
+public_html/uploads/news/
+public_html/uploads/temp/
+
+# Composer vendor (if added later)
+vendor/
+composer.lock
+
+# Node (should not be used per spec, but guard against accidental addition)
+node_modules/
+package-lock.json
+
+# OS files
+.DS_Store
+desktop.ini

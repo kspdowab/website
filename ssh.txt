@@ -1,0 +1,20 @@
+Your identification has been saved in C:\Users\hp/.ssh/id_ed25519
+Your public key has been saved in C:\Users\hp/.ssh/id_ed25519.pub
+The key fingerprint is:
+SHA256:7e6rIJrzc0t7YxFI0esQ6AD58j8pkTP0WuDTXJFndYc kspdowa-hostinger
+The key's randomart image is:
++--[ED25519 256]--+
+|.o   ..+ .. ...  |
+|. . . = +  .E.   |
+| . o . * .       |
+|. + . + o.       |
+| = * . oS..      |
+|  O =   o.       |
+|   O..o  ..      |
+|  +o=o.o+.       |
+|  o+.+o+.++.     |
++----[SHA256]-----+
+
+
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIF70kIUvO8QnQsV9AG8AtKmpRcPBYB9kgPpjW9FsiSi5 kspdowa-hostinger
+Kspdossh@#0026

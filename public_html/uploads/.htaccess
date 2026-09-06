@@ -1,0 +1,17 @@
+# KSPDOWA — uploads/ directory
+# Block direct HTTP access to all files. Uploaded files must be
+# served exclusively through an authorization-checked PHP endpoint.
+# Also disable PHP execution to prevent uploaded script execution.
+
+Order Allow,Deny
+Deny from all
+
+# Disable PHP execution even if the deny-all is bypassed
+<FilesMatch "\.php$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# Disable CGI execution
+Options -ExecCGI
+AddType text/plain .php .php3 .php4 .php5 .phtml .phar

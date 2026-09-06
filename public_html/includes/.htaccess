@@ -1,0 +1,5 @@
+# KSPDOWA — includes/ directory
+# Deny all direct HTTP access. This directory must never be
+# accessible via browser. Files are loaded only via PHP include/require.
+Order Allow,Deny
+Deny from all

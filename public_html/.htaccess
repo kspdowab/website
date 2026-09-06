@@ -1,0 +1,99 @@
+# KSPDOWA — Main .htaccess Security Rules
+# Apache / LiteSpeed — Hostinger compatible
+# ============================================================
+
+Options -Indexes
+ServerSignature Off
+
+# ----------------------------------------------------------
+# Force HTTPS (redirect HTTP → HTTPS)
+# ----------------------------------------------------------
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Redirect HTTP to HTTPS
+    RewriteCond %{HTTPS} off
+    RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+    # Block access to hidden files and directories (dot-files)
+    # Exclude .well-known for Let's Encrypt SSL renewal
+    RewriteCond %{REQUEST_URI} !^/\.well-known/
+    RewriteCond %{REQUEST_URI} (^|/)\.
+    RewriteRule . - [F,L]
+</IfModule>
+
+# ----------------------------------------------------------
+# Deny direct HTTP access to sensitive directories
+# PHP files inside them are still served by PHP engine via
+# include/require — this only blocks direct browser requests.
+# ----------------------------------------------------------
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Block direct access to config/
+    RewriteRule ^config(/.*)?$ - [F,L]
+
+    # Block direct access to includes/
+    RewriteRule ^includes(/.*)?$ - [F,L]
+
+    # Block direct access to uploads/ (served via authenticated PHP endpoint)
+    RewriteRule ^uploads(/.*)?$ - [F,L]
+</IfModule>
+
+# ----------------------------------------------------------
+# Block access to sensitive file types
+# ----------------------------------------------------------
+<FilesMatch "\.(sql|log|sh|bash|env|secret\.php|ini|cfg|bak|swp|git)$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# ----------------------------------------------------------
+# Disable PHP execution in uploads directory
+# ----------------------------------------------------------
+<IfModule mod_php.c>
+    <Files "*.php">
+        # PHP execution in uploads/ is disabled per uploads/.htaccess
+    </Files>
+</IfModule>
+
+# ----------------------------------------------------------
+# Security headers
+# ----------------------------------------------------------
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+</IfModule>
+
+# ----------------------------------------------------------
+# PHP settings (Hostinger / LiteSpeed may override some)
+# ----------------------------------------------------------
+<IfModule mod_php.c>
+    php_flag display_errors Off
+    php_flag log_errors On
+    php_value upload_max_filesize 10M
+    php_value post_max_size 12M
+    php_value max_execution_time 60
+    php_value session.cookie_httponly 1
+    php_value session.cookie_secure 1
+    php_value session.use_strict_mode 1
+</IfModule>
+
+# ----------------------------------------------------------
+# Protect .htaccess itself
+# ----------------------------------------------------------
+<Files ".htaccess">
+    Order Allow,Deny
+    Deny from all
+</Files>
+
+# ----------------------------------------------------------
+# Custom error pages (create these in Phase 1)
+# ----------------------------------------------------------
+# ErrorDocument 403 /public/error/403.php
+# ErrorDocument 404 /public/error/404.php
+# ErrorDocument 500 /public/error/500.php
+

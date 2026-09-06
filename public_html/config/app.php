@@ -1,0 +1,86 @@
+<?php
+/**
+ * KSPDOWA Application Configuration
+ * ============================================================
+ * Site-wide constants and PHP runtime settings.
+ * This file MUST be loaded before any database activity.
+ *
+ * IMPORTANT: Set APP_ENV to 'production' on the live server.
+ * ============================================================
+ */
+
+declare(strict_types=1);
+
+// ------------------------------------------------------------------
+// Environment: 'development' | 'production'
+// ------------------------------------------------------------------
+define('APP_ENV', 'development');
+
+// ------------------------------------------------------------------
+// Application identity
+// ------------------------------------------------------------------
+define('APP_NAME', 'KSPDOWA Digital Association Platform');
+define('APP_FULL_NAME', 'Karnataka State Panchayat Development Officer Welfare Association (R)');
+define('APP_SHORT_NAME', 'KSPDOWA');
+define('APP_VERSION', '1.0.0');
+
+// Set to your actual domain (with trailing slash) once confirmed.
+// Example: 'https://kspdowa.org/'
+define('BASE_URL', 'https://yourdomain.com/');
+
+// ------------------------------------------------------------------
+// Paths (all absolute, no trailing slash)
+// ------------------------------------------------------------------
+define('PUBLIC_HTML', dirname(__DIR__));    // .../public_html
+define('CONFIG_DIR',  __DIR__);            // .../public_html/config
+define('INCLUDES_DIR', PUBLIC_HTML . '/includes');
+define('UPLOADS_DIR',  PUBLIC_HTML . '/uploads');
+define('PROJECT_ROOT', dirname(PUBLIC_HTML)); // workspace root
+
+// ------------------------------------------------------------------
+// Timezone and locale
+// ------------------------------------------------------------------
+define('APP_TIMEZONE', 'Asia/Kolkata');
+define('APP_LOCALE', 'en_IN');
+date_default_timezone_set(APP_TIMEZONE);
+
+// ------------------------------------------------------------------
+// Session
+// ------------------------------------------------------------------
+define('SESSION_NAME',     'KSPDOWA_SESS');
+define('SESSION_LIFETIME', 3600);   // seconds (1 hour idle timeout)
+
+// ------------------------------------------------------------------
+// Security
+// ------------------------------------------------------------------
+define('CSRF_TOKEN_LENGTH', 32);          // bytes (produces 64-char hex token)
+define('PASSWORD_MIN_LENGTH', 8);
+define('BCRYPT_COST', 12);
+
+// ------------------------------------------------------------------
+// File uploads
+// ------------------------------------------------------------------
+define('MAX_UPLOAD_BYTES', 5 * 1024 * 1024); // 5 MB
+define('ALLOWED_IMAGE_TYPES', ['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+define('ALLOWED_DOC_TYPES',   ['application/pdf', 'image/jpeg', 'image/png']);
+
+// ------------------------------------------------------------------
+// Grievance number format (per spec: KSPDOWA-GRV-YYYY-NNNNN)
+// ------------------------------------------------------------------
+define('GRIEVANCE_PREFIX', 'KSPDOWA-GRV');
+
+// ------------------------------------------------------------------
+// PHP error display — controlled by environment
+// ------------------------------------------------------------------
+if (APP_ENV === 'production') {
+    ini_set('display_errors', '0');
+    ini_set('display_startup_errors', '0');
+    error_reporting(0);
+} else {
+    ini_set('display_errors', '1');
+    ini_set('display_startup_errors', '1');
+    error_reporting(E_ALL);
+}
+
+// Log errors always
+ini_set('log_errors', '1');
