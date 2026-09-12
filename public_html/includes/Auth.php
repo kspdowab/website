@@ -233,4 +233,43 @@ class Auth
     {
         return bin2hex(random_bytes($bytes));
     }
+
+    /**
+     * Generate a cryptographically secure, human-typeable temporary
+     * password (e.g. for member account activation -- see Auth::login()
+     * doc block and the must_change_password flow). Excludes visually
+     * ambiguous characters (0/O, 1/l/I) and guarantees at least one
+     * uppercase letter, one lowercase letter and one digit so the
+     * generated value already satisfies Sanitize::password().
+     *
+     * Never persisted in plain text -- callers must hash it with
+     * hashPassword() immediately and must never write it to the audit
+     * log or anywhere else in clear text; it is only ever meant to be
+     * delivered once, out-of-band, to the account holder.
+     */
+    public static function generateTemporaryPassword(int $length = 12): string
+    {
+        $upper  = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // no I, O
+        $lower  = 'abcdefghijkmnopqrstuvwxyz'; // no l
+        $digits = '23456789';                  // no 0, 1
+        $all    = $upper . $lower . $digits;
+
+        $chars = [
+            $upper[random_int(0, strlen($upper) - 1)],
+            $lower[random_int(0, strlen($lower) - 1)],
+            $digits[random_int(0, strlen($digits) - 1)],
+        ];
+        for ($i = count($chars); $i < $length; $i++) {
+            $chars[] = $all[random_int(0, strlen($all) - 1)];
+        }
+
+        // Fisher-Yates shuffle using random_int (mt_rand-based shuffle()
+        // is not cryptographically secure and must not be used here).
+        for ($i = count($chars) - 1; $i > 0; $i--) {
+            $j = random_int(0, $i);
+            [$chars[$i], $chars[$j]] = [$chars[$j], $chars[$i]];
+        }
+
+        return implode('', $chars);
+    }
 }

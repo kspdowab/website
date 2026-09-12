@@ -126,6 +126,22 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $errors[] = 'Invalid member reference.';
         }
 
+        // Uniqueness check on personal_email (real unique key exists as of
+        // migration 013 -- member login is keyed on this field, so two
+        // members must never share one; check first for a friendly error).
+        $personalEmailClean = Sanitize::email($_POST['personal_email'] ?? '');
+        if ($personalEmailClean !== false) {
+            $dupeEmail = Database::fetchOne(
+                'SELECT id FROM member_profiles WHERE personal_email = ?' . ($id ? ' AND member_id != ?' : ''),
+                $id ? [$personalEmailClean, $id] : [$personalEmailClean]
+            );
+            if ($dupeEmail) {
+                $errors[] = 'Personal email "' . $personalEmailClean . '" is already registered to another member.';
+            }
+        } else {
+            $personalEmailClean = null; // blank or invalid -- store as NULL, not an error (field is optional)
+        }
+
         if (!empty($errors)) {
             Session::flash('error', implode(' ', $errors));
         } else {
@@ -165,7 +181,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 'personal_address'         => trim(Sanitize::string($_POST['personal_address'] ?? '', 1000)),
                 'city'                     => trim(Sanitize::string($_POST['city'] ?? '', 100)),
                 'pin_code'                 => trim(Sanitize::string($_POST['pin_code'] ?? '', 10)),
-                'personal_email'           => Sanitize::email($_POST['personal_email'] ?? ''),
+                'personal_email'           => $personalEmailClean,
                 'personal_mobile'          => Sanitize::mobile($_POST['personal_mobile'] ?? ''),
                 'emergency_contact_name'   => trim(Sanitize::string($_POST['emergency_contact_name'] ?? '', 200)),
                 'emergency_contact_mobile' => Sanitize::mobile($_POST['emergency_contact_mobile'] ?? ''),
@@ -322,7 +338,9 @@ $members = Database::fetchAll(
         <h2><?= $editRow ? 'Edit Member' : 'Add Member' ?></h2>
         <p class="section-hint">
             This creates an association member roster record only — not a login account.
-            Self-service registration/login is a separate, not-yet-built feature.
+            Members activate their own portal login (once their current-year annual fee
+            payment is verified) at /member-login.php using this Personal Email; there is
+            no way to create a login account from this page.
         </p>
         <form method="post" action="/admin/members.php">
             <?= CSRF::htmlField() ?>

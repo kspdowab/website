@@ -49,6 +49,12 @@ require_once CONFIG_DIR . '/app.php';
 require_once CONFIG_DIR . '/db.php';
 
 // ------------------------------------------------------------------
+// 2b. Mail configuration (loads config/mail.secret.php if present;
+//     safe 'log' driver defaults apply otherwise -- see config/mail.php)
+// ------------------------------------------------------------------
+require_once CONFIG_DIR . '/mail.php';
+
+// ------------------------------------------------------------------
 // 3. Core classes (load in dependency order)
 // ------------------------------------------------------------------
 require_once INCLUDES_DIR . '/ErrorHandler.php';  // no deps
@@ -60,6 +66,8 @@ require_once INCLUDES_DIR . '/RBAC.php';          // needs Database, AuditLogger
 require_once INCLUDES_DIR . '/CSRF.php';          // needs Session, AuditLogger, ErrorHandler
 require_once INCLUDES_DIR . '/Sanitize.php';      // no runtime deps
 require_once INCLUDES_DIR . '/Settings.php';      // needs Database
+require_once INCLUDES_DIR . '/Mailer.php';        // needs MAIL_ constants only
+require_once INCLUDES_DIR . '/Membership.php';    // needs Database
 
 // ------------------------------------------------------------------
 // 4. Register centralized error handler

@@ -6,6 +6,12 @@
 # Database secret file (copy from db.secret.example.php and fill in credentials)
 public_html/config/db.secret.php
 
+# Mail secret file (copy from mail.secret.example.php and fill in credentials)
+public_html/config/mail.secret.php
+
+# Local mail log (safe 'log' mail driver output -- can contain temp passwords)
+/storage/
+
 # Environment/local config overrides
 .env
 .env.local

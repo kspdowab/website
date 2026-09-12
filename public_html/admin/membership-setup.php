@@ -181,7 +181,7 @@ $editYear   = $editYearId !== false ? Database::fetchOne('SELECT * FROM membersh
 
 $membershipTypes = Database::fetchAll('SELECT * FROM membership_types ORDER BY name');
 $membershipYears = Database::fetchAll('SELECT * FROM membership_years ORDER BY start_date DESC');
-$currentYear     = Database::fetchOne("SELECT * FROM membership_years WHERE status = 'active' ORDER BY start_date DESC LIMIT 1");
+$currentYear     = Membership::getCurrentYear(); // single source of truth -- see includes/Membership.php
 ?>
 <!DOCTYPE html>
 <html lang="en">

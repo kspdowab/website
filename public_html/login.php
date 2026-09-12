@@ -1,14 +1,35 @@
 <?php
 /**
- * KSPDOWA — Admin/Officer Login
+ * KSPDOWA — Sign In (Admin/Officer AND Member accounts)
  * ============================================================
- * Phase 2 slice: login only. Registration, self-service password
- * reset, and the member portal are NOT part of this page — they
- * are full Phase 2 scope, built later.
+ * One shared login form for every `users` row, admin/officer and
+ * member alike -- Auth::login() already looks accounts up generically
+ * by email/mobile/username. What differs is what happens AFTER a
+ * successful password check:
  *
- * This page exists now solely to gate the Office Bearers admin
- * screen (Phase 1 dependency) behind real authentication instead
- * of leaving it open to the public.
+ *   - Non-member accounts (member_id IS NULL): unchanged Phase 1/2
+ *     behavior -- redirect to the admin area (or wherever the user
+ *     was headed before being bounced here).
+ *
+ *   - Member accounts: this is where the approved Phase 3 "current
+ *     year eligibility" architecture rule is enforced. A member
+ *     account only ever exists because member-login.php verified
+ *     current-year payment at activation time, but eligibility can
+ *     change later (a member who paid last year but not this one
+ *     must NOT be allowed to log in as current-year eligible) -- so
+ *     it is re-checked on every login, not just at account creation:
+ *       1. must_change_password=1 (always true right after
+ *          activation) -> force /member/change-password.php before
+ *          anything else.
+ *       2. Not current-year eligible -> the session that Auth::login()
+ *          just created is destroyed immediately (no lingering
+ *          logged-in state for an ineligible member) and the person is
+ *          sent back to member-login.php with a clear message.
+ *       3. Otherwise -> the member portal.
+ *
+ * Registration and a generic self-service password reset are
+ * deliberately NOT part of this page (Phase 3 scope explicitly
+ * excludes both beyond the first-login temporary-password change).
  * ============================================================
  */
 
@@ -33,6 +54,39 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $result = Auth::login($identifier, $password);
 
     if ($result['success']) {
+        $memberId = Session::get('member_id');
+
+        if ($memberId !== null) {
+            $userRow = Database::fetchOne('SELECT must_change_password FROM users WHERE id = ?', [$result['user_id']]);
+
+            if ($userRow && (int) $userRow['must_change_password'] === 1) {
+                // First login on a system-issued temporary password --
+                // this member WAS current-year eligible at activation
+                // time (member-login.php only ever creates the account
+                // after verifying that); force the password change
+                // before anything else.
+                header('Location: /member/change-password.php');
+                exit;
+            }
+
+            $currentYear = Membership::getCurrentYear();
+            if ($currentYear === null || !Membership::isEligibleForYear((int) $memberId, (int) $currentYear['id'])) {
+                // Architecture rule: a member not eligible for the
+                // CURRENT year may not be logged in, even if they were
+                // eligible in a previous year and already know their
+                // real password. Destroy the session Auth::login() just
+                // created rather than leaving it standing.
+                AuditLogger::log('LOGIN_DENIED_INELIGIBLE', 'users', $result['user_id']);
+                Session::destroy();
+                Session::flash('error', 'Your current-year annual membership fee has not been verified yet. Please complete payment to access the member portal.');
+                header('Location: /member-login.php');
+                exit;
+            }
+
+            header('Location: /member/index.php');
+            exit;
+        }
+
         $redirect = Session::getFlash('redirect_after_login', '/admin/office-bearers.php');
         header('Location: ' . $redirect);
         exit;

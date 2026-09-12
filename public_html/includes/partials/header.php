@@ -265,6 +265,27 @@ function nav_active(string $path, string $current): string
         .hero .page-subtitle { max-width: 620px; margin: 0 auto var(--space-5); }
         .hero .hero-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
 
+        /* ---------------- Forms (member/payment-facing screens) ---------------- */
+        .form-group { margin-bottom: var(--space-4); }
+        .form-group label {
+            display: block; font-size: 0.85rem; font-weight: 600;
+            color: var(--ink-700); margin-bottom: 6px;
+        }
+        .form-group input[type="text"],
+        .form-group input[type="email"],
+        .form-group input[type="password"],
+        .form-group select {
+            width: 100%; padding: 10px 12px; border: 1px solid var(--border);
+            border-radius: var(--radius-sm); font-size: 1rem; font-family: var(--font-sans);
+            background: var(--surface); color: var(--ink-900);
+        }
+        .form-group input:focus, .form-group select:focus {
+            outline: none; border-color: var(--blue-600);
+            box-shadow: 0 0 0 3px var(--blue-100);
+        }
+        .form-hint { font-size: 0.8rem; color: var(--ink-500); margin-top: 4px; }
+        .form-narrow { max-width: 420px; margin: 0 auto; }
+
         @media (max-width: 640px) {
             .site-header-inner { flex-direction: column; align-items: flex-start; }
             nav.main-nav { width: 100%; }
@@ -298,7 +319,11 @@ function nav_active(string $path, string $current): string
             <a href="/news.php"<?= nav_active('/news.php', $currentPath) ?>>News</a>
             <a href="/contact.php"<?= nav_active('/contact.php', $currentPath) ?>>Contact</a>
             <?php if (Auth::isLoggedIn()): ?>
-                <a href="/admin/office-bearers.php" class="cta">Admin</a>
+                <?php if (Auth::getCurrentMemberId() !== null): ?>
+                    <a href="/member/index.php" class="cta">Member Portal</a>
+                <?php else: ?>
+                    <a href="/admin/office-bearers.php" class="cta">Admin</a>
+                <?php endif; ?>
             <?php else: ?>
                 <a href="/login.php" class="cta">Login</a>
             <?php endif; ?>
