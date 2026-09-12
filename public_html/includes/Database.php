@@ -48,12 +48,22 @@ class Database
             DB_CHARSET
         );
 
+        // PDO::MYSQL_ATTR_INIT_COMMAND is deprecated as of PHP 8.5 in favor of
+        // the Pdo\Mysql subclass's own constant (Pdo\Mysql only exists from
+        // PHP 8.4 onward). This project must keep running on PHP 8.2+ per
+        // spec, where Pdo\Mysql does not exist yet, so pick whichever
+        // constant is actually available at runtime instead of hardcoding
+        // either one and breaking (or warning on) the other PHP version.
+        $initCommandKey = class_exists('Pdo\\Mysql')
+            ? \Pdo\Mysql::ATTR_INIT_COMMAND
+            : PDO::MYSQL_ATTR_INIT_COMMAND;
+
         $options = [
             PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES   => false,   // true prepared statements
             PDO::ATTR_PERSISTENT         => false,
-            PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci, "
+            $initCommandKey              => "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci, "
                                           . "time_zone = '+05:30'",
         ];
 

@@ -32,9 +32,18 @@ class Session
             return;
         }
 
+        // NOTE: this must reflect whether the CURRENT request is actually HTTPS.
+        // An earlier version also forced this true whenever APP_ENV === 'development'
+        // (comment: "allow non-HTTPS locally"), but that did the opposite of what it
+        // said: it marked the cookie Secure even over plain HTTP, so on any non-HTTPS
+        // host that isn't a browser-exempted loopback address (a real Hostinger
+        // preview URL before SSL is provisioned, a LAN IP, a local dev domain in
+        // /etc/hosts, etc.) the browser silently refuses to store/return the cookie
+        // and every request gets a fresh session — login, CSRF, everything breaks
+        // with no visible error. Simply not forcing the flag already lets plain-HTTP
+        // local development work, since $_SERVER['HTTPS'] is naturally unset there.
         $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-                || (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
-                || (defined('APP_ENV') && APP_ENV === 'development'); // allow non-HTTPS locally
+                || (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
 
         $sessionName = defined('SESSION_NAME') ? SESSION_NAME : 'KSPDOWA_SESS';
 
