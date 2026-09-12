@@ -309,6 +309,7 @@ $members = Database::fetchAll(
         <a href="/admin/members.php" style="text-decoration:underline;">Members</a>
         <a href="/admin/news.php">News</a>
         <a href="/admin/users.php">Users &amp; Roles</a>
+        <a href="/admin/membership-setup.php">Membership Setup</a>
         <a href="/logout.php">Logout</a>
     </div>
 </header>
