@@ -19,21 +19,20 @@ require __DIR__ . '/includes/partials/header.php';
 ?>
 
 <h1 class="page-title">News</h1>
+<p class="page-subtitle">Updates and announcements from the Association.</p>
 
-<div class="card">
-    <?php if (!empty($news)): ?>
-        <?php foreach ($news as $item): ?>
-            <div style="padding:14px 0; border-bottom:1px solid #e2e6ec;">
-                <h2 style="font-size:1rem; margin:0 0 4px; color:#1a3a6b;"><?= Sanitize::html($item['title']) ?></h2>
-                <p style="font-size:0.75rem; color:#9aa4b2; margin:0 0 8px;">
-                    <?= Sanitize::html(date('d M Y', strtotime((string) $item['published_at']))) ?>
-                </p>
-                <p style="margin:0;"><?= nl2br(Sanitize::html(mb_substr((string) $item['content'], 0, 400, 'UTF-8'))) ?></p>
-            </div>
-        <?php endforeach; ?>
-    <?php else: ?>
+<?php if (!empty($news)): ?>
+    <?php foreach ($news as $item): ?>
+        <div class="card">
+            <span class="badge badge-muted"><?= Sanitize::html(date('d M Y', strtotime((string) $item['published_at']))) ?></span>
+            <h2 style="border-bottom:none; padding-bottom:0; margin:10px 0 8px; font-size:1.1rem;"><?= Sanitize::html($item['title']) ?></h2>
+            <p style="margin:0; color:var(--ink-700);"><?= nl2br(Sanitize::html(mb_substr((string) $item['content'], 0, 400, 'UTF-8'))) ?></p>
+        </div>
+    <?php endforeach; ?>
+<?php else: ?>
+    <div class="card">
         <p class="empty-state">No news has been published yet.</p>
-    <?php endif; ?>
-</div>
+    </div>
+<?php endif; ?>
 
 <?php require __DIR__ . '/includes/partials/footer.php'; ?>

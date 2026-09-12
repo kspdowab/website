@@ -23,31 +23,34 @@ $pageTitle = 'Recognition';
 require __DIR__ . '/includes/partials/header.php';
 ?>
 
+<span class="eyebrow">Official Status</span>
 <h1 class="page-title">Government Recognition</h1>
 
 <div class="card">
+    <div class="table-wrap">
     <table class="plain">
-        <tr><td style="width:200px; font-weight:600;">Order Number</td><td>RDPR 184 GPS 2020</td></tr>
-        <tr><td style="font-weight:600;">Order Date</td><td>30-12-2020</td></tr>
-        <tr><td style="font-weight:600;">Issuing Authority</td>
+        <tr><td style="width:200px; font-weight:700; color:var(--ink-900);">Order Number</td><td>RDPR 184 GPS 2020</td></tr>
+        <tr><td style="font-weight:700; color:var(--ink-900);">Order Date</td><td>30-12-2020</td></tr>
+        <tr><td style="font-weight:700; color:var(--ink-900);">Issuing Authority</td>
             <td>Government of Karnataka, Rural Development and Panchayat Raj Department
                 (signed by B. Naveen Kumar, Under Secretary to Government (ZP), Addl. charge)</td></tr>
-        <tr><td style="font-weight:600;">Subject</td>
+        <tr><td style="font-weight:700; color:var(--ink-900);">Subject</td>
             <td>Granting recognition to the Karnataka State Panchayat Development Officers'
                 Welfare Association (Regd.)</td></tr>
-        <tr><td style="font-weight:600;">Rule / Reference</td>
+        <tr><td style="font-weight:700; color:var(--ink-900);">Rule / Reference</td>
             <td>Karnataka Civil Services (Recognition of Service Associations) Rules, 2015,
                 referencing Government Notification No. SiKaSu 6 ESBM 2013 dated 04-01-2016</td></tr>
     </table>
+    </div>
 
-    <p style="margin-top:18px; padding:12px 14px; background:#fdf6e8; border:1px solid #f0dfa8; border-radius:6px; font-size:0.88rem;">
+    <div class="alert alert-info">
         Per the order text itself, recognition was granted <strong>for a period of 2 years from the date
         of this order, subject to conditions and subsequent renewal</strong>. This page reflects only
         what the order document states.
-    </p>
+    </div>
 
     <?php if ($doc): ?>
-        <p style="margin-top:18px;">
+        <p style="margin-top:18px; margin-bottom:0;">
             <a class="btn" href="/document.php?id=<?= (int) $doc['id'] ?>" target="_blank" rel="noopener">
                 View / Download Original Order (PDF) &rarr;
             </a>

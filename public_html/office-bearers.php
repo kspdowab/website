@@ -33,32 +33,36 @@ $pageTitle = 'Office Bearers';
 require __DIR__ . '/includes/partials/header.php';
 ?>
 
+<span class="eyebrow">Association Leadership</span>
 <h1 class="page-title">Office Bearers</h1>
 <p class="page-subtitle">Current state, district, and taluk office bearers of the Association.</p>
 
 <div class="card">
-    <h2 style="margin-top:0; color:#1a3a6b; font-size:1.1rem;">State Committee</h2>
+    <h2><span class="badge badge-green" style="margin-right:8px;">State</span>Committee</h2>
     <?php if (!empty($stateBearers)): ?>
+        <div class="table-wrap">
         <table class="plain">
             <thead><tr><th>Name</th><th>Designation</th><th>Term</th></tr></thead>
             <?php foreach ($stateBearers as $ob): ?>
             <tr>
                 <td><?= Sanitize::html($ob['name']) ?></td>
                 <td><?= Sanitize::html($ob['association_designation']) ?></td>
-                <td style="white-space:nowrap; color:#9aa4b2;">
+                <td style="white-space:nowrap; color:var(--ink-300);">
                     <?= Sanitize::html($ob['term_start'] ?? '—') ?> – <?= Sanitize::html($ob['term_end'] ?? '—') ?>
                 </td>
             </tr>
             <?php endforeach; ?>
         </table>
+        </div>
     <?php else: ?>
         <p class="empty-state">State committee details will appear here shortly.</p>
     <?php endif; ?>
 </div>
 
 <div class="card">
-    <h2 style="margin-top:0; color:#1a3a6b; font-size:1.1rem;">District Committees</h2>
+    <h2><span class="badge badge-lav" style="margin-right:8px;">District</span>Committees</h2>
     <?php if (!empty($districtBearers)): ?>
+        <div class="table-wrap">
         <table class="plain">
             <thead><tr><th>District</th><th>Name</th><th>Designation</th></tr></thead>
             <?php foreach ($districtBearers as $ob): ?>
@@ -69,14 +73,16 @@ require __DIR__ . '/includes/partials/header.php';
             </tr>
             <?php endforeach; ?>
         </table>
+        </div>
     <?php else: ?>
         <p class="empty-state">District office bearer details have not been added yet.</p>
     <?php endif; ?>
 </div>
 
 <div class="card">
-    <h2 style="margin-top:0; color:#1a3a6b; font-size:1.1rem;">Taluk Committees</h2>
+    <h2><span class="badge badge-teal" style="margin-right:8px;">Taluk</span>Committees</h2>
     <?php if (!empty($talukBearers)): ?>
+        <div class="table-wrap">
         <table class="plain">
             <thead><tr><th>Taluk</th><th>District</th><th>Name</th><th>Designation</th></tr></thead>
             <?php foreach ($talukBearers as $ob): ?>
@@ -88,6 +94,7 @@ require __DIR__ . '/includes/partials/header.php';
             </tr>
             <?php endforeach; ?>
         </table>
+        </div>
     <?php else: ?>
         <p class="empty-state">Taluk office bearer details have not been added yet.</p>
     <?php endif; ?>

@@ -22,22 +22,27 @@ $address = Settings::get('site_address', '');
 ?>
 
 <h1 class="page-title">Contact Us</h1>
+<p class="page-subtitle">Reach the Association through the details below.</p>
 
-<div class="card">
-    <table class="plain">
-        <tr>
-            <td style="width:140px; font-weight:600;">Address</td>
-            <td><?= $address !== '' ? Sanitize::html($address) : '<span class="empty-state">Not yet published</span>' ?></td>
-        </tr>
-        <tr>
-            <td style="font-weight:600;">Email</td>
-            <td><?= $email !== '' ? '<a href="mailto:' . Sanitize::attr($email) . '">' . Sanitize::html($email) . '</a>' : '<span class="empty-state">Not yet published</span>' ?></td>
-        </tr>
-        <tr>
-            <td style="font-weight:600;">Phone</td>
-            <td><?= $phone !== '' ? Sanitize::html($phone) : '<span class="empty-state">Not yet published</span>' ?></td>
-        </tr>
-    </table>
+<div class="card" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:20px;">
+    <div>
+        <span class="badge badge-blue">Address</span>
+        <p style="margin:10px 0 0; color:var(--ink-700);">
+            <?= $address !== '' ? Sanitize::html($address) : '<span class="empty-state">Not yet published</span>' ?>
+        </p>
+    </div>
+    <div>
+        <span class="badge badge-teal">Email</span>
+        <p style="margin:10px 0 0; color:var(--ink-700);">
+            <?= $email !== '' ? '<a href="mailto:' . Sanitize::attr($email) . '">' . Sanitize::html($email) . '</a>' : '<span class="empty-state">Not yet published</span>' ?>
+        </p>
+    </div>
+    <div>
+        <span class="badge badge-lav">Phone</span>
+        <p style="margin:10px 0 0; color:var(--ink-700);">
+            <?= $phone !== '' ? Sanitize::html($phone) : '<span class="empty-state">Not yet published</span>' ?>
+        </p>
+    </div>
 </div>
 
 <?php require __DIR__ . '/includes/partials/footer.php'; ?>
