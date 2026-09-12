@@ -222,6 +222,7 @@ $errorMsg   = Session::getFlash('error');
         <a href="/admin/members.php">Members</a>
         <a href="/admin/users.php">Users &amp; Roles</a>
         <a href="/admin/membership-setup.php">Membership Setup</a>
+        <a href="/admin/settings.php">Association Settings</a>
         <a href="/logout.php">Logout</a>
     </div>
 </header>

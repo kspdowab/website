@@ -21,11 +21,20 @@
  *     SAME message so this form cannot be used to discover which
  *     email addresses belong to registered members.
  *
- * Deliberately NOT built here (out of scope for this unit): the new
- * local geography-aware payment form (waiting on official Gram
- * Panchayati master data), the Razorpay webhook/verification
- * integration, and bulk import. Until those exist, "the payment form"
- * is the existing hosted Razorpay page the association already uses.
+ * As of the Razorpay Standard Checkout + Idempotency unit, new
+ * registrations pay via the in-app checkout on payment.php, which
+ * calls Auth::activateMemberPortalAccess() automatically the moment a
+ * payment is server-verified (see PaymentGateway::confirmPayment()) --
+ * a member coming from that flow does not need to visit this page at
+ * all. This page remains the activation path for the pre-existing
+ * hosted Razorpay page (member-initiated renewals for a subsequent
+ * year, where no local pending payment row exists yet) and as a
+ * self-healing fallback: if automatic activation is ever missed for
+ * any reason, entering the same registered email here re-checks
+ * eligibility and activates the account exactly once, via the exact
+ * same Auth::activateMemberPortalAccess() code path.
+ *
+ * Bulk import remains out of scope for this unit.
  * ============================================================
  */
 
@@ -39,15 +48,45 @@ if (Auth::isLoggedIn()) {
     exit;
 }
 
-const RAZORPAY_ANNUAL_FEE_URL = 'https://pages.razorpay.com/KSPDOWAFEE2026';
 
-$error        = Session::getFlash('error');
-$notice       = Session::getFlash('notice');
-$notEligible  = false;
-$alreadyExists = false;
+$error            = Session::getFlash('error');
+$notice           = Session::getFlash('notice');
+$notEligible      = false;
+$resumeEmailValue = '';
 
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     CSRF::requireValid();
+
+    if (($_POST['form_action'] ?? '') === 'resume') {
+        // Lightweight resume for a registered-but-unpaid member: the
+        // SAME two-factor (email + KGID No.) check register.php's safe
+        // retry path already uses (Registration::resumePendingPayment()),
+        // just without re-entering the whole registration form. Never
+        // creates a new `members` row -- only reuses/creates a 'pending'
+        // payment attempt for an existing member.
+        $emailInput       = (string) ($_POST['email'] ?? '');
+        $email            = Sanitize::email($emailInput);
+        $kgid             = Sanitize::string($_POST['kgid_no'] ?? '', 50);
+        $resumeEmailValue = $emailInput;
+
+        $resume = ($email !== false && $kgid !== '')
+            ? Registration::resumePendingPayment($email, $kgid)
+            : null;
+
+        if ($resume === null) {
+            // Deliberately identical to the plain "not eligible" case
+            // below -- a wrong KGID, a wrong email, or a fully unknown
+            // pair all look the same from here, so this form can never
+            // be used to discover which emails/KGID numbers belong to
+            // registered members.
+            $notEligible = true;
+        } else {
+            Session::set('registration_payment_id', $resume['payment_id']);
+            Session::set('registration_member_id', $resume['member_id']);
+            header('Location: /payment.php');
+            exit;
+        }
+    } else {
 
     $emailInput = (string) ($_POST['email'] ?? '');
     $email      = Sanitize::email($emailInput);
@@ -61,64 +100,62 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             // Deliberately identical whether the email is unregistered
             // or belongs to a member who hasn't paid the current year.
             $notEligible = true;
+            $resumeEmailValue = $emailInput;
         } else {
             $existingUser = Database::fetchOne('SELECT id FROM users WHERE member_id = ?', [$member['id']]);
 
             if ($existingUser) {
-                $alreadyExists = true;
+                // Active account already exists -- no interstitial
+                // message needed, send them straight to the password
+                // screen with the email already filled in.
+                header('Location: /login.php?identifier=' . rawurlencode($email));
+                exit;
             } else {
-                $tempPassword = Auth::generateTemporaryPassword();
-                $passwordHash = Auth::hashPassword($tempPassword);
+                // Shared with PaymentGateway::confirmPayment() -- see
+                // Auth::activateMemberPortalAccess() doc block. Both
+                // callers agree on exactly one activation code path, so
+                // it is impossible for this form and a Razorpay
+                // callback/webhook to ever issue two different temporary
+                // passwords for the same member.
+                $activation = Auth::activateMemberPortalAccess($member, $email);
 
-                $newUserId = Database::transaction(function () use ($member, $email, $passwordHash) {
-                    Database::execute(
-                        'INSERT INTO users (member_id, email, password_hash, status, must_change_password)
-                         VALUES (?, ?, ?, ?, 1)',
-                        [$member['id'], $email, $passwordHash, 'active']
+                if ($activation['temp_password'] === null) {
+                    // Lost a race to a concurrent activation (e.g. a
+                    // Razorpay callback/webhook activated this member a
+                    // moment ago). Nothing to email -- same as the
+                    // "account already exists" case above, send them
+                    // straight to the password screen.
+                    header('Location: /login.php?identifier=' . rawurlencode($email));
+                    exit;
+                } else {
+                    $tempPassword = $activation['temp_password'];
+
+                    $mailSent = Mailer::send(
+                        $email,
+                        'Your ' . APP_SHORT_NAME . ' Member Portal Access',
+                        "Dear " . $member['name'] . ",\n\n"
+                            . "Your " . APP_SHORT_NAME . " member portal account has been activated.\n\n"
+                            . "Registered email: " . $email . "\n"
+                            . "Temporary password: " . $tempPassword . "\n\n"
+                            . "Sign in at " . (defined('BASE_URL') ? BASE_URL : '') . "login.php and you will be "
+                            . "asked to set your own password before continuing.\n\n"
+                            . "If you did not request this, please contact the association office.\n"
                     );
-                    $userId = (int) Database::lastInsertId();
 
-                    $role = Database::fetchOne("SELECT id FROM roles WHERE name = 'Regular Member'");
-                    if ($role) {
-                        Database::execute(
-                            'INSERT IGNORE INTO user_roles (user_id, role_id) VALUES (?, ?)',
-                            [$userId, (int) $role['id']]
-                        );
+                    if ($mailSent) {
+                        Session::flash('notice', 'An account has been created for ' . Sanitize::html($email)
+                            . '. A temporary password has been sent to that email address -- please check your inbox and sign in.');
+                    } else {
+                        Session::flash('notice', 'Your account was created, but the confirmation email could not be sent. '
+                            . 'Please contact the association office for your temporary password.');
                     }
 
-                    AuditLogger::log('ACTIVATE', 'users', $userId, null, [
-                        'member_id' => $member['id'],
-                        'email'     => $email,
-                        'source'    => 'member_login_self_activation',
-                    ]);
-
-                    return $userId;
-                });
-
-                $mailSent = Mailer::send(
-                    $email,
-                    'Your ' . APP_SHORT_NAME . ' Member Portal Access',
-                    "Dear " . $member['name'] . ",\n\n"
-                        . "Your " . APP_SHORT_NAME . " member portal account has been activated.\n\n"
-                        . "Registered email: " . $email . "\n"
-                        . "Temporary password: " . $tempPassword . "\n\n"
-                        . "Sign in at " . (defined('BASE_URL') ? BASE_URL : '') . "login.php and you will be "
-                        . "asked to set your own password before continuing.\n\n"
-                        . "If you did not request this, please contact the association office.\n"
-                );
-
-                if ($mailSent) {
-                    Session::flash('notice', 'An account has been created for ' . Sanitize::html($email)
-                        . '. A temporary password has been sent to that email address -- please check your inbox and sign in.');
-                } else {
-                    Session::flash('notice', 'Your account was created, but the confirmation email could not be sent. '
-                        . 'Please contact the association office for your temporary password.');
+                    header('Location: /member-login.php');
+                    exit;
                 }
-
-                header('Location: /member-login.php');
-                exit;
             }
         }
+    }
     }
 }
 
@@ -140,21 +177,31 @@ require __DIR__ . '/includes/partials/header.php';
     <?php if ($notEligible): ?>
         <div class="alert alert-info" role="alert">
             We couldn't find a verified current-year annual membership payment for that email address.
-            If you are a member, please complete (or renew) your annual membership fee payment below,
-            and try again once it has been confirmed.
         </div>
-        <p style="text-align:center; margin-top:var(--space-4);">
-            <a class="btn btn-teal" href="<?= Sanitize::attr(RAZORPAY_ANNUAL_FEE_URL) ?>" target="_blank" rel="noopener">
-                Pay Annual Membership Fee
-            </a>
+
+        <form method="post" action="/member-login.php" autocomplete="off">
+            <?= CSRF::htmlField() ?>
+            <input type="hidden" name="form_action" value="resume">
+            <input type="hidden" name="email" value="<?= Sanitize::attr($resumeEmailValue) ?>">
+            <div class="form-group">
+                <label for="kgid_no">KGID No.</label>
+                <input type="text" id="kgid_no" name="kgid_no" required autofocus maxlength="50"
+                       value="<?= Sanitize::attr($_POST['kgid_no'] ?? '') ?>">
+            </div>
+            <p class="form-hint">
+                Already registered? Enter your KGID No. above to resume your existing payment for
+                <strong><?= Sanitize::html($resumeEmailValue) ?></strong> -- this will not create a
+                duplicate registration.
+            </p>
+            <button type="submit" class="btn btn-teal" style="width:100%; justify-content:center;">Resume My Payment</button>
+        </form>
+
+        <p class="form-hint" style="text-align:center; margin-top:var(--space-4);">
+            New here, or need to correct your registration details?
+            <a href="/register.php">Use the full registration form</a> instead.
         </p>
-        <p class="form-hint" style="text-align:center;">Already paid? It can take a little time to verify -- please try again shortly, or contact the association office.</p>
-    <?php elseif ($alreadyExists): ?>
-        <div class="alert alert-info" role="alert">
-            An account already exists for that email address.
-        </div>
-        <p style="text-align:center; margin-top:var(--space-4);">
-            <a class="btn" href="/login.php">Go to Sign In</a>
+        <p class="form-hint" style="text-align:center;">
+            Already paid? It can take a little time to verify -- please try again shortly, or contact the association office.
         </p>
     <?php else: ?>
         <form method="post" action="/member-login.php" autocomplete="off">

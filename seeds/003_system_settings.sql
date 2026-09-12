@@ -26,7 +26,18 @@ INSERT IGNORE INTO `system_settings`
   -- Contact (fill in verified association contact details)
   ('site_email',   '', 'string'),
   ('site_phone',   '', 'string'),
+  ('site_website', '', 'string'),
   ('site_address', 'Bengaluru, Karnataka', 'string'),
+
+  -- Receipt letterhead logos (paths relative to public_html/; empty =
+  -- fall back to the bundled assets/images/receipt-logo-*.png files)
+  ('receipt_logo_left',  '', 'string'),
+  ('receipt_logo_right', '', 'string'),
+
+  -- Receipt number format (produces KSPDOWA-RCP-YYYY-NNNNN by default)
+  ('receipt_no_prefix',      'KSPDOWA-RCP', 'string'),
+  ('receipt_no_year_format', 'Y',           'string'),
+  ('receipt_no_pad_length',  '5',           'integer'),
 
   -- Grievance number format (produces KSPDOWA-GRV-YYYY-NNNNN)
   ('grievance_no_prefix',      'KSPDOWA-GRV', 'string'),

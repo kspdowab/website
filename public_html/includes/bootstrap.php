@@ -55,19 +55,34 @@ require_once CONFIG_DIR . '/db.php';
 require_once CONFIG_DIR . '/mail.php';
 
 // ------------------------------------------------------------------
+// 2c. Razorpay configuration (loads config/razorpay.secret.php if
+//     present; RAZORPAY_ENABLED defaults to false otherwise -- see
+//     config/razorpay.php)
+// ------------------------------------------------------------------
+require_once CONFIG_DIR . '/razorpay.php';
+
+// ------------------------------------------------------------------
 // 3. Core classes (load in dependency order)
 // ------------------------------------------------------------------
 require_once INCLUDES_DIR . '/ErrorHandler.php';  // no deps
 require_once INCLUDES_DIR . '/Database.php';      // needs DB_ constants
 require_once INCLUDES_DIR . '/Session.php';       // no deps
 require_once INCLUDES_DIR . '/AuditLogger.php';   // needs Database, Session
-require_once INCLUDES_DIR . '/Auth.php';          // needs Database, Session, AuditLogger
+require_once INCLUDES_DIR . '/MembershipNumber.php'; // needs Database, AuditLogger
+require_once INCLUDES_DIR . '/Auth.php';          // needs Database, Session, AuditLogger, MembershipNumber
 require_once INCLUDES_DIR . '/RBAC.php';          // needs Database, AuditLogger, ErrorHandler
 require_once INCLUDES_DIR . '/CSRF.php';          // needs Session, AuditLogger, ErrorHandler
 require_once INCLUDES_DIR . '/Sanitize.php';      // no runtime deps
 require_once INCLUDES_DIR . '/Settings.php';      // needs Database
 require_once INCLUDES_DIR . '/Mailer.php';        // needs MAIL_ constants only
 require_once INCLUDES_DIR . '/Membership.php';    // needs Database
+require_once INCLUDES_DIR . '/Registration.php'; // needs Database, Sanitize, Membership, AuditLogger
+require_once INCLUDES_DIR . '/RazorpayClient.php'; // needs RAZORPAY_ constants only
+require_once INCLUDES_DIR . '/PaymentGateway.php'; // needs Database, RazorpayClient, Membership, Auth, Mailer, AuditLogger
+require_once INCLUDES_DIR . '/Receipt.php';       // needs Database, AuditLogger; lazily requires lib/fpdf.php only when rendering
+require_once INCLUDES_DIR . '/Donation.php';       // needs Database, AuditLogger
+require_once INCLUDES_DIR . '/DonationGateway.php'; // needs Database, RazorpayClient, AuditLogger, Donation
+require_once INCLUDES_DIR . '/DonationReceipt.php'; // needs Database, AuditLogger, Settings, Receipt (renderLetterhead/latin1)
 
 // ------------------------------------------------------------------
 // 4. Register centralized error handler

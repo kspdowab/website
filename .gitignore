@@ -9,6 +9,9 @@ public_html/config/db.secret.php
 # Mail secret file (copy from mail.secret.example.php and fill in credentials)
 public_html/config/mail.secret.php
 
+# Razorpay secret file (copy from razorpay.secret.example.php and fill in credentials)
+public_html/config/razorpay.secret.php
+
 # Local mail log (safe 'log' mail driver output -- can contain temp passwords)
 /storage/
 
@@ -36,6 +39,12 @@ public_html/uploads/documents/
 public_html/uploads/grievances/
 public_html/uploads/news/
 public_html/uploads/temp/
+public_html/uploads/receipts/
+
+# One-off debug / diagnostic scripts (never deploy to production)
+public_html/_check_*.php
+public_html/_reset_*.php
+public_html/_set_admin_password.php
 
 # Composer vendor (if added later)
 vendor/

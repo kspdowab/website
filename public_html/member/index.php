@@ -46,7 +46,14 @@ if ($currentYear === null || !Membership::isEligibleForYear($memberId, (int) $cu
     exit;
 }
 
-$member  = Database::fetchOne('SELECT * FROM members WHERE id = ?', [$memberId]);
+$member  = Database::fetchOne(
+    'SELECT m.*, d.name AS district_name, t.name AS taluk_name
+     FROM members m
+     LEFT JOIN districts d ON d.id = m.district_id
+     LEFT JOIN taluks t    ON t.id = m.taluk_id
+     WHERE m.id = ?',
+    [$memberId]
+);
 $profile = Database::fetchOne('SELECT * FROM member_profiles WHERE member_id = ?', [$memberId]);
 $success = Session::getFlash('success');
 
@@ -65,13 +72,16 @@ require dirname(__DIR__) . '/includes/partials/header.php';
     <h2 class="card-title">Your Membership</h2>
     <table class="plain">
         <tr><th>Member No.</th><td><?= Sanitize::html($member['member_no'] ?? '') ?></td></tr>
+        <tr><th>Member Name</th><td><?= Sanitize::html($member['name'] ?? '') ?></td></tr>
         <tr><th>Designation</th><td><?= Sanitize::html($member['designation'] ?? '') ?></td></tr>
         <tr><th>Registered Email</th><td><?= Sanitize::html($profile['personal_email'] ?? '') ?></td></tr>
-        <tr><th>Current Financial Year</th><td><?= Sanitize::html($currentYear['financial_year']) ?></td></tr>
+        <tr><th>Membership District</th><td><?= ($member['district_name'] ?? '') !== '' ? Sanitize::html($member['district_name']) : 'N/A' ?></td></tr>
+        <tr><th>Membership Taluk</th><td><?= ($member['taluk_name'] ?? '') !== '' ? Sanitize::html($member['taluk_name']) : 'N/A' ?></td></tr>
+        <tr><th>Membership Year</th><td><?= Sanitize::html($currentYear['financial_year']) ?></td></tr>
         <tr><th>Status</th><td><span class="badge badge-green">Current-year membership verified</span></td></tr>
     </table>
 </div>
 
-<p><a href="/logout.php" class="btn btn-outline">Log Out</a></p>
+<p><a href="/member/payments.php" class="btn btn-outline">View Payment History</a> <a href="/logout.php" class="btn btn-outline">Log Out</a></p>
 
 <?php require dirname(__DIR__) . '/includes/partials/footer.php'; ?>

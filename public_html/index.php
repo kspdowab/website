@@ -1,6 +1,6 @@
 <?php
 /**
- * KSPDOWA — Public Home Page (Phase 1)
+ * KSPDOWA BENGALURU — Public Home Page (Phase 1)
  * ============================================================
  */
 

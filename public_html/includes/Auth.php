@@ -225,6 +225,95 @@ class Auth
     }
 
     /**
+     * Activate member portal access for a member with a server-verified
+     * current-year payment: create the `users` login row (must_change_
+     * password = 1) with a system-generated temporary password and the
+     * "Regular Member" role, exactly once per member.
+     *
+     * Shared by member-login.php (existing "I already paid, activate my
+     * account" flow) and PaymentGateway::confirmPayment() (new Razorpay
+     * Standard Checkout flow) so both callers agree on exactly one
+     * activation code path -- approved spec: "Generate temporary
+     * password and activate login exactly once after verified payment."
+     *
+     * Idempotent: if a `users` row already exists for this member
+     * (created by an earlier call, or a concurrent one that won the
+     * race -- users.member_id has a UNIQUE key since migration 013),
+     * nothing new is created and temp_password is null. Callers must
+     * only email a temporary password when created === true.
+     *
+     * @param array  $member Row from `members` (must include 'id' and 'name').
+     * @param string $email  The member's registered personal email --
+     *                       becomes the login identifier.
+     * @return array{created: bool, temp_password: ?string, user_id: int}
+     */
+    public static function activateMemberPortalAccess(array $member, string $email): array
+    {
+        $existing = Database::fetchOne('SELECT id FROM users WHERE member_id = ?', [$member['id']]);
+        if ($existing !== false) {
+            return ['created' => false, 'temp_password' => null, 'user_id' => (int) $existing['id']];
+        }
+
+        $tempPassword = self::generateTemporaryPassword();
+        $passwordHash = self::hashPassword($tempPassword);
+
+        try {
+            $userId = Database::transaction(function () use ($member, $email, $passwordHash) {
+                // Approved district-coded Membership Number
+                // (KSPDOWA-{CODE}-{4-digit serial}), assigned here --
+                // the single existing membership-activation choke
+                // point -- and nowhere else. No-op (returns null) for
+                // a member whose member_no is not the auto-generated
+                // REG-NNNNNN placeholder (see MembershipNumber.php's
+                // own doc comment for the full rationale). Locks the
+                // member and district rows for the rest of this same
+                // transaction, so this and the users-row insert below
+                // commit -- or roll back -- together.
+                MembershipNumber::assignIfPlaceholder((int) $member['id']);
+
+                Database::execute(
+                    'INSERT INTO users (member_id, email, password_hash, status, must_change_password)
+                     VALUES (?, ?, ?, ?, 1)',
+                    [$member['id'], $email, $passwordHash, 'active']
+                );
+                $userId = (int) Database::lastInsertId();
+
+                $role = Database::fetchOne("SELECT id FROM roles WHERE name = 'Regular Member'");
+                if ($role) {
+                    Database::execute(
+                        'INSERT IGNORE INTO user_roles (user_id, role_id) VALUES (?, ?)',
+                        [$userId, (int) $role['id']]
+                    );
+                }
+
+                AuditLogger::log('ACTIVATE', 'users', $userId, null, [
+                    'member_id' => $member['id'],
+                    'email'     => $email,
+                    'source'    => 'member_portal_activation',
+                ]);
+
+                return $userId;
+            });
+        } catch (PDOException $e) {
+            // 23000 = integrity constraint violation -- most likely the
+            // uk_user_member unique key, meaning a concurrent call (e.g.
+            // a duplicate webhook racing the browser callback) already
+            // created this member's account a moment ago. Treat as
+            // "already activated", never as an error, so the caller
+            // never sends a second temporary password.
+            if ($e->getCode() === '23000') {
+                $existing = Database::fetchOne('SELECT id FROM users WHERE member_id = ?', [$member['id']]);
+                if ($existing !== false) {
+                    return ['created' => false, 'temp_password' => null, 'user_id' => (int) $existing['id']];
+                }
+            }
+            throw $e;
+        }
+
+        return ['created' => true, 'temp_password' => $tempPassword, 'user_id' => $userId];
+    }
+
+    /**
      * Generate a cryptographically secure random token (hex-encoded).
      *
      * @param int $bytes Number of random bytes (output length = 2 × bytes)

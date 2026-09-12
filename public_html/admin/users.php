@@ -373,6 +373,7 @@ $pageTitle = 'Users & Roles';
         <a href="/admin/news.php">News</a>
         <a href="/admin/users.php" class="active">Users &amp; Roles</a>
         <a href="/admin/membership-setup.php">Membership Setup</a>
+        <a href="/admin/settings.php">Association Settings</a>
         <a href="/logout.php">Logout</a>
     </nav>
 </header>

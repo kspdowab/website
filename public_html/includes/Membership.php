@@ -30,6 +30,15 @@ declare(strict_types=1);
 class Membership
 {
     /**
+     * Existing Razorpay hosted payment page for the current annual fee
+     * cycle. Single source of truth -- member-login.php and register.php
+     * both link out to this same URL rather than each declaring their own
+     * constant. Approved spec: "Use the existing Razorpay flow initially.
+     * Do not replace it with a new checkout without approval."
+     */
+    public const RAZORPAY_ANNUAL_FEE_URL = 'https://pages.razorpay.com/KSPDOWAFEE2026';
+
+    /**
      * The single active (current) financial year, or null if none is
      * marked active yet.
      */

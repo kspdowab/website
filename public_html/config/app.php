@@ -26,7 +26,9 @@ define('APP_VERSION', '1.0.0');
 
 // Set to your actual domain (with trailing slash) once confirmed.
 // Example: 'https://kspdowa.org/'
-define('BASE_URL', 'https://yourdomain.com/');
+// Local development value below (APP_ENV=development, above) -- update
+// this to the real domain before any production deployment.
+define('BASE_URL', 'http://localhost/');
 
 // ------------------------------------------------------------------
 // Paths (all absolute, no trailing slash)
@@ -85,6 +87,11 @@ define('ALLOWED_DOC_TYPES',   ['application/pdf', 'image/jpeg', 'image/png']);
 // Grievance number format (per spec: KSPDOWA-GRV-YYYY-NNNNN)
 // ------------------------------------------------------------------
 define('GRIEVANCE_PREFIX', 'KSPDOWA-GRV');
+
+// ------------------------------------------------------------------
+// Payment receipt number format (approved: KSPDOWA-RCP-YYYY-NNNNN)
+// ------------------------------------------------------------------
+define('RECEIPT_PREFIX', 'KSPDOWA-RCP');
 
 // ------------------------------------------------------------------
 // PHP error display — controlled by environment

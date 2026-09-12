@@ -96,6 +96,21 @@ class Sanitize
     }
 
     /**
+     * Strictly validate an Indian mobile number for contexts (such as the
+     * self-service member registration form) that must REJECT any prefix,
+     * spacing or formatting rather than normalizing it away -- exactly 10
+     * digits, first digit 6-9, digits only. Unlike mobile() above (which
+     * is intentionally lenient for admin data entry and strips +91/91/0
+     * prefixes), this returns false for anything that is not already a
+     * bare 10-digit number.
+     */
+    public static function mobileStrict(mixed $value): string|false
+    {
+        $clean = trim((string) $value);
+        return preg_match('/^[6-9][0-9]{9}$/', $clean) === 1 ? $clean : false;
+    }
+
+    /**
      * Validate as integer. Returns false if not a valid integer.
      */
     public static function int(mixed $value): int|false

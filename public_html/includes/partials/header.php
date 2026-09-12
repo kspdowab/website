@@ -17,7 +17,18 @@ declare(strict_types=1);
 
 $siteShortName = Settings::get('site_short_name', APP_SHORT_NAME);
 $siteName      = Settings::get('site_name', APP_FULL_NAME);
-$siteTagline   = Settings::get('site_tagline', '');
+$siteTagline   = Settings::get('site_tagline', 'Government-Recognized Service Association');
+$siteAddress   = Settings::get('site_address', '');
+$siteFullName  = $siteName;
+
+// Right-side header emblem -- reuses the same admin-configurable
+// receipt_logo_right setting already used on PDF receipts (no new
+// setting/migration needed). Left logo intentionally left untouched
+// (still the fixed /assets/images/logo.jpg used before this change).
+$receiptLogoRightSetting = Settings::get('receipt_logo_right', '');
+$rightLogoRelative       = $receiptLogoRightSetting !== '' && is_file(PUBLIC_HTML . '/' . ltrim($receiptLogoRightSetting, '/'))
+    ? '/' . ltrim($receiptLogoRightSetting, '/')
+    : '/assets/images/receipt-logo-right.png';
 $pageTitle     = $pageTitle ?? $siteShortName;
 $currentPath   = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 
@@ -78,6 +89,9 @@ function nav_active(string $path, string $current): string
             --red-700: #A23B32;
             --red-100: #FBEAE7;
 
+            /* Association-name red -- matches the same red used on the PDF receipt heading (RGB 200,0,0), kept distinct from the error red above */
+            --brand-name-red: #C80000;
+
             /* Warm surfaces */
             --cream: #FAF7F0;
             --surface: #FFFFFF;
@@ -137,24 +151,35 @@ function nav_active(string $path, string $current): string
         .site-header-inner {
             max-width: var(--content-width);
             margin: 0 auto;
-            padding: 14px 24px;
+            padding: 20px 24px 16px;
             display: flex;
+            flex-direction: column;
             align-items: center;
-            justify-content: space-between;
-            gap: 20px;
-            flex-wrap: wrap;
+            gap: 14px;
+            text-align: center;
         }
-        .brand { display: flex; align-items: center; gap: 14px; text-decoration: none; }
+        .brand { display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 18px; text-decoration: none; width: 100%; }
         .brand-mark {
             display: flex; align-items: center; justify-content: center;
-            width: 52px; height: 52px; border-radius: 50%;
+            width: 96px; height: 96px; border-radius: 50%;
             background: var(--blue-100);
             flex: none;
         }
-        .brand-mark img { height: 38px; width: 38px; object-fit: contain; }
-        .brand-text .brand-short { font-weight: 800; color: var(--ink-900); font-size: 1.08rem; display: block; }
-        .brand-text .brand-tagline { font-size: 0.75rem; color: var(--ink-500); display: block; margin-top: 1px; }
-        nav.main-nav { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
+        .brand-mark img { height: 84px; width: 84px; object-fit: contain; }
+        .brand-text { display: flex; flex-direction: column; align-items: center; text-align: center; min-width: 0; }
+        .brand-text .brand-eyebrow {
+            display: block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em;
+            text-transform: uppercase; color: var(--teal-700); margin-bottom: 4px; white-space: nowrap;
+        }
+        .brand-text .brand-full {
+            display: block; font-weight: 800; color: var(--brand-name-red); font-size: 1.25rem; line-height: 1.3;
+            letter-spacing: -0.005em; white-space: nowrap;
+        }
+        .brand-text .brand-address {
+            display: block; font-size: 0.78rem; color: var(--ink-500); margin-top: 5px; white-space: nowrap;
+        }
+        .brand-text .brand-tagline { font-size: 0.85rem; color: var(--ink-500); display: block; margin-top: 4px; }
+        nav.main-nav { display: flex; align-items: center; justify-content: center; gap: 2px; flex-wrap: wrap; }
         nav.main-nav a {
             text-decoration: none;
             color: var(--ink-700);
@@ -168,6 +193,26 @@ function nav_active(string $path, string $current): string
         nav.main-nav a.active { color: var(--blue-700); border-bottom-color: var(--teal-700); }
         nav.main-nav a.cta { background: var(--blue-700); color: #fff; margin-left: 6px; }
         nav.main-nav a.cta:hover { background: var(--blue-600); color: #fff; }
+        /* Login chooser (Admin Login / Member Login) -- plain <details>,
+           no JS required to open/close; a few lines of JS below only
+           close it on an outside click for polish. */
+        nav.main-nav details.nav-dropdown { position: relative; margin-left: 6px; }
+        nav.main-nav details.nav-dropdown summary {
+            list-style: none; cursor: pointer;
+            background: var(--blue-700); color: #fff;
+            font-size: 0.9rem; font-weight: 600; padding: 9px 14px; border-radius: var(--radius-sm);
+        }
+        nav.main-nav details.nav-dropdown summary::-webkit-details-marker { display: none; }
+        nav.main-nav details.nav-dropdown summary:hover,
+        nav.main-nav details.nav-dropdown[open] summary { background: var(--blue-600); }
+        nav.main-nav details.nav-dropdown .nav-dropdown-menu {
+            position: absolute; right: 0; top: 100%; margin-top: 6px;
+            background: #fff; border: 1px solid var(--border-soft, #eef1f5); border-radius: var(--radius-sm);
+            box-shadow: 0 8px 24px rgba(26,58,107,0.14); min-width: 170px; z-index: 50; padding: 6px;
+        }
+        nav.main-nav details.nav-dropdown .nav-dropdown-menu a {
+            display: block; padding: 9px 10px; border-radius: 6px; font-size: 0.88rem;
+        }
 
         /* ---------------- Layout ---------------- */
         main { max-width: var(--content-width); margin: 0 auto; padding: var(--space-6) 24px 72px; }
@@ -286,9 +331,28 @@ function nav_active(string $path, string $current): string
         .form-hint { font-size: 0.8rem; color: var(--ink-500); margin-top: 4px; }
         .form-narrow { max-width: 420px; margin: 0 auto; }
 
+        /* ---------------- Password field show/hide toggle ---------------- */
+        .password-field-wrap { position: relative; }
+        .password-field-wrap input.has-toggle { padding-right: 42px; }
+        .password-toggle-btn {
+            position: absolute; right: 5px; top: 50%; transform: translateY(-50%);
+            background: none; border: none; padding: 6px; cursor: pointer;
+            color: var(--ink-500); display: flex; align-items: center; justify-content: center;
+            border-radius: var(--radius-sm); line-height: 0;
+        }
+        .password-toggle-btn:hover { color: var(--blue-700); background: var(--blue-100); }
+        .password-toggle-btn:focus-visible { outline: 2px solid var(--blue-600); outline-offset: 2px; }
+
         @media (max-width: 640px) {
-            .site-header-inner { flex-direction: column; align-items: flex-start; }
-            nav.main-nav { width: 100%; }
+            .site-header-inner { padding-left: 10px; padding-right: 10px; }
+            .brand { width: 100%; }
+            .brand-mark { width: 56px; height: 56px; }
+            .brand-mark img { height: 46px; width: 46px; }
+            .brand-text { width: 100%; max-width: 100%; overflow-x: auto; }
+            .brand-text .brand-eyebrow { font-size: 0.6rem; }
+            .brand-text .brand-full { font-size: 0.66rem; }
+            .brand-text .brand-address { font-size: 0.56rem; }
+            nav.main-nav { width: 100%; justify-content: center; }
             main { padding: var(--space-5) 16px 56px; }
             .hero { padding: var(--space-6) var(--space-4); }
             .hero .page-title { font-size: 1.6rem; }
@@ -305,10 +369,16 @@ function nav_active(string $path, string $current): string
                 <img src="/assets/images/logo.jpg" alt="<?= Sanitize::attr($siteShortName) ?> emblem">
             </span>
             <span class="brand-text">
-                <span class="brand-short"><?= Sanitize::html($siteShortName) ?></span>
                 <?php if ($siteTagline !== ''): ?>
-                    <span class="brand-tagline"><?= Sanitize::html($siteTagline) ?></span>
+                    <span class="brand-eyebrow"><?= Sanitize::html($siteTagline) ?></span>
                 <?php endif; ?>
+                <span class="brand-full"><?= Sanitize::html($siteFullName) ?></span>
+                <?php if ($siteAddress !== ''): ?>
+                    <span class="brand-address"><?= Sanitize::html($siteAddress) ?></span>
+                <?php endif; ?>
+            </span>
+            <span class="brand-mark">
+                <img src="<?= Sanitize::attr($rightLogoRelative) ?>" alt="<?= Sanitize::attr($siteShortName) ?> emblem">
             </span>
         </a>
         <nav class="main-nav">
@@ -318,6 +388,7 @@ function nav_active(string $path, string $current): string
             <a href="/recognition.php"<?= nav_active('/recognition.php', $currentPath) ?>>Recognition</a>
             <a href="/news.php"<?= nav_active('/news.php', $currentPath) ?>>News</a>
             <a href="/contact.php"<?= nav_active('/contact.php', $currentPath) ?>>Contact</a>
+            <a href="/donate.php"<?= nav_active('/donate.php', $currentPath) ?>>Donate</a>
             <?php if (Auth::isLoggedIn()): ?>
                 <?php if (Auth::getCurrentMemberId() !== null): ?>
                     <a href="/member/index.php" class="cta">Member Portal</a>
@@ -325,9 +396,27 @@ function nav_active(string $path, string $current): string
                     <a href="/admin/office-bearers.php" class="cta">Admin</a>
                 <?php endif; ?>
             <?php else: ?>
-                <a href="/login.php" class="cta">Login</a>
+                <a href="/register.php"<?= nav_active('/register.php', $currentPath) ?>>Register</a>
+                <details class="nav-dropdown">
+                    <summary>Login</summary>
+                    <div class="nav-dropdown-menu">
+                        <a href="/login.php">Admin Login</a>
+                        <a href="/member-login.php">Member Login</a>
+                    </div>
+                </details>
             <?php endif; ?>
         </nav>
     </div>
 </header>
+<script>
+(function () {
+    // Close any open nav-dropdown <details> when the click lands
+    // outside it -- native <details> only closes via its own summary.
+    document.addEventListener('click', function (e) {
+        document.querySelectorAll('nav.main-nav details.nav-dropdown[open]').forEach(function (d) {
+            if (!d.contains(e.target)) { d.removeAttribute('open'); }
+        });
+    });
+})();
+</script>
 <main>

@@ -192,15 +192,28 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             <div class="error" role="alert"><?= Sanitize::html($error) ?></div>
         <?php endif; ?>
 
+        <?php
+        // Coming from member-login.php with a known-eligible email
+        // (an existing account, or one just activated): pre-fill the
+        // identifier and let the member type only their password,
+        // rather than making them re-enter an email that's already
+        // confirmed correct. A failed POST re-render keeps whatever
+        // the person actually typed (so a mistaken identifier stays
+        // editable), only a GET query value locks the field.
+        $identifierFromQuery = ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET' && ($_GET['identifier'] ?? '') !== '';
+        $identifierValue     = (string) ($_POST['identifier'] ?? $_GET['identifier'] ?? '');
+        ?>
         <form method="post" action="/login.php" autocomplete="off">
             <?= CSRF::htmlField() ?>
 
             <label for="identifier">Email, Mobile, or Username</label>
-            <input type="text" id="identifier" name="identifier" required autofocus
-                   value="<?= Sanitize::attr($_POST['identifier'] ?? '') ?>">
+            <input type="text" id="identifier" name="identifier" required
+                   <?= $identifierFromQuery ? 'readonly' : 'autofocus' ?>
+                   value="<?= Sanitize::attr($identifierValue) ?>">
 
             <label for="password">Password</label>
-            <input type="password" id="password" name="password" required>
+            <input type="password" id="password" name="password" required
+                   <?= $identifierFromQuery ? 'autofocus' : '' ?>>
 
             <button type="submit">Sign In</button>
         </form>

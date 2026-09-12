@@ -98,15 +98,42 @@ require dirname(__DIR__) . '/includes/partials/header.php';
         <?= CSRF::htmlField() ?>
         <div class="form-group">
             <label for="new_password">New Password</label>
-            <input type="password" id="new_password" name="new_password" required minlength="8">
+            <div class="password-field-wrap">
+                <input type="password" id="new_password" name="new_password" required minlength="8" class="has-toggle">
+                <button type="button" class="password-toggle-btn" data-target="new_password" aria-label="Show password" aria-pressed="false">
+                    <svg class="icon-eye" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                    <svg class="icon-eye-off" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a21.8 21.8 0 0 1 5.06-6.06M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 7 11 7a21.7 21.7 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                </button>
+            </div>
         </div>
         <div class="form-group">
             <label for="confirm_password">Confirm New Password</label>
-            <input type="password" id="confirm_password" name="confirm_password" required minlength="8">
+            <div class="password-field-wrap">
+                <input type="password" id="confirm_password" name="confirm_password" required minlength="8" class="has-toggle">
+                <button type="button" class="password-toggle-btn" data-target="confirm_password" aria-label="Show password" aria-pressed="false">
+                    <svg class="icon-eye" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                    <svg class="icon-eye-off" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a21.8 21.8 0 0 1 5.06-6.06M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 7 11 7a21.7 21.7 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                </button>
+            </div>
         </div>
         <p class="form-hint">At least 8 characters, with an uppercase letter, a lowercase letter, and a digit.</p>
         <button type="submit" class="btn" style="width:100%; justify-content:center;">Set Password</button>
     </form>
 </div>
+
+<script>
+document.querySelectorAll('.password-toggle-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+        var input = document.getElementById(btn.getAttribute('data-target'));
+        if (!input) { return; }
+        var showing = input.type === 'text';
+        input.type = showing ? 'password' : 'text';
+        btn.querySelector('.icon-eye').style.display = showing ? '' : 'none';
+        btn.querySelector('.icon-eye-off').style.display = showing ? 'none' : '';
+        btn.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+        btn.setAttribute('aria-pressed', showing ? 'false' : 'true');
+    });
+});
+</script>
 
 <?php require dirname(__DIR__) . '/includes/partials/footer.php'; ?>
