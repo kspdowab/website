@@ -59,6 +59,7 @@ require_once INCLUDES_DIR . '/Auth.php';          // needs Database, Session, Au
 require_once INCLUDES_DIR . '/RBAC.php';          // needs Database, AuditLogger, ErrorHandler
 require_once INCLUDES_DIR . '/CSRF.php';          // needs Session, AuditLogger, ErrorHandler
 require_once INCLUDES_DIR . '/Sanitize.php';      // no runtime deps
+require_once INCLUDES_DIR . '/Settings.php';      // needs Database
 
 // ------------------------------------------------------------------
 // 4. Register centralized error handler
