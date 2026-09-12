@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS `audit_logs` (
 CREATE TABLE IF NOT EXISTS `system_settings` (
   `id`            BIGINT UNSIGNED  NOT NULL AUTO_INCREMENT,
   `setting_key`   VARCHAR(150)     NOT NULL,
-  `setting_value` TEXT             NOT NULL DEFAULT '',
+  `setting_value` TEXT             NOT NULL,
   `setting_type`  ENUM('string','integer','boolean','json') NOT NULL DEFAULT 'string',
   `updated_by`    BIGINT UNSIGNED  NULL,
   `updated_at`    DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP
