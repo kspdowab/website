@@ -280,6 +280,7 @@ $errorMsg   = Session::getFlash('error');
         }
         header h1 { font-size: 1.1rem; margin: 0; }
         header a { color: #cfe0ff; text-decoration: none; font-size: 0.85rem; }
+        header .links a { margin-left: 14px; }
         main { max-width: 960px; margin: 24px auto; padding: 0 16px; }
         .panel {
             background: #fff;
@@ -336,7 +337,11 @@ $errorMsg   = Session::getFlash('error');
 <body>
 <header>
     <h1><?= Sanitize::html(APP_SHORT_NAME) ?> — Office Bearers</h1>
-    <a href="/logout.php">Logout</a>
+    <div class="links">
+        <a href="/admin/news.php">News</a>
+        <a href="/admin/users.php">Users &amp; Roles</a>
+        <a href="/logout.php">Logout</a>
+    </div>
 </header>
 <main>
 
