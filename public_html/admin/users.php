@@ -369,6 +369,7 @@ $pageTitle = 'Users & Roles';
     <h1><?= Sanitize::html(APP_SHORT_NAME) ?> — Users &amp; Roles</h1>
     <nav>
         <a href="/admin/office-bearers.php">Office Bearers</a>
+        <a href="/admin/members.php">Members</a>
         <a href="/admin/news.php">News</a>
         <a href="/admin/users.php" class="active">Users &amp; Roles</a>
         <a href="/logout.php">Logout</a>

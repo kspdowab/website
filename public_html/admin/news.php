@@ -219,6 +219,7 @@ $errorMsg   = Session::getFlash('error');
     <h1><?= Sanitize::html(APP_SHORT_NAME) ?> — News</h1>
     <div class="links">
         <a href="/admin/office-bearers.php">Office Bearers</a>
+        <a href="/admin/members.php">Members</a>
         <a href="/admin/users.php">Users &amp; Roles</a>
         <a href="/logout.php">Logout</a>
     </div>
