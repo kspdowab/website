@@ -250,6 +250,7 @@ $currentYear     = Membership::getCurrentYear(); // single source of truth -- se
         <a href="/admin/news.php">News</a>
         <a href="/admin/users.php">Users &amp; Roles</a>
         <a href="/admin/membership-setup.php" style="text-decoration:underline;">Membership Setup</a>
+        <a href="/admin/donations.php">Donations</a>
         <a href="/admin/settings.php">Association Settings</a>
         <a href="/logout.php">Logout</a>
     </div>
@@ -384,3 +385,4 @@ $currentYear     = Membership::getCurrentYear(); // single source of truth -- se
 </main>
 </body>
 </html>
+

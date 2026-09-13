@@ -351,3 +351,4 @@ $current = Settings::all();
 </main>
 </body>
 </html>
+
