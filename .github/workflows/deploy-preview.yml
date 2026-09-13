@@ -22,10 +22,21 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
+      - name: Clean stale nested folder (first-deploy artefact)
+        env:
+          SSH_USER: u278446798
+          SSH_HOST: kspdowa.in
+          SSH_PORT: 65002
+        run: |
+          ssh -p $SSH_PORT -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST \
+            "rm -rf /home/u278446798/domains/kspdowa.in/public_html/preview/public_html"
+
       - name: Deploy with rsync
         env:
           SSH_USER: u278446798
           SSH_HOST: kspdowa.in
           SSH_PORT: 65002
         run: |
-          rsync -rltvz -e "ssh -p $SSH_PORT -o StrictHostKeyChecking=no" ./public_html/ $SSH_USER@$SSH_HOST:/home/u278446798/domains/kspdowa.in/public_html/preview/
+          rsync -rltvz --delete -e "ssh -p $SSH_PORT -o StrictHostKeyChecking=no" \
+            ./public_html/ $SSH_USER@$SSH_HOST:/home/u278446798/domains/kspdowa.in/public_html/preview/
+
