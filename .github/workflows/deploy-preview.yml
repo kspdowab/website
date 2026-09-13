@@ -28,4 +28,4 @@ jobs:
           SSH_HOST: kspdowa.in
           SSH_PORT: 65002
         run: |
-          rsync -rltvz --exclude '.git' --exclude '.github' -e "ssh -p $SSH_PORT -o StrictHostKeyChecking=no" ./ $SSH_USER@$SSH_HOST:/home/u278446798/domains/kspdowa.in/public_html/preview/
+          rsync -rltvz -e "ssh -p $SSH_PORT -o StrictHostKeyChecking=no" ./public_html/ $SSH_USER@$SSH_HOST:/home/u278446798/domains/kspdowa.in/public_html/preview/
