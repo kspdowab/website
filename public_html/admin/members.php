@@ -785,6 +785,7 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
                                 <option value="">Actions</option>
                                 <option value="view">View Details</option>
                                 <option value="edit">Edit</option>
+                                <option value="make_office_bearer">🏛️ Add as Office Bearer</option>
                                 <?php if (!$m['payment_id'] && $selectedYear && in_array($m['membership_status'], ['active','inactive'])): ?>
                                     <option value="offline_pay">+ Offline Payment</option>
                                 <?php endif; ?>
@@ -984,6 +985,8 @@ function handleAction(sel, memberId, memberName, fyId, feeAmount) {
         window.location.href = '/admin/member-view.php?id=' + memberId;
     } else if (val === 'edit') {
         window.location.href = '/admin/members.php?edit=' + memberId;
+    } else if (val === 'make_office_bearer') {
+        window.location.href = '/admin/office-bearers.php?member_id=' + memberId;
     } else if (val === 'offline_pay') {
         openOfflineModal(memberId, memberName, fyId, feeAmount);
     } else if (val === 'receipt') {

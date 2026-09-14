@@ -324,10 +324,11 @@ require __DIR__ . '/includes/partials/header.php';
         <table class="plain">
             <thead>
                 <tr>
-                    <th style="width:50px;">#</th>
-                    <th>Name</th>
+                    <th style="width:45px; text-align:center;">#</th>
+                    <th style="width:65px; text-align:center;">Photo (ಭಾವಚಿತ್ರ)</th>
+                    <th>Name (ಹೆಸರು)</th>
                     <th>Designation (ಹುದ್ದೆ)</th>
-                    <th>Term</th>
+                    <th>Term (ಅವಧಿ)</th>
                     <?php if ($canViewContact): ?>
                         <th>Contact Number (ಸಂಪರ್ಕ ಸಂಖ್ಯೆ)</th>
                     <?php endif; ?>
@@ -337,34 +338,32 @@ require __DIR__ . '/includes/partials/header.php';
             <tbody id="councilTableBody">
                 <?php foreach ($stateCouncilBearers as $idx => $ob): ?>
                 <tr class="council-row" data-district-id="<?= (int)$ob['district_id'] ?>">
-                    <td style="color:var(--ink-300); font-weight:700;"><?= $idx + 1 ?></td>
-                    <td>
-                        <div style="display:flex; align-items:center; gap:12px;">
-                            <?php if (!empty($ob['photo_path']) && file_exists(PUBLIC_HTML . '/' . ltrim($ob['photo_path'], '/'))): ?>
-                                <img src="/<?= ltrim(Sanitize::attr($ob['photo_path']), '/') ?>" 
-                                     alt="<?= Sanitize::attr($ob['name']) ?>" 
-                                     style="width:40px; height:40px; object-fit:cover; border-radius:50%; border:2px solid #cbd5e1; flex-shrink:0;">
-                            <?php else: ?>
-                                <div style="width:40px; height:40px; border-radius:50%; background:#eff6ff; color:#1e40af; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.85rem; flex-shrink:0; border:1px solid #dbeafe;">
-                                    <?= mb_substr($ob['name'], 0, 1, 'UTF-8') ?>
-                                </div>
-                            <?php endif; ?>
-                            <div>
-                                <strong style="color:var(--ink-900);"><?= Sanitize::html($ob['name']) ?></strong>
-                                <?php if (!empty($ob['official_designation'])): ?>
-                                    <div style="font-size:0.8rem; color:var(--ink-500);"><?= Sanitize::html($ob['official_designation']) ?></div>
-                                <?php endif; ?>
+                    <td style="color:var(--ink-300); font-weight:700; text-align:center; vertical-align:middle;"><?= $idx + 1 ?></td>
+                    <td style="text-align:center; vertical-align:middle;">
+                        <?php if (!empty($ob['photo_path']) && file_exists(PUBLIC_HTML . '/' . ltrim($ob['photo_path'], '/'))): ?>
+                            <img src="/<?= ltrim(Sanitize::attr($ob['photo_path']), '/') ?>" 
+                                 alt="<?= Sanitize::attr($ob['name']) ?>" 
+                                 style="width:44px; height:44px; object-fit:cover; border-radius:50%; border:2px solid #cbd5e1; display:inline-block;">
+                        <?php else: ?>
+                            <div style="width:44px; height:44px; border-radius:50%; background:#eff6ff; color:#1e40af; display:inline-flex; align-items:center; justify-content:center; font-weight:700; font-size:0.85rem; border:1px solid #dbeafe;">
+                                <?= mb_substr($ob['name'], 0, 1, 'UTF-8') ?>
                             </div>
-                        </div>
+                        <?php endif; ?>
                     </td>
-                    <td style="font-family:'Noto Sans Kannada', sans-serif; font-weight:600; color:#1e3a8a;">
+                    <td style="vertical-align:middle;">
+                        <strong style="color:var(--ink-900);"><?= Sanitize::html($ob['name']) ?></strong>
+                        <?php if (!empty($ob['official_designation'])): ?>
+                            <div style="font-size:0.8rem; color:var(--ink-500);"><?= Sanitize::html($ob['official_designation']) ?></div>
+                        <?php endif; ?>
+                    </td>
+                    <td style="font-family:'Noto Sans Kannada', sans-serif; font-weight:600; color:#1e3a8a; vertical-align:middle;">
                         <?= Sanitize::html($ob['association_designation']) ?>
                     </td>
-                    <td style="white-space:nowrap; color:var(--ink-500); font-size:0.86rem;">
+                    <td style="white-space:nowrap; color:var(--ink-500); font-size:0.86rem; vertical-align:middle;">
                         <?= Sanitize::html($ob['term_start'] ?? '—') ?> to <?= Sanitize::html($ob['term_end'] ?? '—') ?>
                     </td>
                     <?php if ($canViewContact): ?>
-                    <td style="white-space:nowrap; font-weight:500;">
+                    <td style="white-space:nowrap; font-weight:500; vertical-align:middle;">
                         <?php if (!empty($ob['contact_number'])): ?>
                             <a href="tel:<?= Sanitize::attr($ob['contact_number']) ?>" style="color:#1d4ed8; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">
                                 📞 <?= Sanitize::html($ob['contact_number']) ?>
@@ -374,13 +373,13 @@ require __DIR__ . '/includes/partials/header.php';
                         <?php endif; ?>
                     </td>
                     <?php endif; ?>
-                    <td>
+                    <td style="vertical-align:middle;">
                         <span class="badge badge-lav"><?= Sanitize::html($ob['district_name']) ?></span>
                     </td>
                 </tr>
                 <?php endforeach; ?>
                 <tr id="councilEmptyRow" style="display:none;">
-                    <td colspan="<?= $canViewContact ? 6 : 5 ?>" style="text-align:center; padding:28px; color:var(--ink-500);">
+                    <td colspan="<?= $canViewContact ? 7 : 6 ?>" style="text-align:center; padding:28px; color:var(--ink-500);">
                         No council members found for the selected district.
                     </td>
                 </tr>
@@ -408,43 +407,42 @@ require __DIR__ . '/includes/partials/header.php';
         <table class="plain">
             <thead>
                 <tr>
-                    <th style="width:50px;">#</th>
-                    <th>Name</th>
+                    <th style="width:45px; text-align:center;">#</th>
+                    <th style="width:65px; text-align:center;">Photo (ಭಾವಚಿತ್ರ)</th>
+                    <th>Name (ಹೆಸರು)</th>
                     <th>Designation (ಹುದ್ದೆ)</th>
                     <?php if ($canViewContact): ?>
                         <th>Contact Number (ಸಂಪರ್ಕ ಸಂಖ್ಯೆ)</th>
                     <?php endif; ?>
-                    <th>Term</th>
+                    <th>Term (ಅವಧಿ)</th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($stateBearers as $idx => $ob): ?>
                 <tr>
-                    <td style="color:var(--ink-300); font-weight:700;"><?= $idx + 1 ?></td>
-                    <td>
-                        <div style="display:flex; align-items:center; gap:12px;">
-                            <?php if (!empty($ob['photo_path']) && file_exists(PUBLIC_HTML . '/' . ltrim($ob['photo_path'], '/'))): ?>
-                                <img src="/<?= ltrim(Sanitize::attr($ob['photo_path']), '/') ?>" 
-                                     alt="<?= Sanitize::attr($ob['name']) ?>" 
-                                     style="width:42px; height:42px; object-fit:cover; border-radius:50%; border:2px solid #cbd5e1; flex-shrink:0;">
-                            <?php else: ?>
-                                <div style="width:42px; height:42px; border-radius:50%; background:#eff6ff; color:#1e40af; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.85rem; flex-shrink:0; border:1px solid #dbeafe;">
-                                    <?= mb_substr($ob['name'], 0, 1, 'UTF-8') ?>
-                                </div>
-                            <?php endif; ?>
-                            <div>
-                                <strong style="color:var(--ink-900); font-size:0.95rem;"><?= Sanitize::html($ob['name']) ?></strong>
-                                <?php if (!empty($ob['official_designation'])): ?>
-                                    <div style="font-size:0.8rem; color:var(--ink-500);"><?= Sanitize::html($ob['official_designation']) ?></div>
-                                <?php endif; ?>
+                    <td style="color:var(--ink-300); font-weight:700; text-align:center; vertical-align:middle;"><?= $idx + 1 ?></td>
+                    <td style="text-align:center; vertical-align:middle;">
+                        <?php if (!empty($ob['photo_path']) && file_exists(PUBLIC_HTML . '/' . ltrim($ob['photo_path'], '/'))): ?>
+                            <img src="/<?= ltrim(Sanitize::attr($ob['photo_path']), '/') ?>" 
+                                 alt="<?= Sanitize::attr($ob['name']) ?>" 
+                                 style="width:44px; height:44px; object-fit:cover; border-radius:50%; border:2px solid #cbd5e1; display:inline-block;">
+                        <?php else: ?>
+                            <div style="width:44px; height:44px; border-radius:50%; background:#eff6ff; color:#1e40af; display:inline-flex; align-items:center; justify-content:center; font-weight:700; font-size:0.85rem; border:1px solid #dbeafe;">
+                                <?= mb_substr($ob['name'], 0, 1, 'UTF-8') ?>
                             </div>
-                        </div>
+                        <?php endif; ?>
                     </td>
-                    <td style="font-family:'Noto Sans Kannada', sans-serif; font-weight:600; color:#1e3a8a;">
+                    <td style="vertical-align:middle;">
+                        <strong style="color:var(--ink-900); font-size:0.95rem;"><?= Sanitize::html($ob['name']) ?></strong>
+                        <?php if (!empty($ob['official_designation'])): ?>
+                            <div style="font-size:0.8rem; color:var(--ink-500);"><?= Sanitize::html($ob['official_designation']) ?></div>
+                        <?php endif; ?>
+                    </td>
+                    <td style="font-family:'Noto Sans Kannada', sans-serif; font-weight:600; color:#1e3a8a; vertical-align:middle;">
                         <?= Sanitize::html($ob['association_designation']) ?>
                     </td>
                     <?php if ($canViewContact): ?>
-                    <td style="white-space:nowrap; font-weight:500;">
+                    <td style="white-space:nowrap; font-weight:500; vertical-align:middle;">
                         <?php if (!empty($ob['contact_number'])): ?>
                             <a href="tel:<?= Sanitize::attr($ob['contact_number']) ?>" style="color:#1d4ed8; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">
                                 📞 <?= Sanitize::html($ob['contact_number']) ?>
@@ -454,7 +452,7 @@ require __DIR__ . '/includes/partials/header.php';
                         <?php endif; ?>
                     </td>
                     <?php endif; ?>
-                    <td style="white-space:nowrap; color:var(--ink-500); font-size:0.86rem;">
+                    <td style="white-space:nowrap; color:var(--ink-500); font-size:0.86rem; vertical-align:middle;">
                         <?= Sanitize::html($ob['term_start'] ?? '—') ?> to <?= Sanitize::html($ob['term_end'] ?? '—') ?>
                     </td>
                 </tr>
@@ -504,10 +502,11 @@ require __DIR__ . '/includes/partials/header.php';
         <table class="plain">
             <thead>
                 <tr>
-                    <th style="width:50px;">#</th>
-                    <th>Name</th>
+                    <th style="width:45px; text-align:center;">#</th>
+                    <th style="width:65px; text-align:center;">Photo (ಭಾವಚಿತ್ರ)</th>
+                    <th>Name (ಹೆಸರು)</th>
                     <th>Designation (ಹುದ್ದೆ)</th>
-                    <th>Term</th>
+                    <th>Term (ಅವಧಿ)</th>
                     <?php if ($canViewContact): ?>
                         <th>Contact Number (ಸಂಪರ್ಕ ಸಂಖ್ಯೆ)</th>
                     <?php endif; ?>
@@ -517,34 +516,32 @@ require __DIR__ . '/includes/partials/header.php';
             <tbody id="districtTableBody">
                 <?php foreach ($districtBearers as $idx => $ob): ?>
                 <tr class="district-row" data-district-id="<?= (int)$ob['district_id'] ?>">
-                    <td style="color:var(--ink-300); font-weight:700;"><?= $idx + 1 ?></td>
-                    <td>
-                        <div style="display:flex; align-items:center; gap:12px;">
-                            <?php if (!empty($ob['photo_path']) && file_exists(PUBLIC_HTML . '/' . ltrim($ob['photo_path'], '/'))): ?>
-                                <img src="/<?= ltrim(Sanitize::attr($ob['photo_path']), '/') ?>" 
-                                     alt="<?= Sanitize::attr($ob['name']) ?>" 
-                                     style="width:40px; height:40px; object-fit:cover; border-radius:50%; border:2px solid #cbd5e1; flex-shrink:0;">
-                            <?php else: ?>
-                                <div style="width:40px; height:40px; border-radius:50%; background:#eff6ff; color:#1e40af; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.85rem; flex-shrink:0; border:1px solid #dbeafe;">
-                                    <?= mb_substr($ob['name'], 0, 1, 'UTF-8') ?>
-                                </div>
-                            <?php endif; ?>
-                            <div>
-                                <strong style="color:var(--ink-900);"><?= Sanitize::html($ob['name']) ?></strong>
-                                <?php if (!empty($ob['official_designation'])): ?>
-                                    <div style="font-size:0.8rem; color:var(--ink-500);"><?= Sanitize::html($ob['official_designation']) ?></div>
-                                <?php endif; ?>
+                    <td style="color:var(--ink-300); font-weight:700; text-align:center; vertical-align:middle;"><?= $idx + 1 ?></td>
+                    <td style="text-align:center; vertical-align:middle;">
+                        <?php if (!empty($ob['photo_path']) && file_exists(PUBLIC_HTML . '/' . ltrim($ob['photo_path'], '/'))): ?>
+                            <img src="/<?= ltrim(Sanitize::attr($ob['photo_path']), '/') ?>" 
+                                 alt="<?= Sanitize::attr($ob['name']) ?>" 
+                                 style="width:44px; height:44px; object-fit:cover; border-radius:50%; border:2px solid #cbd5e1; display:inline-block;">
+                        <?php else: ?>
+                            <div style="width:44px; height:44px; border-radius:50%; background:#eff6ff; color:#1e40af; display:inline-flex; align-items:center; justify-content:center; font-weight:700; font-size:0.85rem; border:1px solid #dbeafe;">
+                                <?= mb_substr($ob['name'], 0, 1, 'UTF-8') ?>
                             </div>
-                        </div>
+                        <?php endif; ?>
                     </td>
-                    <td style="font-family:'Noto Sans Kannada', sans-serif; font-weight:600; color:#1e3a8a;">
+                    <td style="vertical-align:middle;">
+                        <strong style="color:var(--ink-900);"><?= Sanitize::html($ob['name']) ?></strong>
+                        <?php if (!empty($ob['official_designation'])): ?>
+                            <div style="font-size:0.8rem; color:var(--ink-500);"><?= Sanitize::html($ob['official_designation']) ?></div>
+                        <?php endif; ?>
+                    </td>
+                    <td style="font-family:'Noto Sans Kannada', sans-serif; font-weight:600; color:#1e3a8a; vertical-align:middle;">
                         <?= Sanitize::html($ob['association_designation']) ?>
                     </td>
-                    <td style="white-space:nowrap; color:var(--ink-500); font-size:0.86rem;">
+                    <td style="white-space:nowrap; color:var(--ink-500); font-size:0.86rem; vertical-align:middle;">
                         <?= Sanitize::html($ob['term_start'] ?? '—') ?> to <?= Sanitize::html($ob['term_end'] ?? '—') ?>
                     </td>
                     <?php if ($canViewContact): ?>
-                    <td style="white-space:nowrap; font-weight:500;">
+                    <td style="white-space:nowrap; font-weight:500; vertical-align:middle;">
                         <?php if (!empty($ob['contact_number'])): ?>
                             <a href="tel:<?= Sanitize::attr($ob['contact_number']) ?>" style="color:#1d4ed8; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">
                                 📞 <?= Sanitize::html($ob['contact_number']) ?>
@@ -554,13 +551,13 @@ require __DIR__ . '/includes/partials/header.php';
                         <?php endif; ?>
                     </td>
                     <?php endif; ?>
-                    <td>
+                    <td style="vertical-align:middle;">
                         <span class="badge badge-lav"><?= Sanitize::html($ob['district_name']) ?></span>
                     </td>
                 </tr>
                 <?php endforeach; ?>
                 <tr id="districtEmptyRow" style="display:none;">
-                    <td colspan="<?= $canViewContact ? 6 : 5 ?>" style="text-align:center; padding:28px; color:var(--ink-500);">
+                    <td colspan="<?= $canViewContact ? 7 : 6 ?>" style="text-align:center; padding:28px; color:var(--ink-500);">
                         No office bearers found for the selected district.
                     </td>
                 </tr>
@@ -622,10 +619,11 @@ require __DIR__ . '/includes/partials/header.php';
         <table class="plain">
             <thead>
                 <tr>
-                    <th style="width:50px;">#</th>
-                    <th>Name</th>
+                    <th style="width:45px; text-align:center;">#</th>
+                    <th style="width:65px; text-align:center;">Photo (ಭಾವಚಿತ್ರ)</th>
+                    <th>Name (ಹೆಸರು)</th>
                     <th>Designation (ಹುದ್ದೆ)</th>
-                    <th>Term</th>
+                    <th>Term (ಅವಧಿ)</th>
                     <?php if ($canViewContact): ?>
                         <th>Contact Number (ಸಂಪರ್ಕ ಸಂಖ್ಯೆ)</th>
                     <?php endif; ?>
@@ -636,34 +634,32 @@ require __DIR__ . '/includes/partials/header.php';
             <tbody id="talukTableBody">
                 <?php foreach ($talukBearers as $idx => $ob): ?>
                 <tr class="taluk-row" data-district-id="<?= (int)$ob['district_id'] ?>" data-taluk-id="<?= (int)$ob['taluk_id'] ?>">
-                    <td style="color:var(--ink-300); font-weight:700;"><?= $idx + 1 ?></td>
-                    <td>
-                        <div style="display:flex; align-items:center; gap:12px;">
-                            <?php if (!empty($ob['photo_path']) && file_exists(PUBLIC_HTML . '/' . ltrim($ob['photo_path'], '/'))): ?>
-                                <img src="/<?= ltrim(Sanitize::attr($ob['photo_path']), '/') ?>" 
-                                     alt="<?= Sanitize::attr($ob['name']) ?>" 
-                                     style="width:40px; height:40px; object-fit:cover; border-radius:50%; border:2px solid #cbd5e1; flex-shrink:0;">
-                            <?php else: ?>
-                                <div style="width:40px; height:40px; border-radius:50%; background:#eff6ff; color:#1e40af; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.85rem; flex-shrink:0; border:1px solid #dbeafe;">
-                                    <?= mb_substr($ob['name'], 0, 1, 'UTF-8') ?>
-                                </div>
-                            <?php endif; ?>
-                            <div>
-                                <strong style="color:var(--ink-900);"><?= Sanitize::html($ob['name']) ?></strong>
-                                <?php if (!empty($ob['official_designation'])): ?>
-                                    <div style="font-size:0.8rem; color:var(--ink-500);"><?= Sanitize::html($ob['official_designation']) ?></div>
-                                <?php endif; ?>
+                    <td style="color:var(--ink-300); font-weight:700; text-align:center; vertical-align:middle;"><?= $idx + 1 ?></td>
+                    <td style="text-align:center; vertical-align:middle;">
+                        <?php if (!empty($ob['photo_path']) && file_exists(PUBLIC_HTML . '/' . ltrim($ob['photo_path'], '/'))): ?>
+                            <img src="/<?= ltrim(Sanitize::attr($ob['photo_path']), '/') ?>" 
+                                 alt="<?= Sanitize::attr($ob['name']) ?>" 
+                                 style="width:44px; height:44px; object-fit:cover; border-radius:50%; border:2px solid #cbd5e1; display:inline-block;">
+                        <?php else: ?>
+                            <div style="width:44px; height:44px; border-radius:50%; background:#eff6ff; color:#1e40af; display:inline-flex; align-items:center; justify-content:center; font-weight:700; font-size:0.85rem; border:1px solid #dbeafe;">
+                                <?= mb_substr($ob['name'], 0, 1, 'UTF-8') ?>
                             </div>
-                        </div>
+                        <?php endif; ?>
                     </td>
-                    <td style="font-family:'Noto Sans Kannada', sans-serif; font-weight:600; color:#1e3a8a;">
+                    <td style="vertical-align:middle;">
+                        <strong style="color:var(--ink-900);"><?= Sanitize::html($ob['name']) ?></strong>
+                        <?php if (!empty($ob['official_designation'])): ?>
+                            <div style="font-size:0.8rem; color:var(--ink-500);"><?= Sanitize::html($ob['official_designation']) ?></div>
+                        <?php endif; ?>
+                    </td>
+                    <td style="font-family:'Noto Sans Kannada', sans-serif; font-weight:600; color:#1e3a8a; vertical-align:middle;">
                         <?= Sanitize::html($ob['association_designation']) ?>
                     </td>
-                    <td style="white-space:nowrap; color:var(--ink-500); font-size:0.86rem;">
+                    <td style="white-space:nowrap; color:var(--ink-500); font-size:0.86rem; vertical-align:middle;">
                         <?= Sanitize::html($ob['term_start'] ?? '—') ?> to <?= Sanitize::html($ob['term_end'] ?? '—') ?>
                     </td>
                     <?php if ($canViewContact): ?>
-                    <td style="white-space:nowrap; font-weight:500;">
+                    <td style="white-space:nowrap; font-weight:500; vertical-align:middle;">
                         <?php if (!empty($ob['contact_number'])): ?>
                             <a href="tel:<?= Sanitize::attr($ob['contact_number']) ?>" style="color:#1d4ed8; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">
                                 📞 <?= Sanitize::html($ob['contact_number']) ?>
@@ -673,16 +669,16 @@ require __DIR__ . '/includes/partials/header.php';
                         <?php endif; ?>
                     </td>
                     <?php endif; ?>
-                    <td>
+                    <td style="vertical-align:middle;">
                         <span class="badge badge-teal"><?= Sanitize::html($ob['taluk_name']) ?></span>
                     </td>
-                    <td>
+                    <td style="vertical-align:middle;">
                         <span class="badge badge-lav"><?= Sanitize::html($ob['district_name']) ?></span>
                     </td>
                 </tr>
                 <?php endforeach; ?>
                 <tr id="talukEmptyRow" style="display:none;">
-                    <td colspan="<?= $canViewContact ? 7 : 6 ?>" style="text-align:center; padding:28px; color:var(--ink-500);">
+                    <td colspan="<?= $canViewContact ? 8 : 7 ?>" style="text-align:center; padding:28px; color:var(--ink-500);">
                         No office bearers found for the selected taluk.
                     </td>
                 </tr>
