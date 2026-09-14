@@ -5,16 +5,16 @@
  * Gated by RBAC 'members.manage'.
  * Spec: docs/11_MEMBERS_MODULE_SPECIFICATION.md §13
  *
- * Fields: EXACTLY same as member registration form.
+ * Fields: EXACTLY same as member registration form (19 columns).
  * Supports: CSV (.csv) and Excel (.xls / .xlsx via basic xml parse).
  * Duplicate rule: KGID + Financial Year ONLY.
  * Membership Number: auto-generated on activation (never from CSV).
- * Workflow: Upload → Validate → Preview → Confirm → Import
+ * Workflow: Upload → [Remap Locations if Unmatched] → Preview & Confirm → Import
  * ============================================================
  */
 declare(strict_types=1);
 
-// Suppress PHP notices/warnings from appearing in the HTML output
+// Suppress PHP notices/warnings from corrupting HTML/headers
 ini_set('display_errors', '0');
 
 require_once dirname(__DIR__) . '/includes/bootstrap.php';
@@ -27,7 +27,7 @@ RBAC::requirePermission($currentUserId, 'members', 'manage');
 $successMsg = Session::getFlash('success');
 $errorMsg   = Session::getFlash('error');
 
-// Geographic scope
+// Geographic scope for logged-in user
 $associationUnitId = RBAC::getUserAssociationUnit($currentUserId);
 $lockedDistrictId  = null;
 $lockedTalukId     = null;
@@ -39,7 +39,7 @@ if ($associationUnitId) {
     }
 }
 
-// Active year
+// Active and available financial years
 $years      = Database::fetchAll("SELECT id, financial_year, status FROM membership_years ORDER BY start_date DESC");
 $activeYear = Database::fetchOne("SELECT * FROM membership_years WHERE status='active' ORDER BY start_date DESC LIMIT 1");
 $fyId       = $activeYear ? (int)$activeYear['id'] : 0;
@@ -49,40 +49,122 @@ $importFyId = Sanitize::positiveInt($_GET['fy_id'] ?? null) ?: $fyId;
 $importYear = null;
 foreach ($years as $y) { if ((int)$y['id'] === $importFyId) { $importYear = $y; break; } }
 
-// Geography lookups (by name, case-insensitive)
+// ─── Geography lookups — normalized name matching ────────────────────────────
+// Normalization: lowercase, collapse spaces, remove dots/hyphens
+function normGeoName(string $s): string {
+    $s = strtolower(trim($s));
+    $s = preg_replace('/[\-\.]+/', ' ', $s);
+    $s = preg_replace('/\s+/', ' ', $s);
+    return trim($s);
+}
+
 $districts = Database::fetchAll("SELECT id, name FROM districts WHERE status='active' ORDER BY name");
 $taluks    = Database::fetchAll("SELECT id, name, district_id FROM taluks WHERE status='active' ORDER BY name");
 $gps       = Database::fetchAll("SELECT id, name, taluk_id FROM gram_panchayatis WHERE status='active' ORDER BY name");
 
-// Build lookup maps: lowercased name → id
-$dMap = [];
-foreach ($districts as $d) { $dMap[strtolower(trim($d['name']))] = (int)$d['id']; }
-$tMap = [];  // keyed as "district_id:lower_name"
-$tById = []; // taluk_id → ['district_id', 'name']
+// dMap: norm(name) → district_id
+// dNames: id → canonical name
+$dMap   = [];
+$dNames = [];
+foreach ($districts as $d) {
+    $key = normGeoName($d['name']);
+    $dMap[$key] = (int)$d['id'];
+    $dNames[(int)$d['id']] = $d['name'];
+}
+
+// tMap: "district_id:norm(taluk_name)" → taluk_id
+// tById: id → taluk row
+// tByDistrict: district_id → [taluk rows]
+$tMap        = [];
+$tById       = [];
+$tByDistrict = [];
 foreach ($taluks as $t) {
-    $tMap[(int)$t['district_id'] . ':' . strtolower(trim($t['name']))] = (int)$t['id'];
+    $key = (int)$t['district_id'] . ':' . normGeoName($t['name']);
+    $tMap[$key] = (int)$t['id'];
     $tById[(int)$t['id']] = $t;
+    $tByDistrict[(int)$t['district_id']][] = $t;
 }
-$gpMap = []; // taluk_id:lower_name → gp_id
+
+// gpMap: "taluk_id:norm(gp_name)" → gp_id
+// gpsById: id → gp row
+// gpByTaluk: taluk_id → [gp rows]
+$gpMap     = [];
+$gpsById   = [];
+$gpByTaluk = [];
 foreach ($gps as $g) {
-    $gpMap[(int)$g['taluk_id'] . ':' . strtolower(trim($g['name']))] = (int)$g['id'];
+    $key = (int)$g['taluk_id'] . ':' . normGeoName($g['name']);
+    $gpMap[$key] = (int)$g['id'];
+    $gpsById[(int)$g['id']] = $g;
+    $gpByTaluk[(int)$g['taluk_id']][] = $g;
 }
 
-// ─── CSV/Excel row reader helpers ─────────────────────────────────────────────
+// ─── Auto-Suggestion Helpers for Remap Dropdowns ─────────────────────────────
+function suggestDistrict(string $raw, array $districts): ?int {
+    $norm = normGeoName($raw);
+    if ($norm === '') return null;
+    foreach ($districts as $d) {
+        if (normGeoName($d['name']) === $norm) return (int)$d['id'];
+    }
+    foreach ($districts as $d) {
+        $dNorm = normGeoName($d['name']);
+        if (str_contains($norm, $dNorm) || str_contains($dNorm, $norm)) {
+            return (int)$d['id'];
+        }
+    }
+    $bestId = null; $bestScore = 75;
+    foreach ($districts as $d) {
+        similar_text($norm, normGeoName($d['name']), $pct);
+        if ($pct > $bestScore) { $bestScore = $pct; $bestId = (int)$d['id']; }
+    }
+    return $bestId;
+}
 
-/**
- * Parse a CSV file; return array of rows (each row is an indexed array).
- * Skips blank rows and the header row.
- *
- * PHP 8.1+: fgetcsv() requires explicit $escape parameter — use '\\' (backslash).
- * Also strips the UTF-8 BOM (\xEF\xBB\xBF) that Excel writes at the start of
- * the file; without stripping it, the first field of the header row gets a
- * 3-byte prefix and downstream code may miscount columns.
- */
+function suggestTaluk(string $rawTaluk, ?int $districtId, array $taluks, array $tByDistrict): ?int {
+    $norm = normGeoName($rawTaluk);
+    if ($norm === '') return null;
+    $candidates = ($districtId && !empty($tByDistrict[$districtId])) ? $tByDistrict[$districtId] : $taluks;
+    foreach ($candidates as $t) {
+        if (normGeoName($t['name']) === $norm) return (int)$t['id'];
+    }
+    foreach ($candidates as $t) {
+        $tNorm = normGeoName($t['name']);
+        if (str_contains($norm, $tNorm) || str_contains($tNorm, $norm)) {
+            return (int)$t['id'];
+        }
+    }
+    $bestId = null; $bestScore = 70;
+    foreach ($candidates as $t) {
+        similar_text($norm, normGeoName($t['name']), $pct);
+        if ($pct > $bestScore) { $bestScore = $pct; $bestId = (int)$t['id']; }
+    }
+    return $bestId;
+}
+
+function suggestGp(string $rawGp, ?int $talukId, array $gpByTaluk): ?int {
+    if (!$talukId || empty($gpByTaluk[$talukId])) return null;
+    $norm = normGeoName($rawGp);
+    if ($norm === '') return null;
+    foreach ($gpByTaluk[$talukId] as $g) {
+        if (normGeoName($g['name']) === $norm) return (int)$g['id'];
+    }
+    foreach ($gpByTaluk[$talukId] as $g) {
+        $gNorm = normGeoName($g['name']);
+        if (str_contains($norm, $gNorm) || str_contains($gNorm, $norm)) {
+            return (int)$g['id'];
+        }
+    }
+    $bestId = null; $bestScore = 70;
+    foreach ($gpByTaluk[$talukId] as $g) {
+        similar_text($norm, normGeoName($g['name']), $pct);
+        if ($pct > $bestScore) { $bestScore = $pct; $bestId = (int)$g['id']; }
+    }
+    return $bestId;
+}
+
+// ─── CSV / Excel Parsers ─────────────────────────────────────────────────────
 function parseCSVFile(string $filePath): array {
     $rows = [];
     if (($h = fopen($filePath, 'r')) !== false) {
-        // Skip header row; strip BOM from first field if present
         $header = fgetcsv($h, 0, ',', '"', '\\');
         if ($header && isset($header[0])) {
             $header[0] = ltrim($header[0], "\xEF\xBB\xBF");
@@ -96,24 +178,17 @@ function parseCSVFile(string $filePath): array {
     return $rows;
 }
 
-/**
- * Parse a simple xlsx file (Office Open XML) without library.
- * Extracts shared strings + sheet1 data. Returns array of rows.
- * Only handles string/number cell types. Skips header row.
- */
 function parseXlsxFile(string $filePath): array {
     $rows = [];
     $zip = new ZipArchive();
     if ($zip->open($filePath) !== true) { return $rows; }
 
-    // Shared strings
     $sharedStrings = [];
     $ssXml = $zip->getFromName('xl/sharedStrings.xml');
     if ($ssXml !== false) {
         $ss = simplexml_load_string($ssXml);
         if ($ss) {
             foreach ($ss->si as $si) {
-                // collect all <t> text nodes
                 $text = '';
                 foreach ($si->r as $r) { $text .= (string)$r->t; }
                 if ($text === '' && isset($si->t)) { $text = (string)$si->t; }
@@ -148,7 +223,7 @@ function parseXlsxFile(string $filePath): array {
     return $rows;
 }
 
-// ─── Expected CSV columns (0-indexed) ────────────────────────────────────────
+// ─── 19 Expected Columns (0-indexed) ─────────────────────────────────────────
 // 0  Full Name
 // 1  Father / Husband Name
 // 2  Gender (male/female)
@@ -173,9 +248,18 @@ $LOCKED_ORG_TYPES = ['zilla_panchayat', 'taluk_panchayat'];
 
 /**
  * Validate and parse a single import row.
- * Returns: ['valid'=>bool, 'data'=>array, 'errors'=>array]
+ * Returns: ['valid'=>bool, 'data'=>array, 'errors'=>array, 'dupe_status'=>?string]
  */
-function validateImportRow(array $cells, array $dMap, array $tMap, array $tById, array $gpMap, array $LOCKED_ORG_TYPES, int $importFyId, ?int $lockedDistrictId, ?int $lockedTalukId): array {
+function validateImportRow(
+    array $cells,
+    array $dMap, array $dNames,
+    array $tMap, array $tById, array $tByDistrict,
+    array $gpMap, array $gpByTaluk, array $gpsById,
+    array $LOCKED_ORG_TYPES,
+    int $importFyId,
+    ?int $lockedDistrictId, ?int $lockedTalukId,
+    array $remaps = []
+): array {
     $pad  = function(int $i) use ($cells) { return trim((string)($cells[$i] ?? '')); };
     $errors = [];
 
@@ -190,14 +274,39 @@ function validateImportRow(array $cells, array $dMap, array $tMap, array $tById,
     $orgTypeRaw  = strtolower($pad(8));
     $orgName     = $pad(9);
     $orgAddress  = $pad(10);
-    $wDistrictRaw= strtolower($pad(11));
-    $wTalukRaw   = strtolower($pad(12));
-    $wGpRaw      = strtolower($pad(13));
-    $mDistrictRaw= strtolower($pad(14));
-    $mTalukRaw   = strtolower($pad(15));
+    $wDistrictRaw= normGeoName($pad(11));
+    $wTalukRaw   = normGeoName($pad(12));
+    $wGpRaw      = normGeoName($pad(13));
+    $mDistrictRaw= normGeoName($pad(14));
+    $mTalukRaw   = normGeoName($pad(15));
     $payMode     = strtolower($pad(16));
     $offlineRef  = $pad(17);
     $offlineRem  = $pad(18);
+
+    // Remap resolution helpers
+    $resolveDistrict = function(string $norm) use ($dMap, $remaps): ?int {
+        if (!empty($remaps['districts'][$norm])) { return (int)$remaps['districts'][$norm]; }
+        return $dMap[$norm] ?? null;
+    };
+
+    $resolveTaluk = function(?int $districtId, string $norm) use ($tMap, $remaps): ?int {
+        if (!empty($remaps['taluks'][$norm])) { return (int)$remaps['taluks'][$norm]; }
+        if ($districtId !== null && isset($tMap[$districtId . ':' . $norm])) {
+            return $tMap[$districtId . ':' . $norm];
+        }
+        return null;
+    };
+
+    $resolveGp = function(?int $talukId, string $norm) use ($gpMap, $remaps): ?int {
+        if (isset($remaps['gps'][$norm])) {
+            if ($remaps['gps'][$norm] === 'skip') { return null; }
+            return (int)$remaps['gps'][$norm];
+        }
+        if ($talukId !== null && isset($gpMap[$talukId . ':' . $norm])) {
+            return $gpMap[$talukId . ':' . $norm];
+        }
+        return null;
+    };
 
     // Required fields
     if ($fullName === '') { $errors[] = 'Full Name required'; }
@@ -208,10 +317,9 @@ function validateImportRow(array $cells, array $dMap, array $tMap, array $tById,
     if ($kgid === '') { $errors[] = 'KGID required'; }
     if ($gpWorkingRaw === '' || !in_array($gpWorkingRaw, ['yes','no'])) { $errors[] = 'GP Working must be yes or no'; }
 
-    // DOB
+    // Date of Birth
     $dob = null;
     if ($dobRaw !== '') {
-        // Accept YYYY-MM-DD or DD-MM-YYYY
         if (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $dobRaw)) {
             $dob = $dobRaw;
         } elseif (preg_match('/^(\d{2})-(\d{2})-(\d{4})$/', $dobRaw, $m)) {
@@ -222,63 +330,86 @@ function validateImportRow(array $cells, array $dMap, array $tMap, array $tById,
         $errors[] = 'Date of Birth required';
     }
 
-    // Org type
-    $orgTypeKey = str_replace([' ','-'], '_', $orgTypeRaw);
+    $orgTypeKey    = str_replace([' ','-'], '_', $orgTypeRaw);
     $validOrgTypes = array_keys(Registration::ORG_TYPES);
 
-    // Location logic
-    $workingDistrictId   = null;
-    $workingTalukId      = null;
-    $workingGpId         = null;
-    $membershipDistrictId= null;
-    $membershipTalukId   = null;
+    $workingDistrictId    = null;
+    $workingTalukId       = null;
+    $workingGpId          = null;
+    $membershipDistrictId = null;
+    $membershipTalukId    = null;
 
-    $gpWorking = ($gpWorkingRaw === 'yes') ? 'yes' : (($gpWorkingRaw === 'no') ? 'no' : null);
+    $gpWorking  = ($gpWorkingRaw === 'yes') ? 'yes' : (($gpWorkingRaw === 'no') ? 'no' : null);
     $orgIsLocked = in_array($orgTypeKey, $LOCKED_ORG_TYPES);
 
     if ($gpWorking === 'yes' || ($gpWorking === 'no' && $orgIsLocked)) {
         // Working location required
-        $wDid = $dMap[$wDistrictRaw] ?? null;
-        if (!$wDid) { $errors[] = "Working District '$wDistrictRaw' not found"; }
-        else {
+        $wDid = $resolveDistrict($wDistrictRaw);
+        if (!$wDid) {
+            $errors[] = "Working District '" . $pad(11) . "' not found in GP master data.";
+        } else {
             $workingDistrictId = $wDid;
-            $wTid = $tMap[$wDid . ':' . $wTalukRaw] ?? null;
-            if (!$wTid) { $errors[] = "Working Taluk '$wTalukRaw' not found in that district"; }
-            else {
+            $wTid = $resolveTaluk($wDid, $wTalukRaw);
+            if (!$wTid) {
+                $distName = $dNames[$wDid] ?? 'district';
+                $errors[] = "Working Taluk '" . $pad(12) . "' not found under $distName in GP master data.";
+            } else {
                 $workingTalukId = $wTid;
+                // If taluk was remapped, sync parent district to master taluk's district
+                if (isset($tById[$wTid])) {
+                    $workingDistrictId = (int)$tById[$wTid]['district_id'];
+                }
+
+                // Working GP (optional)
                 if ($gpWorking === 'yes' && $wGpRaw !== '') {
-                    $wGpId = $gpMap[$wTid . ':' . $wGpRaw] ?? null;
-                    if (!$wGpId) { $errors[] = "Working GP '$wGpRaw' not found in that taluk"; }
-                    else { $workingGpId = $wGpId; }
+                    if (isset($remaps['gps'][$wGpRaw]) && $remaps['gps'][$wGpRaw] === 'skip') {
+                        $workingGpId = null; // Admin chose to skip
+                    } else {
+                        $wGpId = $resolveGp($workingTalukId, $wGpRaw);
+                        if (!$wGpId) {
+                            $errors[] = "Working GP '" . $pad(13) . "' not found in GP master data.";
+                        } else {
+                            $workingGpId = $wGpId;
+                        }
+                    }
                 }
             }
         }
-        // Membership = Working (auto-locked)
+
+        // For GP=yes or ZP/TP, membership location is auto-locked to working location
         $membershipDistrictId = $workingDistrictId;
         $membershipTalukId    = $workingTalukId;
 
         if ($gpWorking === 'no') {
-            // Validate org fields
             if (!in_array($orgTypeKey, $validOrgTypes)) { $errors[] = "Organization Type '$orgTypeRaw' invalid"; }
             if ($orgName === '') { $errors[] = 'Organization Name required'; }
         }
     } else {
-        // Manual membership location
+        // GP Working = no with other organization
         if ($gpWorking === 'no') {
             if (!in_array($orgTypeKey, $validOrgTypes)) { $errors[] = "Organization Type '$orgTypeRaw' invalid"; }
             if ($orgName === '') { $errors[] = 'Organization Name required'; }
         }
-        $mDid = $dMap[$mDistrictRaw] ?? null;
-        if (!$mDid) { $errors[] = "Membership District '$mDistrictRaw' not found"; }
-        else {
+
+        $mDid = $resolveDistrict($mDistrictRaw);
+        if (!$mDid) {
+            $errors[] = "Membership District '" . $pad(14) . "' not found in GP master data.";
+        } else {
             $membershipDistrictId = $mDid;
-            $mTid = $tMap[$mDid . ':' . $mTalukRaw] ?? null;
-            if (!$mTid) { $errors[] = "Membership Taluk '$mTalukRaw' not found in that district"; }
-            else { $membershipTalukId = $mTid; }
+            $mTid = $resolveTaluk($mDid, $mTalukRaw);
+            if (!$mTid) {
+                $distName = $dNames[$mDid] ?? 'district';
+                $errors[] = "Membership Taluk '" . $pad(15) . "' not found under $distName in GP master data.";
+            } else {
+                $membershipTalukId = $mTid;
+                if (isset($tById[$mTid])) {
+                    $membershipDistrictId = (int)$tById[$mTid]['district_id'];
+                }
+            }
         }
     }
 
-    // RBAC scope check
+    // RBAC geographical scope validation
     if ($lockedDistrictId && $membershipDistrictId && $membershipDistrictId !== $lockedDistrictId) {
         $errors[] = 'Member is outside your authorized district';
     }
@@ -286,58 +417,170 @@ function validateImportRow(array $cells, array $dMap, array $tMap, array $tById,
         $errors[] = 'Member is outside your authorized taluk';
     }
 
-    // KGID + FY duplicate check
+    // Duplicate check: KGID + Financial Year ONLY
     $dupeStatus = null;
     if ($kgid !== '' && empty($errors)) {
         $profileRow = Database::fetchOne("SELECT member_id FROM member_profiles WHERE kgid_no = ?", [$kgid]);
         if ($profileRow) {
             $mId  = $profileRow['member_id'];
             $paid = $importFyId ? Database::fetchOne("SELECT id FROM membership_payments WHERE member_id = ? AND membership_year_id = ? AND status='completed'", [$mId, $importFyId]) : false;
-            if ($paid) { $dupeStatus = 'already_paid'; $errors[] = "KGID $kgid already PAID for this FY"; }
-            else       { $dupeStatus = 'existing_unpaid'; /* existing member, no FY payment — can update */ }
+            if ($paid) {
+                $dupeStatus = 'already_paid';
+                $errors[] = "KGID $kgid already PAID for this FY";
+            } else {
+                $dupeStatus = 'existing_unpaid';
+            }
         }
     }
 
-    // Payment mode
     $payModeClean = in_array($payMode, ['offline','online']) ? $payMode : null;
     $importPaid   = ($payModeClean === 'offline');
 
     return [
-        'valid'  => empty($errors),
-        'errors' => $errors,
+        'valid'       => empty($errors),
+        'errors'      => $errors,
         'dupe_status' => $dupeStatus,
-        'data'   => [
-            'full_name'             => $fullName,
-            'father_spouse_name'    => $fatherName,
-            'gender'                => $gender,
-            'phone'                 => $phone,
-            'email'                 => $email,
-            'kgid_no'               => $kgid,
-            'dob'                   => $dob,
-            'gp_working'            => $gpWorking,
-            'organization_type'     => $orgIsLocked ? $orgTypeKey : ($gpWorking === 'no' ? $orgTypeKey : null),
-            'organization_name'     => $orgName ?: null,
-            'organization_address'  => $orgAddress ?: null,
-            'working_district_id'   => $workingDistrictId,
-            'working_taluk_id'      => $workingTalukId,
-            'working_gp_id'         => $workingGpId,
-            'membership_district_id'=> $membershipDistrictId,
-            'membership_taluk_id'   => $membershipTalukId,
-            'payment_mode'          => $payModeClean,
-            'import_paid'           => $importPaid,
-            'offline_reference'     => $offlineRef ?: null,
-            'offline_remarks'       => $offlineRem ?: null,
+        'data'        => [
+            'full_name'              => $fullName,
+            'father_spouse_name'     => $fatherName,
+            'gender'                 => $gender,
+            'phone'                  => $phone,
+            'email'                  => $email,
+            'kgid_no'                => $kgid,
+            'dob'                    => $dob,
+            'gp_working'             => $gpWorking,
+            'organization_type'      => $orgIsLocked ? $orgTypeKey : ($gpWorking === 'no' ? $orgTypeKey : null),
+            'organization_name'      => $orgName ?: null,
+            'organization_address'   => $orgAddress ?: null,
+            'working_district_id'    => $workingDistrictId,
+            'working_taluk_id'       => $workingTalukId,
+            'working_gp_id'          => $workingGpId,
+            'membership_district_id' => $membershipDistrictId,
+            'membership_taluk_id'    => $membershipTalukId,
+            'payment_mode'           => $payModeClean,
+            'import_paid'            => $importPaid,
+            'offline_reference'      => $offlineRef ?: null,
+            'offline_remarks'        => $offlineRem ?: null,
         ],
     ];
 }
 
-// ─── POST handlers ────────────────────────────────────────────────────────────
+/**
+ * Scan raw rows and find any district, taluk, or GP names that do not match GP master data.
+ */
+function detectUnmatchedLocations(
+    array $rawRows,
+    array $dMap,
+    array $tMap,
+    array $gpMap,
+    array $districts,
+    array $taluks
+): array {
+    $unmatchedDistricts = []; // normKey => ['raw' => string, 'count' => int]
+    $unmatchedTaluks    = []; // normKey => ['raw' => string, 'district_raw' => string, 'district_id' => ?int, 'count' => int]
+    $unmatchedGps       = []; // normKey => ['raw' => string, 'taluk_raw' => string, 'taluk_id' => ?int, 'count' => int]
+
+    foreach ($rawRows as $cells) {
+        $pad = fn(int $i) => trim((string)($cells[$i] ?? ''));
+        $gpWork = strtolower($pad(7));
+        $org    = str_replace([' ','-'], '_', strtolower($pad(8)));
+        $locked = in_array($org, ['zilla_panchayat','taluk_panchayat']);
+
+        $rawD = '';
+        $rawT = '';
+        $rawG = '';
+
+        if ($gpWork === 'yes' || ($gpWork === 'no' && $locked)) {
+            $rawD = $pad(11);
+            $rawT = $pad(12);
+            if ($gpWork === 'yes') {
+                $rawG = $pad(13);
+            }
+        } else {
+            $rawD = $pad(14);
+            $rawT = $pad(15);
+        }
+
+        $normD = normGeoName($rawD);
+        $normT = normGeoName($rawT);
+        $normG = normGeoName($rawG);
+
+        $resolvedDid = null;
+        if ($normD !== '') {
+            if (isset($dMap[$normD])) {
+                $resolvedDid = $dMap[$normD];
+            } else {
+                if (!isset($unmatchedDistricts[$normD])) {
+                    $unmatchedDistricts[$normD] = ['raw' => $rawD, 'count' => 0];
+                }
+                $unmatchedDistricts[$normD]['count']++;
+            }
+        }
+
+        $resolvedTid = null;
+        if ($normT !== '') {
+            if ($resolvedDid !== null && isset($tMap[$resolvedDid . ':' . $normT])) {
+                $resolvedTid = $tMap[$resolvedDid . ':' . $normT];
+            } else {
+                // If not found under this district, check if taluk exists in any district
+                $foundAny = false;
+                foreach ($districts as $d) {
+                    if (isset($tMap[$d['id'] . ':' . $normT])) { $foundAny = true; break; }
+                }
+                if (!$foundAny || $resolvedDid !== null) {
+                    if (!isset($unmatchedTaluks[$normT])) {
+                        $unmatchedTaluks[$normT] = [
+                            'raw'          => $rawT,
+                            'district_raw' => $rawD,
+                            'district_id'  => $resolvedDid,
+                            'count'        => 0,
+                        ];
+                    }
+                    $unmatchedTaluks[$normT]['count']++;
+                }
+            }
+        }
+
+        if ($normG !== '') {
+            if ($resolvedTid !== null && isset($gpMap[$resolvedTid . ':' . $normG])) {
+                // Matched
+            } else {
+                // Check if GP exists anywhere in gpMap
+                $foundGp = false;
+                foreach ($gpMap as $key => $_) {
+                    if (str_ends_with($key, ':' . $normG)) { $foundGp = true; break; }
+                }
+                if (!$foundGp || $resolvedTid !== null) {
+                    if (!isset($unmatchedGps[$normG])) {
+                        $unmatchedGps[$normG] = [
+                            'raw'       => $rawG,
+                            'taluk_raw' => $rawT,
+                            'taluk_id'  => $resolvedTid,
+                            'count'     => 0,
+                        ];
+                    }
+                    $unmatchedGps[$normG]['count']++;
+                }
+            }
+        }
+    }
+
+    return [
+        'districts' => $unmatchedDistricts,
+        'taluks'    => $unmatchedTaluks,
+        'gps'       => $unmatchedGps,
+    ];
+}
+
+// ─── POST Handlers ────────────────────────────────────────────────────────────
 $previewData = null;
+$remapStep   = null;
 
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     CSRF::requireValid();
     $action = $_POST['action'] ?? '';
 
+    // ── Upload Step: parse file, check GP master matching ──────────────────
     if ($action === 'upload') {
         if (!isset($_FILES['import_file']) || $_FILES['import_file']['error'] !== UPLOAD_ERR_OK) {
             Session::flash('error', 'Please select a valid CSV or Excel file.');
@@ -347,7 +590,6 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         $tmpName  = $_FILES['import_file']['tmp_name'];
         $origName = strtolower(basename($_FILES['import_file']['name']));
 
-        // Parse file
         if (str_ends_with($origName, '.xlsx') || str_ends_with($origName, '.xls')) {
             if (!class_exists('ZipArchive')) {
                 Session::flash('error', 'Excel import requires the PHP Zip extension. Please use CSV instead.');
@@ -360,21 +602,109 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         }
 
         if (empty($rawRows)) {
-            Session::flash('error', 'No data rows found in the uploaded file (make sure row 1 is the header).');
+            Session::flash('error', 'No data rows found (make sure row 1 is the header row).');
             header('Location: /admin/members-import.php');
             exit;
         }
 
         $importFyIdPost = Sanitize::positiveInt($_POST['import_fy_id'] ?? null) ?: $fyId;
 
-        $valid   = [];
-        $invalid = [];
+        // Store raw rows and state in session
+        $_SESSION['import_raw_rows'] = $rawRows;
+        $_SESSION['import_fy_id']    = $importFyIdPost;
+        $_SESSION['import_remaps']   = [];
 
+        // Detect any unmatched locations against GP Master Data
+        $unmatched = detectUnmatchedLocations($rawRows, $dMap, $tMap, $gpMap, $districts, $taluks);
+
+        if (!empty($unmatched['districts']) || !empty($unmatched['taluks']) || !empty($unmatched['gps'])) {
+            // Unmatched locations detected — admin must remap before preview
+            $remapStep = [
+                'districts'   => $unmatched['districts'],
+                'taluks'      => $unmatched['taluks'],
+                'gps'         => $unmatched['gps'],
+                'fy_id'       => $importFyIdPost,
+                'total_rows'  => count($rawRows),
+            ];
+            $_SESSION['import_remap_step'] = $remapStep;
+            $_SESSION['import_unmatched']  = $unmatched;
+            unset($_SESSION['members_import_preview']);
+        } else {
+            // All locations matched master data — validate and show preview directly
+            $valid = $invalid = [];
+            foreach ($rawRows as $cells) {
+                $result = validateImportRow(
+                    $cells,
+                    $dMap, $dNames,
+                    $tMap, $tById, $tByDistrict,
+                    $gpMap, $gpByTaluk, $gpsById,
+                    $LOCKED_ORG_TYPES,
+                    $importFyIdPost,
+                    $lockedDistrictId, $lockedTalukId,
+                    []
+                );
+                $result['data']['_import_fy_id'] = $importFyIdPost;
+                if ($result['valid']) {
+                    $valid[] = $result['data'];
+                } else {
+                    $result['data']['_errors'] = $result['errors'];
+                    $invalid[] = $result['data'];
+                }
+            }
+            $previewData = ['valid' => $valid, 'invalid' => $invalid, 'fy_id' => $importFyIdPost];
+            $_SESSION['members_import_preview'] = $previewData;
+            unset($_SESSION['import_remap_step']);
+        }
+    }
+
+    // ── Remap Step: admin maps unrecognized names → master DB entries ────────
+    if ($action === 'remap') {
+        $rawRows        = $_SESSION['import_raw_rows'] ?? [];
+        $importFyIdPost = (int)($_SESSION['import_fy_id'] ?? $fyId);
+
+        if (empty($rawRows)) {
+            Session::flash('error', 'Session expired. Please re-upload the file.');
+            header('Location: /admin/members-import.php');
+            exit;
+        }
+
+        $remaps = [
+            'districts' => [],
+            'taluks'    => [],
+            'gps'       => [],
+        ];
+        foreach (($_POST['remap_district'] ?? []) as $normKey => $did) {
+            $did = (int)$did;
+            if ($did > 0) { $remaps['districts'][$normKey] = $did; }
+        }
+        foreach (($_POST['remap_taluk'] ?? []) as $normKey => $tid) {
+            $tid = (int)$tid;
+            if ($tid > 0) { $remaps['taluks'][$normKey] = $tid; }
+        }
+        foreach (($_POST['remap_gp'] ?? []) as $normKey => $gid) {
+            if ($gid === 'skip' || $gid === '') {
+                $remaps['gps'][$normKey] = 'skip';
+            } else {
+                $gid = (int)$gid;
+                if ($gid > 0) { $remaps['gps'][$normKey] = $gid; }
+            }
+        }
+        $_SESSION['import_remaps'] = $remaps;
+
+        // Re-validate all rows with remaps applied
+        $valid = $invalid = [];
         foreach ($rawRows as $cells) {
-            $result = validateImportRow($cells, $dMap, $tMap, $tById, $gpMap, $LOCKED_ORG_TYPES, $importFyIdPost, $lockedDistrictId, $lockedTalukId);
+            $result = validateImportRow(
+                $cells,
+                $dMap, $dNames,
+                $tMap, $tById, $tByDistrict,
+                $gpMap, $gpByTaluk, $gpsById,
+                $LOCKED_ORG_TYPES,
+                $importFyIdPost,
+                $lockedDistrictId, $lockedTalukId,
+                $remaps
+            );
             $result['data']['_import_fy_id'] = $importFyIdPost;
-            $result['data']['_row_display']  = ($cells[0] ?? '') . ' | ' . ($cells[5] ?? '');
-
             if ($result['valid']) {
                 $valid[] = $result['data'];
             } else {
@@ -382,11 +712,30 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 $invalid[] = $result['data'];
             }
         }
-
         $previewData = ['valid' => $valid, 'invalid' => $invalid, 'fy_id' => $importFyIdPost];
         $_SESSION['members_import_preview'] = $previewData;
+        unset($_SESSION['import_remap_step']);
+        $remapStep = null;
     }
 
+    // ── Re-open Remap from Preview ───────────────────────────────────────────
+    if ($action === 'reopen_remap') {
+        $unmatched = $_SESSION['import_unmatched'] ?? null;
+        if ($unmatched && (!empty($unmatched['districts']) || !empty($unmatched['taluks']) || !empty($unmatched['gps']))) {
+            $remapStep = [
+                'districts'   => $unmatched['districts'],
+                'taluks'      => $unmatched['taluks'],
+                'gps'         => $unmatched['gps'],
+                'fy_id'       => (int)($_SESSION['import_fy_id'] ?? $fyId),
+                'total_rows'  => count($_SESSION['import_raw_rows'] ?? []),
+            ];
+            $_SESSION['import_remap_step'] = $remapStep;
+            $previewData = null;
+            unset($_SESSION['members_import_preview']);
+        }
+    }
+
+    // ── Commit Step: insert new members, member profiles, payments ───────────
     if ($action === 'commit') {
         $data = $_SESSION['members_import_preview'] ?? null;
         if (!$data || empty($data['valid'])) {
@@ -395,29 +744,48 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             exit;
         }
 
-        $count    = 0;
-        $paidCount= 0;
+        $count     = 0;
+        $paidCount = 0;
         $importFyIdCommit = (int)($data['fy_id'] ?? $fyId);
 
         foreach ($data['valid'] as $row) {
-            // Check KGID again — someone may have registered between preview and commit
+            // Check KGID duplicate status
             $existingProfile = Database::fetchOne("SELECT member_id FROM member_profiles WHERE kgid_no = ?", [$row['kgid_no']]);
             $memberId = null;
 
             if ($existingProfile) {
-                // Existing member — do NOT re-insert, just add FY payment if needed
+                // Existing member — do NOT re-insert, add FY payment if applicable
                 $memberId = (int)$existingProfile['member_id'];
             } else {
-                // Insert new member
+                // Insert new member into members table
                 Database::execute(
-                    "INSERT INTO members (name, designation, gp_id, taluk_id, district_id, joining_date, membership_status) VALUES (?, 'PDO', ?, ?, ?, CURDATE(), 'active')",
-                    [$row['full_name'], $row['working_gp_id'], $row['membership_taluk_id'], $row['membership_district_id']]
+                    "INSERT INTO members
+                        (name, designation, gp_id, taluk_id, district_id,
+                         gp_working, organization_type, organization_name, organization_address,
+                         working_district_id, working_taluk_id, working_gp_id,
+                         joining_date, membership_status)
+                     VALUES (?, 'PDO', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE(), 'active')",
+                    [
+                        $row['full_name'],
+                        $row['working_gp_id'],
+                        $row['membership_taluk_id'],
+                        $row['membership_district_id'],
+                        $row['gp_working'],
+                        $row['organization_type'],
+                        $row['organization_name'],
+                        $row['organization_address'],
+                        $row['working_district_id'],
+                        $row['working_taluk_id'],
+                        $row['working_gp_id'],
+                    ]
                 );
                 $memberId = (int)Database::lastInsertId();
 
-                // Profile
+                // Insert into member_profiles table
                 Database::execute(
-                    "INSERT INTO member_profiles (member_id, kgid_no, date_of_birth, gender, father_spouse_name, personal_email, personal_mobile, organization_type, organization_name, organization_address) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                    "INSERT INTO member_profiles
+                        (member_id, kgid_no, date_of_birth, gender, father_spouse_name, personal_email, personal_mobile)
+                     VALUES (?, ?, ?, ?, ?, ?, ?)",
                     [
                         $memberId,
                         $row['kgid_no'],
@@ -426,61 +794,71 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                         $row['father_spouse_name'],
                         $row['email'],
                         $row['phone'],
-                        $row['organization_type'],
-                        $row['organization_name'],
-                        $row['organization_address'],
                     ]
                 );
 
-                // Working location on member row
-                if ($row['working_district_id']) {
-                    Database::execute(
-                        "UPDATE members SET working_district_id=?, working_taluk_id=?, working_gp_id=? WHERE id=?",
-                        [$row['working_district_id'], $row['working_taluk_id'], $row['working_gp_id'], $memberId]
-                    );
-                }
-
-                // Assign placeholder membership number
+                // Assign provisional placeholder member number
                 MembershipNumber::assignIfPlaceholder($memberId);
                 $count++;
             }
 
-            // Offline payment → mark paid
+            // Offline payment processing
             if ($row['import_paid'] && $importFyIdCommit && $memberId) {
                 $already = Database::fetchOne("SELECT id FROM membership_payments WHERE member_id=? AND membership_year_id=? AND status='completed'", [$memberId, $importFyIdCommit]);
                 if (!$already) {
                     $fyRow = Database::fetchOne("SELECT fee_amount FROM membership_years WHERE id=?", [$importFyIdCommit]);
                     $feeAmt = $fyRow ? (float)$fyRow['fee_amount'] : 0;
                     Database::execute(
-                        "INSERT INTO membership_payments (member_id, membership_year_id, amount, status, payment_mode, offline_reference, offline_remarks, paid_at, created_at) VALUES (?,?,?,'completed','offline',?,?,NOW(),NOW())",
+                        "INSERT INTO membership_payments (member_id, membership_year_id, amount, status, payment_mode, offline_reference, offline_remarks, paid_at, created_at) VALUES (?, ?, ?, 'completed', 'offline', ?, ?, NOW(), NOW())",
                         [$memberId, $importFyIdCommit, $feeAmt, $row['offline_reference'], $row['offline_remarks']]
                     );
-                    // On verified payment, generate proper membership number
+                    // On verified payment, generate permanent membership number
                     MembershipNumber::assignIfPlaceholder($memberId);
                     $paidCount++;
                 }
             }
         }
 
-        unset($_SESSION['members_import_preview']);
+        // Clean up session keys
+        unset(
+            $_SESSION['members_import_preview'],
+            $_SESSION['import_raw_rows'],
+            $_SESSION['import_fy_id'],
+            $_SESSION['import_remaps'],
+            $_SESSION['import_unmatched'],
+            $_SESSION['import_remap_step']
+        );
+
         AuditLogger::log('CREATE', 'members', null, null, ['action' => 'bulk_import', 'new_members' => $count, 'paid_activated' => $paidCount]);
         Session::flash('success', "Bulk import complete. New members: $count. Paid/activated: $paidCount.");
         header('Location: /admin/members.php');
         exit;
     }
 
+    // ── Cancel Step ──────────────────────────────────────────────────────────
     if ($action === 'cancel') {
-        unset($_SESSION['members_import_preview']);
+        unset(
+            $_SESSION['members_import_preview'],
+            $_SESSION['import_raw_rows'],
+            $_SESSION['import_fy_id'],
+            $_SESSION['import_remaps'],
+            $_SESSION['import_unmatched'],
+            $_SESSION['import_remap_step']
+        );
         header('Location: /admin/members-import.php');
         exit;
     }
 }
 
-// Restore preview from session if returning to page
+// Restore active step from session if returning to page
 if ($previewData === null && isset($_SESSION['members_import_preview'])) {
     $previewData = $_SESSION['members_import_preview'];
 }
-// Build name-lookup maps for the preview table (avoids N+1 queries)
+if ($remapStep === null && $previewData === null && isset($_SESSION['import_remap_step'])) {
+    $remapStep = $_SESSION['import_remap_step'];
+}
+
+// Lookup maps for preview display (avoids N+1 DB queries)
 $districtNameMap = [];
 foreach (Database::fetchAll("SELECT id, name FROM districts") as $d) {
     $districtNameMap[(int)$d['id']] = $d['name'];
@@ -514,6 +892,7 @@ foreach (Database::fetchAll("SELECT id, name FROM gram_panchayatis") as $g) {
         main { max-width: 1400px; margin: 24px auto; padding: 0 16px; }
         .panel { background: #fff; border-radius: 8px; box-shadow: 0 1px 6px rgba(26,58,107,0.08); padding: 24px; margin-bottom: 24px; }
         .panel h2 { font-size: 1.15rem; color: #1a3a6b; margin: 0 0 16px; border-bottom: 2px solid #eef1f5; padding-bottom: 12px; }
+        .panel h3 { font-size: 1rem; color: #1a3a6b; margin: 20px 0 10px; }
         .msg { padding: 10px 14px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 16px; }
         .msg.success { background: #e7f6ec; color: #1e6b3a; border: 1px solid #b9e5c6; }
         .msg.error   { background: #fdecea; color: #a12622; border: 1px solid #f5c2be; }
@@ -521,13 +900,20 @@ foreach (Database::fetchAll("SELECT id, name FROM gram_panchayatis") as $g) {
         .btn:hover { background: #142c52; }
         select, input[type="text"], input[type="file"] { width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; font-family: inherit; }
         label { display: block; font-size: 0.8rem; font-weight: 600; color: #33415c; margin: 10px 0 4px; }
-        table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-top: 16px; }
-        th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid #eef1f5; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-top: 12px; }
+        th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #eef1f5; }
         th { background: #f8fafc; color: #33415c; font-weight: 600; border-bottom: 2px solid #e2e8f0; }
-        .err-cell { color: #a12622; font-size: 0.78rem; }
+        .err-cell { color: #a12622; font-size: 0.78rem; font-weight: 500; }
         .ok-cell  { color: #1e6b3a; font-size: 0.78rem; }
         code { background: #f0f3f7; padding: 1px 5px; border-radius: 3px; font-size: 0.85em; }
         .drop-zone { border: 2px dashed #cbd5e1; border-radius: 10px; padding: 36px 24px; text-align: center; background: #f8fafc; }
+        .badge { display: inline-block; font-size: 0.75rem; padding: 2px 7px; border-radius: 4px; font-weight: 600; }
+        .badge-suggest { background: #e0f2fe; color: #0369a1; }
+        .workflow-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; padding: 10px 16px; background: #fff; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 0.85rem; }
+        .workflow-step { padding: 4px 10px; border-radius: 4px; font-weight: 600; color: #64748b; }
+        .workflow-step.active { background: #1a3a6b; color: #fff; }
+        .workflow-step.completed { color: #166534; }
+        .workflow-sep { color: #94a3b8; }
     </style>
 </head>
 <body>
@@ -553,17 +939,220 @@ foreach (Database::fetchAll("SELECT id, name FROM gram_panchayatis") as $g) {
     <?php if ($successMsg): ?><div class="msg success"><?= Sanitize::html($successMsg) ?></div><?php endif; ?>
     <?php if ($errorMsg): ?><div class="msg error"><?= Sanitize::html($errorMsg) ?></div><?php endif; ?>
 
-    <?php if ($previewData): ?>
-    <!-- ── Preview / Confirm step ──────────────────────────────────────────── -->
+    <?php if ($remapStep): ?>
+    <!-- ── Step 2: Remap Locations with GP Master Data ───────────────────────── -->
+    <div class="workflow-bar">
+        <span class="workflow-step completed">✓ 1. Upload File</span>
+        <span class="workflow-sep">→</span>
+        <span class="workflow-step active">2. Remap Locations (Action Required)</span>
+        <span class="workflow-sep">→</span>
+        <span class="workflow-step">3. Preview &amp; Confirm</span>
+        <span class="workflow-sep">→</span>
+        <span class="workflow-step">4. Import Complete</span>
+    </div>
+
+    <div class="panel">
+        <h2>Remap Unmatched Locations to GP Master Data</h2>
+
+        <div style="background:#fffbeb; border:1px solid #fde68a; color:#92400e; padding:14px 18px; border-radius:8px; margin-bottom:20px; font-size:0.9rem; line-height:1.6;">
+            <strong>⚠️ Location Matching Notice:</strong><br>
+            The uploaded file contains District, Taluk, or Gram Panchayat names that do not exactly match the official GP Master Data.<br>
+            Please map each unrecognized name below to the correct entry in the database. Your selections will be applied across all <strong><?= (int)($remapStep['total_rows'] ?? 0) ?> rows</strong> in the file before generating the preview.
+        </div>
+
+        <form method="post">
+            <?= CSRF::htmlField() ?>
+            <input type="hidden" name="action" value="remap">
+
+            <?php if (!empty($remapStep['districts'])): ?>
+            <div style="margin-bottom:28px;">
+                <h3>🏛️ Unmatched Districts (<?= count($remapStep['districts']) ?>)</h3>
+                <p style="color:#64748b; font-size:0.82rem; margin:0 0 10px;">Select the master district corresponding to each uploaded name:</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:40px;">#</th>
+                            <th style="width:260px;">Uploaded District Name</th>
+                            <th style="width:110px;">Rows Affected</th>
+                            <th>Map to Master District</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
+                        $dIdx = 1;
+                        $savedDistRemaps = $_SESSION['import_remaps']['districts'] ?? [];
+                        foreach ($remapStep['districts'] as $normKey => $info):
+                            $suggestedDid = $savedDistRemaps[$normKey] ?? suggestDistrict($info['raw'], $districts);
+                        ?>
+                        <tr>
+                            <td><?= $dIdx++ ?></td>
+                            <td>
+                                <strong><?= Sanitize::html($info['raw']) ?></strong>
+                                <?php if ($suggestedDid): ?>
+                                    <span class="badge badge-suggest" style="margin-left:6px;">Suggested: <?= Sanitize::html($dNames[$suggestedDid] ?? '') ?></span>
+                                <?php endif; ?>
+                            </td>
+                            <td><?= (int)$info['count'] ?></td>
+                            <td>
+                                <select name="remap_district[<?= Sanitize::html($normKey) ?>]" required style="max-width:340px;">
+                                    <option value="">-- Select Master District --</option>
+                                    <?php foreach ($districts as $d): ?>
+                                        <option value="<?= $d['id'] ?>" <?= ($suggestedDid === (int)$d['id']) ? 'selected' : '' ?>>
+                                            <?= Sanitize::html($d['name']) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php endif; ?>
+
+            <?php if (!empty($remapStep['taluks'])): ?>
+            <div style="margin-bottom:28px;">
+                <h3>📍 Unmatched Taluks (<?= count($remapStep['taluks']) ?>)</h3>
+                <p style="color:#64748b; font-size:0.82rem; margin:0 0 10px;">Select the master taluk corresponding to each uploaded name:</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:40px;">#</th>
+                            <th style="width:240px;">Uploaded Taluk Name</th>
+                            <th style="width:180px;">District in File</th>
+                            <th style="width:110px;">Rows Affected</th>
+                            <th>Map to Master Taluk</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
+                        $tIdx = 1;
+                        $savedTalukRemaps = $_SESSION['import_remaps']['taluks'] ?? [];
+                        foreach ($remapStep['taluks'] as $normKey => $info):
+                            $suggestedTid = $savedTalukRemaps[$normKey] ?? suggestTaluk($info['raw'], $info['district_id'], $taluks, $tByDistrict);
+                        ?>
+                        <tr>
+                            <td><?= $tIdx++ ?></td>
+                            <td>
+                                <strong><?= Sanitize::html($info['raw']) ?></strong>
+                                <?php if ($suggestedTid && isset($tById[$suggestedTid])): ?>
+                                    <span class="badge badge-suggest" style="margin-left:6px;">Suggested: <?= Sanitize::html($tById[$suggestedTid]['name']) ?></span>
+                                <?php endif; ?>
+                            </td>
+                            <td><?= Sanitize::html($info['district_raw'] ?: '—') ?></td>
+                            <td><?= (int)$info['count'] ?></td>
+                            <td>
+                                <select name="remap_taluk[<?= Sanitize::html($normKey) ?>]" required style="max-width:380px;">
+                                    <option value="">-- Select Master Taluk --</option>
+                                    <?php foreach ($districts as $d): ?>
+                                        <?php if (!empty($tByDistrict[$d['id']])): ?>
+                                            <optgroup label="<?= Sanitize::html($d['name']) ?>">
+                                                <?php foreach ($tByDistrict[$d['id']] as $t): ?>
+                                                    <option value="<?= $t['id'] ?>" <?= ($suggestedTid === (int)$t['id']) ? 'selected' : '' ?>>
+                                                        <?= Sanitize::html($t['name']) ?> (<?= Sanitize::html($d['name']) ?>)
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </optgroup>
+                                        <?php endif; ?>
+                                    <?php endforeach; ?>
+                                </select>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php endif; ?>
+
+            <?php if (!empty($remapStep['gps'])): ?>
+            <div style="margin-bottom:28px;">
+                <h3>🏡 Unmatched Gram Panchayats (<?= count($remapStep['gps']) ?>)</h3>
+                <p style="color:#64748b; font-size:0.82rem; margin:0 0 10px;">
+                    Working GP is optional. You can map to the master GP, or choose <em>"-- Leave Blank / Skip GP --"</em> if unknown.
+                </p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:40px;">#</th>
+                            <th style="width:240px;">Uploaded GP Name</th>
+                            <th style="width:180px;">Taluk in File</th>
+                            <th style="width:110px;">Rows Affected</th>
+                            <th>Map to Master Gram Panchayat</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
+                        $gIdx = 1;
+                        $savedGpRemaps = $_SESSION['import_remaps']['gps'] ?? [];
+                        foreach ($remapStep['gps'] as $normKey => $info):
+                            $suggestedGid = $savedGpRemaps[$normKey] ?? suggestGp($info['raw'], $info['taluk_id'], $gpByTaluk);
+                        ?>
+                        <tr>
+                            <td><?= $gIdx++ ?></td>
+                            <td>
+                                <strong><?= Sanitize::html($info['raw']) ?></strong>
+                                <?php if ($suggestedGid && isset($gpsById[$suggestedGid])): ?>
+                                    <span class="badge badge-suggest" style="margin-left:6px;">Suggested: <?= Sanitize::html($gpsById[$suggestedGid]['name']) ?></span>
+                                <?php endif; ?>
+                            </td>
+                            <td><?= Sanitize::html($info['taluk_raw'] ?: '—') ?></td>
+                            <td><?= (int)$info['count'] ?></td>
+                            <td>
+                                <select name="remap_gp[<?= Sanitize::html($normKey) ?>]" style="max-width:380px;">
+                                    <option value="skip">-- Leave Blank / Skip GP (Optional) --</option>
+                                    <?php if (!empty($info['taluk_id']) && !empty($gpByTaluk[$info['taluk_id']])): ?>
+                                        <optgroup label="GPs under <?= Sanitize::html($tById[$info['taluk_id']]['name'] ?? 'Taluk') ?>">
+                                            <?php foreach ($gpByTaluk[$info['taluk_id']] as $g): ?>
+                                                <option value="<?= $g['id'] ?>" <?= ($suggestedGid === (int)$g['id']) ? 'selected' : '' ?>>
+                                                    <?= Sanitize::html($g['name']) ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </optgroup>
+                                    <?php endif; ?>
+                                </select>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php endif; ?>
+
+            <div style="margin-top:24px; display:flex; gap:12px; align-items:center;">
+                <button type="submit" class="btn" style="background:#1e6b3a; padding:10px 24px;">
+                    Apply Location Mappings &amp; Preview Import →
+                </button>
+                <button type="submit" name="action" value="cancel" class="btn" style="background:#64748b;" formnovalidate>
+                    Cancel Import
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <?php elseif ($previewData): ?>
+    <!-- ── Step 3: Preview & Confirm Import ──────────────────────────────────── -->
+    <div class="workflow-bar">
+        <span class="workflow-step completed">✓ 1. Upload File</span>
+        <span class="workflow-sep">→</span>
+        <span class="workflow-step completed">✓ 2. Locations Matched</span>
+        <span class="workflow-sep">→</span>
+        <span class="workflow-step active">3. Preview &amp; Confirm Import</span>
+        <span class="workflow-sep">→</span>
+        <span class="workflow-step">4. Import Complete</span>
+    </div>
+
     <div class="panel">
         <h2>Preview &amp; Confirm Import</h2>
-        <p>
-            <strong><?= count($previewData['valid']) ?></strong> valid rows ready to import.
-            <strong style="color:#a12622;"><?= count($previewData['invalid']) ?></strong> rows have errors and will be skipped.
+        <p style="font-size:0.95rem; line-height:1.6;">
+            <strong><?= count($previewData['valid']) ?></strong> valid row(s) ready to import.<br>
+            <?php if (!empty($previewData['invalid'])): ?>
+                <strong style="color:#a12622;"><?= count($previewData['invalid']) ?></strong> row(s) contain validation errors and will be skipped.
+            <?php endif; ?>
         </p>
 
         <?php if (!empty($previewData['valid'])): ?>
-        <h3 style="color:#1e6b3a;">✓ Valid Rows (<?= count($previewData['valid']) ?>)</h3>
+        <h3 style="color:#1e6b3a;">✓ Valid Rows Ready for Import (<?= count($previewData['valid']) ?>)</h3>
+        <p style="color:#64748b; font-size:0.8rem; margin:0 0 10px;">All 19 registration columns verified against master data:</p>
         <div style="overflow-x:auto;">
         <table style="font-size:0.78rem; white-space:nowrap;">
             <thead><tr>
@@ -592,25 +1181,25 @@ foreach (Database::fetchAll("SELECT id, name FROM gram_panchayatis") as $g) {
             <?php $i=1; foreach ($previewData['valid'] as $row): ?>
             <tr>
                 <td><?= $i++ ?></td>
-                <td><?= Sanitize::html($row['full_name']) ?></td>
-                <td><?= Sanitize::html($row['father_spouse_name'] ?? '—') ?></td>
-                <td><?= Sanitize::html(ucfirst($row['gender'] ?? '—')) ?></td>
+                <td><strong><?= Sanitize::html($row['full_name']) ?></strong></td>
+                <td><?= Sanitize::html($row['father_spouse_name'] ?: '—') ?></td>
+                <td><?= Sanitize::html(ucfirst($row['gender'] ?: '—')) ?></td>
                 <td><?= Sanitize::html($row['phone']) ?></td>
                 <td><?= Sanitize::html($row['email']) ?></td>
-                <td><?= Sanitize::html($row['kgid_no']) ?></td>
-                <td><?= Sanitize::html($row['dob'] ?? '—') ?></td>
-                <td><?= Sanitize::html($row['gp_working'] ?? '—') ?></td>
-                <td><?= Sanitize::html($row['organization_type'] ?? '—') ?></td>
-                <td><?= Sanitize::html($row['organization_name'] ?? '—') ?></td>
-                <td><?= Sanitize::html($row['organization_address'] ?? '—') ?></td>
+                <td><code><?= Sanitize::html($row['kgid_no']) ?></code></td>
+                <td><?= Sanitize::html($row['dob'] ?: '—') ?></td>
+                <td><?= Sanitize::html(strtoupper($row['gp_working'] ?: '—')) ?></td>
+                <td><?= Sanitize::html($row['organization_type'] ?: '—') ?></td>
+                <td><?= Sanitize::html($row['organization_name'] ?: '—') ?></td>
+                <td><?= Sanitize::html($row['organization_address'] ?: '—') ?></td>
                 <td><?= Sanitize::html($districtNameMap[$row['working_district_id'] ?? 0] ?? '—') ?></td>
                 <td><?= Sanitize::html($talukNameMap[$row['working_taluk_id'] ?? 0] ?? '—') ?></td>
                 <td><?= Sanitize::html($gpNameMap[$row['working_gp_id'] ?? 0] ?? '—') ?></td>
                 <td><?= Sanitize::html($districtNameMap[$row['membership_district_id'] ?? 0] ?? '—') ?></td>
                 <td><?= Sanitize::html($talukNameMap[$row['membership_taluk_id'] ?? 0] ?? '—') ?></td>
                 <td><?= Sanitize::html($row['payment_mode'] ? ucfirst($row['payment_mode']) : '—') ?></td>
-                <td><?= Sanitize::html($row['offline_reference'] ?? '—') ?></td>
-                <td><?= Sanitize::html($row['offline_remarks'] ?? '—') ?></td>
+                <td><?= Sanitize::html($row['offline_reference'] ?: '—') ?></td>
+                <td><?= Sanitize::html($row['offline_remarks'] ?: '—') ?></td>
             </tr>
             <?php endforeach; ?>
             </tbody>
@@ -619,16 +1208,16 @@ foreach (Database::fetchAll("SELECT id, name FROM gram_panchayatis") as $g) {
         <?php endif; ?>
 
         <?php if (!empty($previewData['invalid'])): ?>
-        <h3 style="color:#a12622; margin-top:24px;">✗ Invalid Rows (<?= count($previewData['invalid']) ?>) — will be skipped</h3>
+        <h3 style="color:#a12622; margin-top:28px;">✗ Invalid Rows (<?= count($previewData['invalid']) ?>) — will be skipped</h3>
         <div style="overflow-x:auto;">
         <table>
-            <thead><tr><th>#</th><th>Full Name</th><th>KGID</th><th>Errors</th></tr></thead>
+            <thead><tr><th style="width:40px;">#</th><th style="width:200px;">Full Name</th><th style="width:140px;">KGID</th><th>Validation Error(s)</th></tr></thead>
             <tbody>
             <?php $i=1; foreach ($previewData['invalid'] as $row): ?>
             <tr>
                 <td><?= $i++ ?></td>
-                <td><?= Sanitize::html($row['full_name'] ?? '') ?></td>
-                <td><?= Sanitize::html($row['kgid_no'] ?? '') ?></td>
+                <td><?= Sanitize::html($row['full_name'] ?: '(blank)') ?></td>
+                <td><code><?= Sanitize::html($row['kgid_no'] ?: '—') ?></code></td>
                 <td class="err-cell"><?= Sanitize::html(implode('; ', $row['_errors'] ?? [])) ?></td>
             </tr>
             <?php endforeach; ?>
@@ -637,23 +1226,43 @@ foreach (Database::fetchAll("SELECT id, name FROM gram_panchayatis") as $g) {
         </div>
         <?php endif; ?>
 
-        <form method="post" style="margin-top:24px;">
+        <form method="post" style="margin-top:24px; display:flex; gap:12px; align-items:center;">
             <?= CSRF::htmlField() ?>
-            <button type="submit" name="action" value="commit" class="btn" style="background:#1e6b3a;" <?= empty($previewData['valid']) ? 'disabled' : '' ?>>Confirm &amp; Import <?= count($previewData['valid']) ?> Rows</button>
-            <button type="submit" name="action" value="cancel" class="btn" style="background:#64748b; margin-left:12px;">Cancel</button>
+            <button type="submit" name="action" value="commit" class="btn" style="background:#1e6b3a; padding:10px 24px;" <?= empty($previewData['valid']) ? 'disabled' : '' ?>>
+                Confirm &amp; Import <?= count($previewData['valid']) ?> Rows
+            </button>
+            <?php if (!empty($_SESSION['import_unmatched'])): ?>
+                <button type="submit" name="action" value="reopen_remap" class="btn" style="background:#2C6B67;">
+                    ← Adjust Location Mappings
+                </button>
+            <?php endif; ?>
+            <button type="submit" name="action" value="cancel" class="btn" style="background:#64748b;">
+                Cancel
+            </button>
         </form>
     </div>
 
     <?php else: ?>
-    <!-- ── Upload step ─────────────────────────────────────────────────────── -->
+    <!-- ── Step 1: Upload File ──────────────────────────────────────────────── -->
+    <div class="workflow-bar">
+        <span class="workflow-step active">1. Upload File</span>
+        <span class="workflow-sep">→</span>
+        <span class="workflow-step">2. Remap Locations (if needed)</span>
+        <span class="workflow-sep">→</span>
+        <span class="workflow-step">3. Preview &amp; Confirm</span>
+        <span class="workflow-sep">→</span>
+        <span class="workflow-step">4. Import Complete</span>
+    </div>
+
     <div class="panel">
         <h2>Bulk Import Members</h2>
 
         <p style="color:#556; line-height:1.7;">
-            Upload a <strong>CSV</strong> or <strong>Excel (.xlsx)</strong> file with member data.<br>
+            Upload a <strong>CSV</strong> or <strong>Excel (.xlsx)</strong> file containing member registration data.<br>
             <strong>Row 1 must be the header row</strong> (column names — ignored during import).<br>
-            Duplicate rule: <code>KGID + Financial Year</code> only. Name, phone and email are not duplicate keys.<br>
-            Membership Number is auto-generated — do NOT include it in the file.<br>
+            Location names (District, Taluk, Gram Panchayat) are automatically matched against official <strong>GP Master Data</strong>. If any name is unrecognized, you can easily <strong>remap it before import</strong>.<br>
+            Duplicate rule: <code>KGID + Financial Year</code> only. Name, phone, and email are not duplicate keys.<br>
+            Membership Number is auto-generated on verified activation — do NOT include it in the file.<br>
             <a href="/admin/members-import-template.php" class="btn" style="background:#2C6B67; padding:6px 14px; font-size:0.85rem; display:inline-block; margin-top:8px;">⬇ Download Template (CSV)</a>
         </p>
 
@@ -665,21 +1274,23 @@ foreach (Database::fetchAll("SELECT id, name FROM gram_panchayatis") as $g) {
                 <label>Financial Year for this import</label>
                 <select name="import_fy_id" style="max-width:280px;">
                     <?php foreach ($years as $y): ?>
-                        <option value="<?= $y['id'] ?>" <?= $y['id'] == $importFyId ? 'selected' : '' ?>><?= Sanitize::html($y['financial_year']) ?></option>
+                        <option value="<?= $y['id'] ?>" <?= $y['id'] == $importFyId ? 'selected' : '' ?>>
+                            <?= Sanitize::html($y['financial_year']) ?>
+                        </option>
                     <?php endforeach; ?>
                 </select>
             </div>
 
             <div class="drop-zone">
-                <p style="color:#556; margin:0 0 14px;">Select a CSV or Excel (.xlsx) file</p>
+                <p style="color:#556; margin:0 0 14px; font-size:0.95rem;">Select a CSV or Excel (.xlsx) file</p>
                 <input type="file" name="import_file" accept=".csv,.xlsx,.xls" required style="border:none; background:transparent; width:auto;">
                 <br><br>
-                <button type="submit" class="btn">Analyse &amp; Preview File</button>
+                <button type="submit" class="btn" style="padding:10px 24px;">Analyse &amp; Check File</button>
             </div>
         </form>
 
         <div style="margin-top:28px; padding:16px; background:#f0f5ff; border-radius:8px; font-size:0.85rem; color:#33415c;">
-            <strong>Expected Columns (in this order):</strong><br><br>
+            <strong>Expected Columns (in this exact order):</strong><br><br>
             <table style="font-size:0.82rem; width:auto;">
                 <thead><tr><th style="padding:4px 12px 4px 0;">#</th><th style="padding:4px 12px 4px 0;">Column</th><th style="padding:4px 0;">Required?</th></tr></thead>
                 <tbody>

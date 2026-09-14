@@ -59,8 +59,8 @@ $exampleRows = [
         '',                      // Organization Name (not needed)
         '',                      // Organization Address
         'BAGALKOTE',             // Working District
-        'BAGALKOTE',             // Working Taluk
-        '',                      // Working GP (optional)
+        'BADAMI',                // Working Taluk
+        'KAKANUR',               // Working GP (optional)
         '',                      // Membership District (auto from working)
         '',                      // Membership Taluk (auto from working)
         '',                      // Payment Mode (unpaid)
@@ -81,7 +81,7 @@ $exampleRows = [
         'Zilla Panchayat Office Bagalkote', // Organization Name
         'Main Road Bagalkote',   // Organization Address
         'BAGALKOTE',             // Working District (required for ZP)
-        'BAGALKOTE',             // Working Taluk (required for ZP)
+        'BAGALKOT',              // Working Taluk (required for ZP)
         '',                      // Working GP
         '',                      // Membership District (auto from working)
         '',                      // Membership Taluk (auto from working)
@@ -105,7 +105,7 @@ $exampleRows = [
         '',                      // Working District (not needed for non-ZP/TP)
         '',                      // Working Taluk
         '',                      // Working GP
-        'BENGALURU URBAN',       // Membership District
+        'BENGALURU',             // Membership District
         'BENGALURU NORTH',       // Membership Taluk
         '',                      // Payment Mode
         '',                      // Offline Reference
