@@ -214,6 +214,61 @@ function nav_active(string $path, string $current): string
             display: block; padding: 9px 10px; border-radius: 6px; font-size: 0.88rem;
         }
 
+        /* Office Bearers navigation dropdown */
+        nav.main-nav .nav-item-dropdown {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+        }
+        nav.main-nav .nav-item-dropdown > a {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        nav.main-nav .nav-item-dropdown .nav-caret {
+            font-size: 0.72rem;
+            opacity: 0.75;
+            transition: transform 0.2s ease;
+            pointer-events: none;
+        }
+        nav.main-nav .nav-item-dropdown:hover .nav-caret,
+        nav.main-nav .nav-item-dropdown.is-open .nav-caret {
+            transform: rotate(180deg);
+        }
+        nav.main-nav .nav-item-dropdown .nav-sub-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            margin-top: 4px;
+            background: #ffffff;
+            border: 1px solid var(--border-soft, #eef1f5);
+            border-radius: var(--radius-sm, 6px);
+            box-shadow: 0 10px 25px rgba(26,58,107,0.12);
+            min-width: 200px;
+            z-index: 50;
+            padding: 6px;
+        }
+        nav.main-nav .nav-item-dropdown:hover .nav-sub-menu,
+        nav.main-nav .nav-item-dropdown:focus-within .nav-sub-menu,
+        nav.main-nav .nav-item-dropdown.is-open .nav-sub-menu {
+            display: block;
+        }
+        nav.main-nav .nav-item-dropdown .nav-sub-menu a {
+            display: block;
+            padding: 9px 12px;
+            border-radius: 6px;
+            font-size: 0.88rem;
+            color: var(--ink-700);
+            border-bottom: none;
+            white-space: nowrap;
+            text-align: left;
+        }
+        nav.main-nav .nav-item-dropdown .nav-sub-menu a:hover {
+            background: var(--blue-100);
+            color: var(--blue-700);
+        }
+
         /* ---------------- Layout ---------------- */
         main { max-width: var(--content-width); margin: 0 auto; padding: var(--space-6) 24px 72px; }
         .eyebrow {
@@ -384,7 +439,16 @@ function nav_active(string $path, string $current): string
         <nav class="main-nav">
             <a href="/"<?= nav_active('/', $currentPath) ?>>Home</a>
             <a href="/about.php"<?= nav_active('/about.php', $currentPath) ?>>About</a>
-            <a href="/office-bearers.php"<?= nav_active('/office-bearers.php', $currentPath) ?>>Office Bearers</a>
+            <div class="nav-item-dropdown">
+                <a href="/office-bearers.php"<?= nav_active('/office-bearers.php', $currentPath) ?>>
+                    Office Bearers <span class="nav-caret">▾</span>
+                </a>
+                <div class="nav-sub-menu">
+                    <a href="/office-bearers.php#state">🏛️ State (ರಾಜ್ಯ)</a>
+                    <a href="/office-bearers.php#district">📍 District (ಜಿಲ್ಲೆ)</a>
+                    <a href="/office-bearers.php#taluk">🏙️ Taluk (ತಾಲ್ಲೂಕು)</a>
+                </div>
+            </div>
             <a href="/recognition.php"<?= nav_active('/recognition.php', $currentPath) ?>>Recognition</a>
             <a href="/news.php"<?= nav_active('/news.php', $currentPath) ?>>News</a>
             <a href="/contact.php"<?= nav_active('/contact.php', $currentPath) ?>>Contact</a>
@@ -410,11 +474,26 @@ function nav_active(string $path, string $current): string
 </header>
 <script>
 (function () {
-    // Close any open nav-dropdown <details> when the click lands
-    // outside it -- native <details> only closes via its own summary.
+    // Close any open nav-dropdown <details> or .nav-item-dropdown when click lands outside
     document.addEventListener('click', function (e) {
         document.querySelectorAll('nav.main-nav details.nav-dropdown[open]').forEach(function (d) {
             if (!d.contains(e.target)) { d.removeAttribute('open'); }
+        });
+        document.querySelectorAll('nav.main-nav .nav-item-dropdown.is-open').forEach(function (d) {
+            if (!d.contains(e.target)) { d.classList.remove('is-open'); }
+        });
+    });
+
+    // Touch device support for Office Bearers dropdown
+    document.querySelectorAll('nav.main-nav .nav-item-dropdown > a').forEach(function (trigger) {
+        trigger.addEventListener('click', function (e) {
+            var parent = this.parentElement;
+            if (window.innerWidth <= 768 || ('ontouchstart' in window)) {
+                if (!parent.classList.contains('is-open')) {
+                    e.preventDefault();
+                    parent.classList.add('is-open');
+                }
+            }
         });
     });
 })();
