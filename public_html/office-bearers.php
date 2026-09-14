@@ -12,6 +12,9 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/includes/bootstrap.php';
 
+// Check if viewer is an authenticated member/user
+$canViewContact = Auth::isLoggedIn();
+
 // 1. Fetch State Council Members
 // District-wise elected: President, State Council Member, and Treasurer
 $stateCouncilBearers = Database::fetchAll(
@@ -267,6 +270,18 @@ require __DIR__ . '/includes/partials/header.php';
     <a href="#taluk" class="jump-btn">🏙️ Taluk Committee (ತಾಲ್ಲೂಕು ಸಂಘ)</a>
 </div>
 
+<?php if (!$canViewContact): ?>
+    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-left:4px solid #2563eb; border-radius:6px; padding:10px 16px; margin-bottom:20px; font-size:0.84rem; color:var(--ink-700); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+            <span>🔒</span>
+            <span><strong>ಗಮನಿಸಿ / Member Notice:</strong> ಪದಾಧಿಕಾರಿಗಳ ಸಂಪರ್ಕ ಸಂಖ್ಯೆಗಳನ್ನು (Contact Numbers) ವೀಕ್ಷಿಸಲು ಸಂಘದ ಸದಸ್ಯರು ಲಾಗಿನ್ ಆಗುವುದು ಕಡ್ಡಾಯವಾಗಿದೆ.</span>
+        </div>
+        <a href="/login.php" class="btn btn-sm btn-outline" style="white-space:nowrap; padding:4px 12px; font-size:0.8rem; font-weight:600; text-decoration:none;">
+            🔑 Member Login (ಲಾಗಿನ್)
+        </a>
+    </div>
+<?php endif; ?>
+
 <!-- =======================================================================
      1) STATE COUNCIL SECTION (ರಾಜ್ಯ ಪರಿಷತ್ತು)
      ======================================================================= -->
@@ -313,6 +328,9 @@ require __DIR__ . '/includes/partials/header.php';
                     <th>Name</th>
                     <th>Designation (ಹುದ್ದೆ)</th>
                     <th>Term</th>
+                    <?php if ($canViewContact): ?>
+                        <th>Contact Number (ಸಂಪರ್ಕ ಸಂಖ್ಯೆ)</th>
+                    <?php endif; ?>
                     <th>Representative District (ಪ್ರತಿನಿಧಿಸುವ ಜಿಲ್ಲೆ)</th>
                 </tr>
             </thead>
@@ -345,13 +363,24 @@ require __DIR__ . '/includes/partials/header.php';
                     <td style="white-space:nowrap; color:var(--ink-500); font-size:0.86rem;">
                         <?= Sanitize::html($ob['term_start'] ?? '—') ?> to <?= Sanitize::html($ob['term_end'] ?? '—') ?>
                     </td>
+                    <?php if ($canViewContact): ?>
+                    <td style="white-space:nowrap; font-weight:500;">
+                        <?php if (!empty($ob['contact_number'])): ?>
+                            <a href="tel:<?= Sanitize::attr($ob['contact_number']) ?>" style="color:#1d4ed8; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">
+                                📞 <?= Sanitize::html($ob['contact_number']) ?>
+                            </a>
+                        <?php else: ?>
+                            <span style="color:var(--ink-400);">—</span>
+                        <?php endif; ?>
+                    </td>
+                    <?php endif; ?>
                     <td>
                         <span class="badge badge-lav"><?= Sanitize::html($ob['district_name']) ?></span>
                     </td>
                 </tr>
                 <?php endforeach; ?>
                 <tr id="councilEmptyRow" style="display:none;">
-                    <td colspan="5" style="text-align:center; padding:28px; color:var(--ink-500);">
+                    <td colspan="<?= $canViewContact ? 6 : 5 ?>" style="text-align:center; padding:28px; color:var(--ink-500);">
                         No council members found for the selected district.
                     </td>
                 </tr>
@@ -382,6 +411,9 @@ require __DIR__ . '/includes/partials/header.php';
                     <th style="width:50px;">#</th>
                     <th>Name</th>
                     <th>Designation (ಹುದ್ದೆ)</th>
+                    <?php if ($canViewContact): ?>
+                        <th>Contact Number (ಸಂಪರ್ಕ ಸಂಖ್ಯೆ)</th>
+                    <?php endif; ?>
                     <th>Term</th>
                 </tr>
             </thead>
@@ -411,6 +443,17 @@ require __DIR__ . '/includes/partials/header.php';
                     <td style="font-family:'Noto Sans Kannada', sans-serif; font-weight:600; color:#1e3a8a;">
                         <?= Sanitize::html($ob['association_designation']) ?>
                     </td>
+                    <?php if ($canViewContact): ?>
+                    <td style="white-space:nowrap; font-weight:500;">
+                        <?php if (!empty($ob['contact_number'])): ?>
+                            <a href="tel:<?= Sanitize::attr($ob['contact_number']) ?>" style="color:#1d4ed8; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">
+                                📞 <?= Sanitize::html($ob['contact_number']) ?>
+                            </a>
+                        <?php else: ?>
+                            <span style="color:var(--ink-400);">—</span>
+                        <?php endif; ?>
+                    </td>
+                    <?php endif; ?>
                     <td style="white-space:nowrap; color:var(--ink-500); font-size:0.86rem;">
                         <?= Sanitize::html($ob['term_start'] ?? '—') ?> to <?= Sanitize::html($ob['term_end'] ?? '—') ?>
                     </td>
@@ -465,6 +508,9 @@ require __DIR__ . '/includes/partials/header.php';
                     <th>Name</th>
                     <th>Designation (ಹುದ್ದೆ)</th>
                     <th>Term</th>
+                    <?php if ($canViewContact): ?>
+                        <th>Contact Number (ಸಂಪರ್ಕ ಸಂಖ್ಯೆ)</th>
+                    <?php endif; ?>
                     <th>Representative District (ಪ್ರತಿನಿಧಿಸುವ ಜಿಲ್ಲೆ)</th>
                 </tr>
             </thead>
@@ -497,13 +543,24 @@ require __DIR__ . '/includes/partials/header.php';
                     <td style="white-space:nowrap; color:var(--ink-500); font-size:0.86rem;">
                         <?= Sanitize::html($ob['term_start'] ?? '—') ?> to <?= Sanitize::html($ob['term_end'] ?? '—') ?>
                     </td>
+                    <?php if ($canViewContact): ?>
+                    <td style="white-space:nowrap; font-weight:500;">
+                        <?php if (!empty($ob['contact_number'])): ?>
+                            <a href="tel:<?= Sanitize::attr($ob['contact_number']) ?>" style="color:#1d4ed8; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">
+                                📞 <?= Sanitize::html($ob['contact_number']) ?>
+                            </a>
+                        <?php else: ?>
+                            <span style="color:var(--ink-400);">—</span>
+                        <?php endif; ?>
+                    </td>
+                    <?php endif; ?>
                     <td>
                         <span class="badge badge-lav"><?= Sanitize::html($ob['district_name']) ?></span>
                     </td>
                 </tr>
                 <?php endforeach; ?>
                 <tr id="districtEmptyRow" style="display:none;">
-                    <td colspan="5" style="text-align:center; padding:28px; color:var(--ink-500);">
+                    <td colspan="<?= $canViewContact ? 6 : 5 ?>" style="text-align:center; padding:28px; color:var(--ink-500);">
                         No office bearers found for the selected district.
                     </td>
                 </tr>
@@ -569,6 +626,9 @@ require __DIR__ . '/includes/partials/header.php';
                     <th>Name</th>
                     <th>Designation (ಹುದ್ದೆ)</th>
                     <th>Term</th>
+                    <?php if ($canViewContact): ?>
+                        <th>Contact Number (ಸಂಪರ್ಕ ಸಂಖ್ಯೆ)</th>
+                    <?php endif; ?>
                     <th>Taluk (ತಾಲ್ಲೂಕು)</th>
                     <th>Representative District (ಪ್ರತಿನಿಧಿಸುವ ಜಿಲ್ಲೆ)</th>
                 </tr>
@@ -602,6 +662,17 @@ require __DIR__ . '/includes/partials/header.php';
                     <td style="white-space:nowrap; color:var(--ink-500); font-size:0.86rem;">
                         <?= Sanitize::html($ob['term_start'] ?? '—') ?> to <?= Sanitize::html($ob['term_end'] ?? '—') ?>
                     </td>
+                    <?php if ($canViewContact): ?>
+                    <td style="white-space:nowrap; font-weight:500;">
+                        <?php if (!empty($ob['contact_number'])): ?>
+                            <a href="tel:<?= Sanitize::attr($ob['contact_number']) ?>" style="color:#1d4ed8; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">
+                                📞 <?= Sanitize::html($ob['contact_number']) ?>
+                            </a>
+                        <?php else: ?>
+                            <span style="color:var(--ink-400);">—</span>
+                        <?php endif; ?>
+                    </td>
+                    <?php endif; ?>
                     <td>
                         <span class="badge badge-teal"><?= Sanitize::html($ob['taluk_name']) ?></span>
                     </td>
@@ -611,7 +682,7 @@ require __DIR__ . '/includes/partials/header.php';
                 </tr>
                 <?php endforeach; ?>
                 <tr id="talukEmptyRow" style="display:none;">
-                    <td colspan="6" style="text-align:center; padding:28px; color:var(--ink-500);">
+                    <td colspan="<?= $canViewContact ? 7 : 6 ?>" style="text-align:center; padding:28px; color:var(--ink-500);">
                         No office bearers found for the selected taluk.
                     </td>
                 </tr>

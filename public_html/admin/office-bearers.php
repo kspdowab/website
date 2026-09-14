@@ -166,6 +166,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         $associationDesignation = trim(Sanitize::string($_POST['association_designation'] ?? '', 200));
         $officialDesignationRaw = trim(Sanitize::string($_POST['official_designation'] ?? '', 200));
         $officialDesignation    = $officialDesignationRaw !== '' ? $officialDesignationRaw : null;
+        $contactNumberRaw       = trim(Sanitize::string($_POST['contact_number'] ?? '', 20));
+        $contactNumber          = $contactNumberRaw !== '' ? $contactNumberRaw : null;
         $level                  = Sanitize::inArray($_POST['level'] ?? '', ['state', 'district', 'taluk']);
         $sortOrder              = Sanitize::nonNegativeInt($_POST['sort_order'] ?? 0);
         $termStartRaw           = trim((string) ($_POST['term_start'] ?? ''));
@@ -182,8 +184,13 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         if ($level === false) {
             $errors[] = 'Please choose a valid level (State / District / Taluk).';
         }
-        if ($sortOrder === false) {
-            $sortOrder = 0;
+        if ($sortOrder === false || $sortOrder === 0) {
+            if ($action === 'create') {
+                $maxSort = (int) Database::fetchScalar("SELECT COALESCE(MAX(sort_order), 0) FROM office_bearers");
+                $sortOrder = $maxSort + 1;
+            } else {
+                $sortOrder = 0;
+            }
         }
 
         $termStart = null;
@@ -299,27 +306,36 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             exit;
         }
 
+        if ($action === 'update') {
+            $contactVal  = array_key_exists('contact_number', $_POST) ? $contactNumber : ($existing['contact_number'] ?? null);
+            $officialVal = array_key_exists('official_designation', $_POST) ? $officialDesignation : ($existing['official_designation'] ?? null);
+        } else {
+            $contactVal  = $contactNumber;
+            $officialVal = $officialDesignation;
+        }
+
         $data = [
             'name'                     => $name,
             'association_designation'  => $associationDesignation,
-            'official_designation'     => $officialDesignation,
+            'official_designation'     => $officialVal,
+            'contact_number'           => $contactVal,
             'district_id'              => $districtId,
             'taluk_id'                 => $talukId,
             'photo_path'               => $photoPath,
             'term_start'               => $termStart,
             'term_end'                 => $termEnd,
-            'sort_order'               => $sortOrder,
+            'sort_order'               => ($action === 'update' && ($sortOrder === 0 || $sortOrder === false)) ? (int) ($existing['sort_order'] ?? 0) : $sortOrder,
         ];
 
         if ($action === 'create') {
             Database::execute(
                 'INSERT INTO office_bearers
-                    (name, association_designation, official_designation, district_id, taluk_id,
+                    (name, association_designation, official_designation, contact_number, district_id, taluk_id,
                      photo_path, term_start, term_end, status, sort_order, created_at, updated_at)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())',
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())',
                 [
                     $data['name'], $data['association_designation'], $data['official_designation'],
-                    $data['district_id'], $data['taluk_id'], $data['photo_path'],
+                    $data['contact_number'], $data['district_id'], $data['taluk_id'], $data['photo_path'],
                     $data['term_start'], $data['term_end'], 'active', $data['sort_order'],
                 ]
             );
@@ -329,13 +345,13 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         } else {
             Database::execute(
                 'UPDATE office_bearers SET
-                    name = ?, association_designation = ?, official_designation = ?,
+                    name = ?, association_designation = ?, official_designation = ?, contact_number = ?,
                     district_id = ?, taluk_id = ?, photo_path = ?, term_start = ?, term_end = ?,
                     sort_order = ?, updated_at = NOW()
                  WHERE id = ?',
                 [
                     $data['name'], $data['association_designation'], $data['official_designation'],
-                    $data['district_id'], $data['taluk_id'], $data['photo_path'],
+                    $data['contact_number'], $data['district_id'], $data['taluk_id'], $data['photo_path'],
                     $data['term_start'], $data['term_end'], $data['sort_order'], $id,
                 ]
             );
@@ -392,7 +408,11 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         $designationKn = trim(Sanitize::string($_POST['designation_kn'] ?? '', 255));
         $designationEn = trim(Sanitize::string($_POST['designation_en'] ?? '', 255));
         $seats         = max(1, Sanitize::positiveInt($_POST['seats'] ?? 1) ?: 1);
-        $sortOrder     = Sanitize::nonNegativeInt($_POST['sort_order'] ?? 0);
+        $sortOrder     = isset($_POST['sort_order']) && $_POST['sort_order'] !== ''
+            ? Sanitize::nonNegativeInt($_POST['sort_order'])
+            : (isset($_POST['desig_sort_order']) && $_POST['desig_sort_order'] !== ''
+                ? Sanitize::nonNegativeInt($_POST['desig_sort_order'])
+                : null);
         $status        = Sanitize::inArray($_POST['status'] ?? 'active', ['active', 'inactive']) ?: 'active';
 
         if (!$id || !$level || $designationKn === '') {
@@ -400,6 +420,9 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         } else {
             $existing = Database::fetchOne('SELECT * FROM office_bearer_designations WHERE id = ?', [$id]);
             if ($existing) {
+                if ($sortOrder === null || $sortOrder === false || $sortOrder === 0) {
+                    $sortOrder = (int) ($existing['sort_order'] ?? 0);
+                }
                 Database::execute(
                     "UPDATE office_bearer_designations 
                      SET level = ?, designation_kn = ?, designation_en = ?, seats = ?, sort_order = ?, status = ?, updated_at = NOW()
@@ -928,163 +951,168 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
      TAB 1: OFFICE BEARERS MANAGEMENT
      ═══════════════════════════════════════════════════════════════════════════ -->
     <div class="panel">
-        <div class="panel-header-flex">
-            <h2><?= $editRow ? 'Edit Office Bearer' : 'Add New Office Bearer' ?></h2>
-            <a href="/admin/office-bearers.php?view=designations" class="btn btn-outline btn-sm">
-                🏷️ Manage Designations (ಹುದ್ದೆಗಳ ನಿರ್ವಹಣೆ)
-            </a>
+        <div class="panel-header-flex" style="cursor: pointer; margin-bottom: <?= $editRow ? '18px' : '0' ?>;" onclick="toggleAddObForm()">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span id="addObToggleIcon" style="font-size: 0.9rem; color: #1a3a6b; display: inline-block;"><?= $editRow ? '▼' : '▶' ?></span>
+                <h2 style="margin: 0;"><?= $editRow ? 'Edit Office Bearer' : 'Add New Office Bearer' ?></h2>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <button type="button" class="btn btn-sm btn-outline" onclick="event.stopPropagation(); toggleAddObForm();">
+                    <span id="addObBtnText"><?= $editRow ? '✕ Close Form' : '+ Expand Form' ?></span>
+                </button>
+                <a href="/admin/office-bearers.php?view=designations" class="btn btn-outline btn-sm" onclick="event.stopPropagation();">
+                    🏷️ Manage Designations (ಹುದ್ದೆಗಳ ನಿರ್ವಹಣೆ)
+                </a>
+            </div>
         </div>
 
-        <?php if (empty($districts)): ?>
-            <div class="msg error" role="alert">
-                No districts are set up yet, so only State-level entries can be added right now.
-                District/Taluk geography master data needs to be imported first.
-            </div>
-        <?php endif; ?>
-
-        <form method="post" action="/admin/office-bearers.php" enctype="multipart/form-data">
-            <?= CSRF::htmlField() ?>
-            <input type="hidden" name="action" value="<?= $editRow ? 'update' : 'create' ?>">
-            <?php if ($editRow): ?>
-                <input type="hidden" name="id" value="<?= (int) $editRow['id'] ?>">
+        <div id="addObFormBody" style="<?= $editRow ? 'display: block;' : 'display: none;' ?>">
+            <?php if (empty($districts)): ?>
+                <div class="msg error" role="alert" style="margin-top: 15px;">
+                    No districts are set up yet, so only State-level entries can be added right now.
+                    District/Taluk geography master data needs to be imported first.
+                </div>
             <?php endif; ?>
 
-            <?php $currentLevel = $editRow ? ob_level($editRow) : 'state'; ?>
-            <label>Committee Level *</label>
-            <div class="level-choice">
-                <label>
-                    <input type="radio" name="level" value="state" onchange="obUpdateLevel()"
-                        <?= $currentLevel === 'state' ? 'checked' : '' ?>> 
-                    <strong>State Committee</strong> (ಉಪನಿಯಮ 46)
-                </label>
-                <label>
-                    <input type="radio" name="level" value="district" onchange="obUpdateLevel()"
-                        <?= empty($districts) ? 'disabled' : '' ?>
-                        <?= $currentLevel === 'district' ? 'checked' : '' ?>> 
-                    <strong>District Committee</strong> (ಉಪನಿಯಮ 26)
-                </label>
-                <label>
-                    <input type="radio" name="level" value="taluk" onchange="obUpdateLevel()"
-                        <?= empty($taluks) ? 'disabled' : '' ?>
-                        <?= $currentLevel === 'taluk' ? 'checked' : '' ?>> 
-                    <strong>Taluk Committee</strong>
-                </label>
-            </div>
+            <form method="post" action="/admin/office-bearers.php" enctype="multipart/form-data" style="margin-top: 15px;">
+                <?= CSRF::htmlField() ?>
+                <input type="hidden" name="action" value="<?= $editRow ? 'update' : 'create' ?>">
+                <?php if ($editRow): ?>
+                    <input type="hidden" name="id" value="<?= (int) $editRow['id'] ?>">
+                <?php endif; ?>
 
-            <div id="ob-district-field" style="display:none;">
-                <label for="district_id">District *</label>
-                <select name="district_id" id="district_id">
-                    <option value="">— Select district —</option>
-                    <?php foreach ($districts as $d): ?>
-                        <option value="<?= (int) $d['id'] ?>"
-                            <?= ($editRow && (int) ($editRow['district_id'] ?? 0) === (int) $d['id']) ? 'selected' : '' ?>>
-                            <?= Sanitize::html($d['name']) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-
-            <div id="ob-taluk-field" style="display:none;">
-                <label for="taluk_id">Taluk *</label>
-                <select name="taluk_id" id="taluk_id">
-                    <option value="">— Select taluk —</option>
-                    <?php foreach ($taluks as $t): ?>
-                        <option value="<?= (int) $t['id'] ?>"
-                            <?= ($editRow && (int) ($editRow['taluk_id'] ?? 0) === (int) $t['id']) ? 'selected' : '' ?>>
-                            <?= Sanitize::html($t['name']) ?> — <?= Sanitize::html($t['district_name']) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-
-            <div class="row">
-                <div>
-                    <label for="name">Name (Kannada) *</label>
-                    <input type="text" id="name" name="name" required lang="kn"
-                           value="<?= Sanitize::attr($editRow['name'] ?? '') ?>"
-                           placeholder="ಉದಾ: ದಿಲೀಪ್ ಕುಮಾರ ಬಿ.ಎಂ">
-                    <div class="hint">ಪದಾಧಿಕಾರಿಯ ಪೂರ್ಣ ಹೆಸರು ಕನ್ನಡದಲ್ಲಿ ನಮೂದಿಸಿ</div>
-                </div>
-                <div>
-                    <label for="designation_select">
-                        Association Designation (Kannada) *
+                <?php $currentLevel = $editRow ? ob_level($editRow) : 'state'; ?>
+                <label>Committee Level *</label>
+                <div class="level-choice">
+                    <label>
+                        <input type="radio" name="level" value="state" onchange="obUpdateLevel()"
+                            <?= $currentLevel === 'state' ? 'checked' : '' ?>> 
+                        <strong>State Committee</strong> (ರಾಜ್ಯ ಸಂಘ)
                     </label>
-                    <!-- Quick Dropdown for Official Kannada Designations -->
-                    <select id="designation_select" onchange="onDesignationSelect(this)" style="margin-bottom:6px;">
-                        <option value="">— Select Designation (Kannada) —</option>
-                    </select>
+                    <label>
+                        <input type="radio" name="level" value="district" onchange="obUpdateLevel()"
+                            <?= empty($districts) ? 'disabled' : '' ?>
+                            <?= $currentLevel === 'district' ? 'checked' : '' ?>> 
+                        <strong>District Committee</strong> (ಜಿಲ್ಲಾ ಸಂಘ)
+                    </label>
+                    <label>
+                        <input type="radio" name="level" value="taluk" onchange="obUpdateLevel()"
+                            <?= empty($taluks) ? 'disabled' : '' ?>
+                            <?= $currentLevel === 'taluk' ? 'checked' : '' ?>> 
+                        <strong>Taluk Committee</strong> (ತಾಲ್ಲೂಕು ಸಂಘ)
+                    </label>
+                </div>
 
-                    <!-- Text input with Kannada designation (synced or custom) -->
-                    <input type="text" id="association_designation" name="association_designation" required lang="kn"
-                           value="<?= Sanitize::attr($editRow['association_designation'] ?? '') ?>"
-                           placeholder="ಉದಾ: ಅಧ್ಯಕ್ಷರ ಸ್ಥಾನ">
-                    <div class="hint" id="designation-hint">
-                        ಆಯ್ಕೆ ಮಾಡಿ ಅಥವಾ ಕಸ್ಟಮ್ ಹುದ್ದೆ ನಮೂದಿಸಿ | 
-                        <a href="/admin/office-bearers.php?view=designations" target="_blank" style="color:#2563eb; text-decoration:underline;">
-                            ಹುದ್ದೆಗಳ ಪಟ್ಟಿ ನಿರ್ವಹಿಸಿ
-                        </a>
+                <div id="ob-district-field" style="display:none;">
+                    <label for="district_id">District *</label>
+                    <select name="district_id" id="district_id">
+                        <option value="">— Select district —</option>
+                        <?php foreach ($districts as $d): ?>
+                            <option value="<?= (int) $d['id'] ?>"
+                                <?= ($editRow && (int) ($editRow['district_id'] ?? 0) === (int) $d['id']) ? 'selected' : '' ?>>
+                                <?= Sanitize::html($d['name']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div id="ob-taluk-field" style="display:none;">
+                    <label for="taluk_id">Taluk *</label>
+                    <select name="taluk_id" id="taluk_id">
+                        <option value="">— Select taluk —</option>
+                        <?php foreach ($taluks as $t): ?>
+                            <option value="<?= (int) $t['id'] ?>"
+                                <?= ($editRow && (int) ($editRow['taluk_id'] ?? 0) === (int) $t['id']) ? 'selected' : '' ?>>
+                                <?= Sanitize::html($t['name']) ?> — <?= Sanitize::html($t['district_name']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div class="row">
+                    <div>
+                        <label for="name">Name (Kannada) *</label>
+                        <input type="text" id="name" name="name" required lang="kn"
+                               value="<?= Sanitize::attr($editRow['name'] ?? '') ?>"
+                               placeholder="ಉದಾ: ದಿಲೀಪ್ ಕುಮಾರ ಬಿ.ಎಂ">
+                        <div class="hint">ಪದಾಧಿಕಾರಿಯ ಪೂರ್ಣ ಹೆಸರು ಕನ್ನಡದಲ್ಲಿ ನಮೂದಿಸಿ</div>
+                    </div>
+                    <div>
+                        <label for="designation_select">
+                            Association Designation (Kannada) *
+                        </label>
+                        <!-- Quick Dropdown for Official Kannada Designations -->
+                        <select id="designation_select" onchange="onDesignationSelect(this)" style="margin-bottom:6px;">
+                            <option value="">— Select Designation (Kannada) —</option>
+                        </select>
+
+                        <!-- Text input with Kannada designation (synced or custom) -->
+                        <input type="text" id="association_designation" name="association_designation" required lang="kn"
+                               value="<?= Sanitize::attr($editRow['association_designation'] ?? '') ?>"
+                               placeholder="ಉದಾ: ಅಧ್ಯಕ್ಷರ ಸ್ಥಾನ">
+                        <div class="hint" id="designation-hint">
+                            ಆಯ್ಕೆ ಮಾಡಿ ಅಥವಾ ಕಸ್ಟಮ್ ಹುದ್ದೆ ನಮೂದಿಸಿ | 
+                            <a href="/admin/office-bearers.php?view=designations" target="_blank" style="color:#2563eb; text-decoration:underline;">
+                                ಹುದ್ದೆಗಳ ಪಟ್ಟಿ ನಿರ್ವಹಿಸಿ
+                            </a>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="row">
-                <div>
-                    <label for="official_designation">Official (Govt.) Designation — optional</label>
-                    <input type="text" id="official_designation" name="official_designation"
-                           value="<?= Sanitize::attr($editRow['official_designation'] ?? '') ?>"
-                           placeholder="e.g. Panchayath Development Officer (PDO)">
+                <div class="row">
+                    <div>
+                        <label for="contact_number">Contact Number (ಸಂಪರ್ಕ ಸಂಖ್ಯೆ) — optional</label>
+                        <input type="text" id="contact_number" name="contact_number" maxlength="20"
+                               value="<?= Sanitize::attr($editRow['contact_number'] ?? '') ?>"
+                               placeholder="ಉದಾ: 9876543210">
+                        <div class="hint">🔒 This contact number will only be displayed to logged-in members (login required)</div>
+                    </div>
                 </div>
-                <div>
-                    <label for="sort_order">Display Order (ಕ್ರಮಾಂಕ)</label>
-                    <input type="number" id="sort_order" name="sort_order" min="0"
-                           value="<?= (int) ($editRow['sort_order'] ?? 0) ?>">
-                    <div class="hint">ಸಮಿತಿಯ ಪಟ್ಟಿಯಲ್ಲಿ ತೋರಿಸಲು ಕ್ರಮಾಂಕ ಸಂಖ್ಯೆ</div>
-                </div>
-            </div>
 
-            <div class="row">
-                <div>
-                    <label for="term_start">Term Start (ಆರಂಭ ದಿನಾಂಕ) — optional</label>
-                    <input type="date" id="term_start" name="term_start"
-                           value="<?= Sanitize::attr($editRow['term_start'] ?? '2026-05-17') ?>">
-                    <div class="hint">ರಾಜ್ಯ ಸಂಘದ ಪ್ರಥಮ ಸಭೆಯ ದಿನಾಂಕ: 17-05-2026</div>
+                <div class="row">
+                    <div>
+                        <label for="term_start">Term Start (ಆರಂಭ ದಿನಾಂಕ) — optional</label>
+                        <input type="date" id="term_start" name="term_start"
+                               value="<?= Sanitize::attr($editRow['term_start'] ?? '2026-05-17') ?>">
+                        <div class="hint">ರಾಜ್ಯ ಸಂಘದ ಪ್ರಥಮ ಸಭೆಯ ದಿನಾಂಕ: 17-05-2026</div>
+                    </div>
+                    <div>
+                        <label for="term_end">Term End (ಅಂತ್ಯ ದಿನಾಂಕ) — optional</label>
+                        <input type="date" id="term_end" name="term_end"
+                               value="<?= Sanitize::attr($editRow['term_end'] ?? '2029-05-16') ?>">
+                        <div class="hint">3 ವರ್ಷಗಳ ಅವಧಿ: 17-05-2026 ರಿಂದ 16-05-2029</div>
+                    </div>
                 </div>
-                <div>
-                    <label for="term_end">Term End (ಅಂತ್ಯ ದಿನಾಂಕ) — optional</label>
-                    <input type="date" id="term_end" name="term_end"
-                           value="<?= Sanitize::attr($editRow['term_end'] ?? '2029-05-16') ?>">
-                    <div class="hint">3 ವರ್ಷಗಳ ಅವಧಿ: 17-05-2026 ರಿಂದ 16-05-2029</div>
-                </div>
-            </div>
 
-            <div class="row">
-                <div>
-                    <label for="photo">Photo (ಭಾವಚಿತ್ರ) — optional</label>
-                    <?php if (!empty($editRow['photo_path']) && file_exists(PUBLIC_HTML . '/' . ltrim($editRow['photo_path'], '/'))): ?>
-                        <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px; background:#f8fafc; padding:8px 12px; border:1px solid #e2e8f0; border-radius:6px;">
-                            <img src="/<?= ltrim(Sanitize::attr($editRow['photo_path']), '/') ?>" 
-                                 alt="Current photo" 
-                                 style="width:48px; height:48px; object-fit:cover; border-radius:50%; border:2px solid #2563eb;">
-                            <div>
-                                <div style="font-size:0.82rem; font-weight:600; color:#1e293b;">Current Photo</div>
-                                <label style="font-size:0.75rem; color:#b91c1c; font-weight:500; margin:4px 0 0; display:inline-flex; align-items:center; gap:4px; cursor:pointer;">
-                                    <input type="checkbox" name="remove_photo" value="1"> ✕ Remove photo
-                                </label>
+                <div class="row">
+                    <div>
+                        <label for="photo">Photo (ಭಾವಚಿತ್ರ) — optional</label>
+                        <?php if (!empty($editRow['photo_path']) && file_exists(PUBLIC_HTML . '/' . ltrim($editRow['photo_path'], '/'))): ?>
+                            <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px; background:#f8fafc; padding:8px 12px; border:1px solid #e2e8f0; border-radius:6px;">
+                                <img src="/<?= ltrim(Sanitize::attr($editRow['photo_path']), '/') ?>" 
+                                     alt="Current photo" 
+                                     style="width:48px; height:48px; object-fit:cover; border-radius:50%; border:2px solid #2563eb;">
+                                <div>
+                                    <div style="font-size:0.82rem; font-weight:600; color:#1e293b;">Current Photo</div>
+                                    <label style="font-size:0.75rem; color:#b91c1c; font-weight:500; margin:4px 0 0; display:inline-flex; align-items:center; gap:4px; cursor:pointer;">
+                                        <input type="checkbox" name="remove_photo" value="1"> ✕ Remove photo
+                                    </label>
+                                </div>
                             </div>
-                        </div>
-                    <?php endif; ?>
-                    <input type="file" id="photo" name="photo" accept="image/jpeg,image/png,image/webp">
-                    <div class="hint">Recommended: Clear portrait photo (JPG, PNG, WebP, max 2MB)</div>
+                        <?php endif; ?>
+                        <input type="file" id="photo" name="photo" accept="image/jpeg,image/png,image/webp">
+                        <div class="hint">Recommended: Clear portrait photo (JPG, PNG, WebP, max 2MB)</div>
+                    </div>
                 </div>
-            </div>
 
-            <div style="margin-top: 20px; display: flex; gap: 10px;">
-                <button type="submit"><?= $editRow ? 'Save Changes' : 'Add Office Bearer' ?></button>
-                <?php if ($editRow): ?>
-                    <a class="btn btn-secondary" href="/admin/office-bearers.php">Cancel</a>
-                <?php endif; ?>
-            </div>
-        </form>
+                <div style="margin-top: 20px; display: flex; gap: 10px;">
+                    <button type="submit"><?= $editRow ? 'Save Changes' : 'Add Office Bearer' ?></button>
+                    <?php if ($editRow): ?>
+                        <a class="btn btn-secondary" href="/admin/office-bearers.php">Cancel</a>
+                    <?php endif; ?>
+                </div>
+            </form>
+        </div>
     </div>
 
     <!-- Existing Office Bearers Table Panel -->
@@ -1119,6 +1147,7 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
                     <th>Name</th>
                     <th>Designation (Kannada)</th>
                     <th>Official Post</th>
+                    <th>Contact</th>
                     <th>Term</th>
                     <th style="width:110px; text-align:center;">Reorder</th>
                     <th style="width:90px;">Status</th>
@@ -1161,6 +1190,15 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
                     <td data-label="Official Post">
                         <?= !empty($row['official_designation']) ? Sanitize::html($row['official_designation']) : '<span class="hint">—</span>' ?>
                     </td>
+                    <td data-label="Contact" style="white-space:nowrap;">
+                        <?php if (!empty($row['contact_number'])): ?>
+                            <a href="tel:<?= Sanitize::attr($row['contact_number']) ?>" style="color:#2563eb; text-decoration:none; font-weight:500;">
+                                📞 <?= Sanitize::html($row['contact_number']) ?>
+                            </a>
+                        <?php else: ?>
+                            <span class="hint">—</span>
+                        <?php endif; ?>
+                    </td>
                     <td data-label="Term" style="white-space:nowrap;">
                         <?= Sanitize::html($row['term_start'] ?? '—') ?> to <?= Sanitize::html($row['term_end'] ?? '—') ?>
                     </td>
@@ -1191,7 +1229,7 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
                 </tr>
                 <?php endforeach; ?>
                 <?php if (empty($officeBearers)): ?>
-                <tr><td colspan="8" style="text-align:center; padding:24px; color:#64748b;">No office bearers added yet.</td></tr>
+                <tr><td colspan="9" style="text-align:center; padding:24px; color:#64748b;">No office bearers added yet.</td></tr>
                 <?php endif; ?>
             </tbody>
         </table>
@@ -1212,71 +1250,75 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
 
     <!-- Add / Edit Designation Form -->
     <div class="panel">
-        <div class="panel-header-flex">
-            <h2><?= $editDesigRow ? 'Edit Designation' : 'Add New Designation (ಹೊಸ ಹುದ್ದೆ ಸೇರಿಸಿ)' ?></h2>
-            <?php if ($editDesigRow): ?>
-                <a href="/admin/office-bearers.php?view=designations" class="btn btn-secondary btn-sm">✕ Cancel Edit</a>
-            <?php endif; ?>
-        </div>
-
-        <form method="post" action="/admin/office-bearers.php">
-            <?= CSRF::htmlField() ?>
-            <input type="hidden" name="action" value="<?= $editDesigRow ? 'update_designation' : 'add_designation' ?>">
-            <?php if ($editDesigRow): ?>
-                <input type="hidden" name="desig_id" value="<?= (int) $editDesigRow['id'] ?>">
-            <?php endif; ?>
-
-            <div class="row">
-                <div>
-                    <label for="desig_level">Committee Level *</label>
-                    <select name="desig_level" id="desig_level" required>
-                        <option value="state" <?= ($editDesigRow && $editDesigRow['level'] === 'state') || (!$editDesigRow && $desigLevelFilter === 'state') ? 'selected' : '' ?>>State Committee (ರಾಜ್ಯ ಸಂಘ — ಉಪನಿಯಮ 46)</option>
-                        <option value="district" <?= ($editDesigRow && $editDesigRow['level'] === 'district') || (!$editDesigRow && $desigLevelFilter === 'district') ? 'selected' : '' ?>>District Committee (ಜಿಲ್ಲಾ ಸಂಘ — ಉಪನಿಯಮ 26)</option>
-                        <option value="taluk" <?= ($editDesigRow && $editDesigRow['level'] === 'taluk') || (!$editDesigRow && $desigLevelFilter === 'taluk') ? 'selected' : '' ?>>Taluk Committee (ತಾಲ್ಲೂಕು ಸಂಘ)</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="designation_kn">Designation (Kannada) *</label>
-                    <input type="text" id="designation_kn" name="designation_kn" required lang="kn"
-                           value="<?= Sanitize::attr($editDesigRow['designation_kn'] ?? '') ?>"
-                           placeholder="ಉದಾ: ಅಧ್ಯಕ್ಷರ ಸ್ಥಾನ">
-                </div>
-                <div>
-                    <label for="designation_en">Designation (English) — optional</label>
-                    <input type="text" id="designation_en" name="designation_en"
-                           value="<?= Sanitize::attr($editDesigRow['designation_en'] ?? '') ?>"
-                           placeholder="e.g. President">
-                </div>
+        <div class="panel-header-flex" style="cursor: pointer; margin-bottom: <?= $editDesigRow ? '18px' : '0' ?>;" onclick="toggleAddDesigForm()">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span id="addDesigToggleIcon" style="font-size: 0.9rem; color: #1a3a6b; display: inline-block;"><?= $editDesigRow ? '▼' : '▶' ?></span>
+                <h2 style="margin: 0;"><?= $editDesigRow ? 'Edit Designation' : 'Add New Designation (ಹೊಸ ಹುದ್ದೆ ಸೇರಿಸಿ)' ?></h2>
             </div>
-
-            <div class="row">
-                <div>
-                    <label for="seats">Seats / Posts Count (ಸ್ಥಾನಗಳ ಸಂಖ್ಯೆ)</label>
-                    <input type="number" id="seats" name="seats" min="1" max="50"
-                           value="<?= (int) ($editDesigRow['seats'] ?? 1) ?>">
-                    <div class="hint">ಉದಾ: 01 ಅಥವಾ 04</div>
-                </div>
-                <div>
-                    <label for="desig_sort_order">Display Order (ಕ್ರಮಾಂಕ)</label>
-                    <input type="number" id="desig_sort_order" name="desig_sort_order" min="0"
-                           value="<?= (int) ($editDesigRow['sort_order'] ?? 0) ?>">
-                    <div class="hint">ಸಮಿತಿಯ ಪಟ್ಟಿಯಲ್ಲಿ ಯಾವ ಸ್ಥಾನದಲ್ಲಿರಬೇಕು</div>
-                </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <button type="button" class="btn btn-sm btn-outline" onclick="event.stopPropagation(); toggleAddDesigForm();">
+                    <span id="addDesigBtnText"><?= $editDesigRow ? '✕ Close Form' : '+ Expand Form' ?></span>
+                </button>
                 <?php if ($editDesigRow): ?>
-                <div>
-                    <label for="status">Status</label>
-                    <select name="status" id="status">
-                        <option value="active" <?= $editDesigRow['status'] === 'active' ? 'selected' : '' ?>>Active</option>
-                        <option value="inactive" <?= $editDesigRow['status'] === 'inactive' ? 'selected' : '' ?>>Inactive</option>
-                    </select>
-                </div>
+                    <a href="/admin/office-bearers.php?view=designations" class="btn btn-secondary btn-sm" onclick="event.stopPropagation();">✕ Cancel Edit</a>
                 <?php endif; ?>
             </div>
+        </div>
 
-            <div style="margin-top: 18px;">
-                <button type="submit"><?= $editDesigRow ? 'Save Designation Changes' : '+ Add Designation' ?></button>
-            </div>
-        </form>
+        <div id="addDesigFormBody" style="<?= $editDesigRow ? 'display: block;' : 'display: none;' ?>">
+            <form method="post" action="/admin/office-bearers.php" style="margin-top: 15px;">
+                <?= CSRF::htmlField() ?>
+                <input type="hidden" name="action" value="<?= $editDesigRow ? 'update_designation' : 'add_designation' ?>">
+                <?php if ($editDesigRow): ?>
+                    <input type="hidden" name="desig_id" value="<?= (int) $editDesigRow['id'] ?>">
+                <?php endif; ?>
+
+                <div class="row">
+                    <div>
+                        <label for="desig_level">Committee Level *</label>
+                        <select name="desig_level" id="desig_level" required>
+                            <option value="state" <?= ($editDesigRow && $editDesigRow['level'] === 'state') || (!$editDesigRow && $desigLevelFilter === 'state') ? 'selected' : '' ?>>State Committee (ರಾಜ್ಯ ಸಂಘ)</option>
+                            <option value="district" <?= ($editDesigRow && $editDesigRow['level'] === 'district') || (!$editDesigRow && $desigLevelFilter === 'district') ? 'selected' : '' ?>>District Committee (ಜಿಲ್ಲಾ ಸಂಘ)</option>
+                            <option value="taluk" <?= ($editDesigRow && $editDesigRow['level'] === 'taluk') || (!$editDesigRow && $desigLevelFilter === 'taluk') ? 'selected' : '' ?>>Taluk Committee (ತಾಲ್ಲೂಕು ಸಂಘ)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="designation_kn">Designation (Kannada) *</label>
+                        <input type="text" id="designation_kn" name="designation_kn" required lang="kn"
+                               value="<?= Sanitize::attr($editDesigRow['designation_kn'] ?? '') ?>"
+                               placeholder="ಉದಾ: ಅಧ್ಯಕ್ಷರ ಸ್ಥಾನ">
+                    </div>
+                    <div>
+                        <label for="designation_en">Designation (English) — optional</label>
+                        <input type="text" id="designation_en" name="designation_en"
+                               value="<?= Sanitize::attr($editDesigRow['designation_en'] ?? '') ?>"
+                               placeholder="e.g. President">
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div>
+                        <label for="seats">Seats / Posts Count (ಸ್ಥಾನಗಳ ಸಂಖ್ಯೆ)</label>
+                        <input type="number" id="seats" name="seats" min="1" max="50"
+                               value="<?= (int) ($editDesigRow['seats'] ?? 1) ?>">
+                        <div class="hint">ಉದಾ: 01 ಅಥವಾ 04</div>
+                    </div>
+                    <?php if ($editDesigRow): ?>
+                    <div>
+                        <label for="status">Status</label>
+                        <select name="status" id="status">
+                            <option value="active" <?= $editDesigRow['status'] === 'active' ? 'selected' : '' ?>>Active</option>
+                            <option value="inactive" <?= $editDesigRow['status'] === 'inactive' ? 'selected' : '' ?>>Inactive</option>
+                        </select>
+                    </div>
+                    <?php endif; ?>
+                </div>
+
+                <div style="margin-top: 18px;">
+                    <button type="submit"><?= $editDesigRow ? 'Save Designation Changes' : '+ Add Designation' ?></button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <!-- Designations List & Reorder Panel -->
@@ -1296,11 +1338,11 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
             <a href="/admin/office-bearers.php?view=designations&desig_level=all" 
                class="filter-pill <?= $desigLevelFilter === 'all' ? 'active' : '' ?>">All Levels</a>
             <a href="/admin/office-bearers.php?view=designations&desig_level=state" 
-               class="filter-pill <?= $desigLevelFilter === 'state' ? 'active' : '' ?>">State (ಉಪನಿಯಮ 46)</a>
+               class="filter-pill <?= $desigLevelFilter === 'state' ? 'active' : '' ?>">State (ರಾಜ್ಯ ಸಂಘ)</a>
             <a href="/admin/office-bearers.php?view=designations&desig_level=district" 
-               class="filter-pill <?= $desigLevelFilter === 'district' ? 'active' : '' ?>">District (ಉಪನಿಯಮ 26)</a>
+               class="filter-pill <?= $desigLevelFilter === 'district' ? 'active' : '' ?>">District (ಜಿಲ್ಲಾ ಸಂಘ)</a>
             <a href="/admin/office-bearers.php?view=designations&desig_level=taluk" 
-               class="filter-pill <?= $desigLevelFilter === 'taluk' ? 'active' : '' ?>">Taluk</a>
+               class="filter-pill <?= $desigLevelFilter === 'taluk' ? 'active' : '' ?>">Taluk (ತಾಲ್ಲೂಕು ಸಂಘ)</a>
         </div>
 
         <form id="bulkOrderForm" method="post" action="/admin/office-bearers.php">
@@ -1680,6 +1722,38 @@ function saveReorderedTable(tbodyId, statusSpanId, actionName, redirectParamName
             statusSpan.textContent = '✕ Connection error.';
         }
     });
+}
+
+function toggleAddObForm() {
+    var body = document.getElementById('addObFormBody');
+    var icon = document.getElementById('addObToggleIcon');
+    var btnText = document.getElementById('addObBtnText');
+    if (!body) return;
+    if (body.style.display === 'none' || body.style.display === '') {
+        body.style.display = 'block';
+        if (icon) icon.textContent = '▼';
+        if (btnText) btnText.textContent = '✕ Close Form';
+    } else {
+        body.style.display = 'none';
+        if (icon) icon.textContent = '▶';
+        if (btnText) btnText.textContent = '+ Expand Form';
+    }
+}
+
+function toggleAddDesigForm() {
+    var body = document.getElementById('addDesigFormBody');
+    var icon = document.getElementById('addDesigToggleIcon');
+    var btnText = document.getElementById('addDesigBtnText');
+    if (!body) return;
+    if (body.style.display === 'none' || body.style.display === '') {
+        body.style.display = 'block';
+        if (icon) icon.textContent = '▼';
+        if (btnText) btnText.textContent = '✕ Close Form';
+    } else {
+        body.style.display = 'none';
+        if (icon) icon.textContent = '▶';
+        if (btnText) btnText.textContent = '+ Expand Form';
+    }
 }
 
 // Initialize on DOM load
