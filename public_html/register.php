@@ -171,17 +171,18 @@ require __DIR__ . '/includes/partials/header.php';
     .reg-review-table td { padding: 8px 4px; border-bottom: 1px solid var(--border-soft, #eef1f5); vertical-align: top; }
     .reg-review-table td:first-child { color: var(--ink-500); width: 42%; }
     .reg-fee-box {
-        background: var(--teal-100);
-        border: 1px solid var(--teal-700);
+        background: var(--light-blue);
+        border: 1px solid rgba(23, 105, 170, 0.25);
         border-radius: var(--radius-md, 8px);
         padding: 18px 20px;
         margin: 20px 0;
     }
-    .reg-fee-box .amount { font-size: 1.6rem; font-weight: 700; color: var(--teal-700); }
-    .reg-fee-box .charges { font-size: 0.85rem; color: var(--ink-500); margin-top: 4px; }
+    .reg-fee-box .amount { font-size: 1.6rem; font-weight: 700; color: var(--primary-navy); }
+    .reg-fee-box .charges { font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px; }
     [hidden] { display: none !important; }
 </style>
 
+<span class="eyebrow">Membership Application</span>
 <h1 class="page-title">Member Registration</h1>
 <p class="page-subtitle">Register as a Panchayat Development Officer member of KSPDOWA.</p>
 
@@ -194,7 +195,7 @@ require __DIR__ . '/includes/partials/header.php';
     <div class="card">
         <span class="badge badge-green">Registration received</span>
         <h2 style="margin-top:12px;">Thank you<?= $result['retry'] ?? false ? '' : '' ?>, your registration has been recorded.</h2>
-        <p style="color:var(--ink-700);">
+        <p style="color:var(--text-main);">
             The annual membership fee for <strong><?= Sanitize::html($result['financial_year']) ?></strong>
             is <strong>&#8377;<?= Sanitize::html(number_format((float) $result['amount'], 2)) ?></strong>.
             Please complete payment using the button below to activate your membership.
@@ -204,8 +205,9 @@ require __DIR__ . '/includes/partials/header.php';
             be emailed to your registered email address, with a mandatory password change on first login.
         </p>
         <p style="margin-top:20px;">
-            <a class="btn btn-teal" href="/payment.php">
-                Proceed to Payment
+            <a class="btn" href="/payment.php">
+                <span>Proceed to Payment</span>
+                <span aria-hidden="true">&rarr;</span>
             </a>
         </p>
         <p class="form-hint" style="margin-top:16px;">
@@ -286,7 +288,7 @@ require __DIR__ . '/includes/partials/header.php';
                 <input type="hidden" name="<?= Sanitize::attr($k) ?>" value="<?= Sanitize::attr((string) ($v ?? '')) ?>">
             <?php endforeach; ?>
             <div style="display:flex; gap:12px; margin-top:20px;">
-                <button type="submit" class="btn btn-teal" <?= $year === null ? 'disabled' : '' ?>>Confirm &amp; Proceed to Payment</button>
+                <button type="submit" class="btn" <?= $year === null ? 'disabled' : '' ?>>Confirm &amp; Proceed to Payment</button>
                 <a class="btn btn-outline" href="/register.php">Edit Details</a>
             </div>
         </form>

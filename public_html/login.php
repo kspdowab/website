@@ -122,12 +122,15 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign In — <?= Sanitize::html(APP_SHORT_NAME) ?></title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Kannada:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: #f5f7fa;
-            color: #1a1a2e;
+            font-family: 'Inter', 'Noto Sans Kannada', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #F5F7FA;
+            color: #17202A;
             margin: 0;
             min-height: 100vh;
             display: flex;
@@ -136,22 +139,24 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             padding: 24px;
         }
         .card {
-            background: #fff;
-            border-radius: 10px;
-            box-shadow: 0 2px 16px rgba(26, 58, 107, 0.10);
+            background: #ffffff;
+            border: 1px solid #DCE3EA;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(23, 63, 103, 0.08);
             padding: 40px 32px;
             width: 100%;
-            max-width: 380px;
+            max-width: 400px;
         }
         h1 {
-            color: #1a3a6b;
-            font-size: 1.3rem;
+            color: #173F67;
+            font-size: 1.35rem;
+            font-weight: 800;
             margin: 0 0 4px;
             text-align: center;
         }
         .subtitle {
-            color: #666;
-            font-size: 0.85rem;
+            color: #667085;
+            font-size: 0.88rem;
             text-align: center;
             margin: 0 0 28px;
         }
@@ -159,7 +164,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             display: block;
             font-size: 0.85rem;
             font-weight: 600;
-            color: #33415c;
+            color: #17202A;
             margin-bottom: 6px;
         }
         input[type="text"], input[type="password"] {
@@ -172,7 +177,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         }
         input[type="text"]:focus, input[type="password"]:focus {
             outline: none;
-            border-color: #1a3a6b;
+            border-color: #1769AA;
+            box-shadow: 0 0 0 3px rgba(23, 105, 170, 0.15);
         }
         .password-field-wrap {
             position: relative;
@@ -202,11 +208,11 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             transition: color 0.15s, background-color 0.15s;
         }
         .password-toggle-btn:hover {
-            color: #1a3a6b;
-            background: #f1f5f9 !important;
+            color: #1769AA;
+            background: #EEF5FA !important;
         }
         .password-toggle-btn:focus-visible {
-            outline: 2px solid #1a3a6b;
+            outline: 2px solid #1769AA;
             outline-offset: 1px;
         }
         .remember-row {
@@ -230,24 +236,25 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             height: 16px;
             margin: 0;
             cursor: pointer;
-            accent-color: #1a3a6b;
+            accent-color: #173F67;
         }
         button[type="submit"] {
             width: 100%;
-            background: #1a3a6b;
+            background: #173F67;
             color: #fff;
             border: none;
             border-radius: 6px;
             padding: 12px;
-            font-size: 1rem;
+            font-size: 0.95rem;
             font-weight: 600;
             cursor: pointer;
+            transition: background 0.15s ease;
         }
-        button[type="submit"]:hover { background: #142c52; }
+        button[type="submit"]:hover { background: #0F4C81; }
         .error {
-            background: #fdecea;
-            color: #a12622;
-            border: 1px solid #f5c2be;
+            background: #FDE8E8;
+            color: #C00000;
+            border: 1px solid #FECACA;
             border-radius: 6px;
             padding: 10px 14px;
             font-size: 0.85rem;
@@ -259,7 +266,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             margin-top: 18px;
             font-size: 0.85rem;
         }
-        .back-link a { color: #1a3a6b; }
+        .back-link a { color: #1769AA; text-decoration: none; font-weight: 500; }
+        .back-link a:hover { color: #0F4C81; text-decoration: underline; }
     </style>
 </head>
 <body>

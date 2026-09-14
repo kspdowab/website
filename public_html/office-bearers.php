@@ -148,7 +148,7 @@ require __DIR__ . '/includes/partials/header.php';
     .quick-jump-label {
         font-size: 0.85rem;
         font-weight: 700;
-        color: var(--ink-500);
+        color: var(--text-secondary);
         white-space: nowrap;
         flex-shrink: 0;
     }
@@ -156,12 +156,12 @@ require __DIR__ . '/includes/partials/header.php';
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        padding: 6px 13px;
+        padding: 6px 14px;
         font-size: 0.82rem;
         font-weight: 600;
-        color: var(--blue-700);
+        color: var(--primary-navy);
         background: #ffffff;
-        border: 1px solid var(--border);
+        border: 1px solid var(--border-color);
         border-radius: 999px;
         text-decoration: none;
         transition: all 0.15s ease;
@@ -170,19 +170,31 @@ require __DIR__ . '/includes/partials/header.php';
         flex-shrink: 0;
     }
     .quick-jump-nav a.jump-btn:hover {
-        background: var(--blue-100);
-        border-color: var(--blue-600);
-        color: var(--blue-700);
+        background: var(--light-blue);
+        border-color: var(--prof-blue);
+        color: var(--prof-blue);
         transform: translateY(-1px);
     }
+    .jump-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+        flex-shrink: 0;
+    }
+    .jump-dot.blue { background: var(--prof-blue); }
+    .jump-dot.navy { background: var(--primary-navy); }
+    .jump-dot.red  { background: var(--brand-red); }
+    .jump-dot.green{ background: var(--accent-green); }
+
     .filter-toolbar {
         display: flex;
         align-items: center;
         gap: 12px;
         flex-wrap: wrap;
-        background: var(--surface-alt, #f5f1e7);
-        border: 1px solid var(--border, #e5dfd1);
-        border-radius: var(--radius-md, 10px);
+        background: var(--light-blue);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
         padding: 12px 16px;
         margin-bottom: 18px;
     }
@@ -194,24 +206,27 @@ require __DIR__ . '/includes/partials/header.php';
     .filter-toolbar label {
         font-size: 0.85rem;
         font-weight: 700;
-        color: var(--ink-700, #33415a);
+        color: var(--primary-navy);
         white-space: nowrap;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
     }
     .filter-toolbar select {
         padding: 8px 12px;
         font-size: 0.9rem;
         font-family: var(--font-sans);
-        border: 1px solid var(--border, #cbd5e1);
-        border-radius: var(--radius-sm, 6px);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-sm);
         background: #ffffff;
-        color: var(--ink-900, #1e293b);
+        color: var(--text-main);
         cursor: pointer;
         min-width: 190px;
     }
     .filter-toolbar select:focus {
         outline: none;
-        border-color: var(--blue-600);
-        box-shadow: 0 0 0 3px var(--blue-100);
+        border-color: var(--prof-blue);
+        box-shadow: 0 0 0 3px rgba(23, 105, 170, 0.15);
     }
     .filter-clear-btn {
         display: inline-flex;
@@ -221,24 +236,40 @@ require __DIR__ . '/includes/partials/header.php';
         font-size: 0.82rem;
         font-weight: 600;
         background: #ffffff;
-        color: var(--red-700, #b91c1c);
-        border: 1px solid #fca5a5;
-        border-radius: var(--radius-sm, 6px);
+        color: var(--brand-red);
+        border: 1px solid #FECACA;
+        border-radius: var(--radius-sm);
         cursor: pointer;
         transition: all 0.15s ease;
     }
     .filter-clear-btn:hover {
-        background: #fee2e2;
+        background: #FEE2E2;
     }
     .filter-count-badge {
         font-size: 0.82rem;
         font-weight: 600;
-        color: var(--teal-700);
-        background: var(--teal-100);
+        color: var(--prof-blue);
+        background: #ffffff;
+        border: 1px solid rgba(23, 105, 170, 0.2);
         padding: 4px 12px;
         border-radius: 999px;
         margin-left: auto;
     }
+
+    /* Semantic section accents */
+    .section-accent-blue {
+        border-top: 3px solid var(--prof-blue);
+    }
+    .section-accent-navy {
+        border-top: 3px solid var(--primary-navy);
+    }
+    .section-accent-red {
+        border-top: 3px solid var(--brand-red);
+    }
+    .section-accent-green {
+        border-top: 3px solid var(--accent-green);
+    }
+
     @media (max-width: 640px) {
         .filter-toolbar select {
             min-width: 100%;
@@ -259,25 +290,25 @@ require __DIR__ . '/includes/partials/header.php';
 
 <span class="eyebrow">Association Leadership</span>
 <h1 class="page-title">Office Bearers (ಪದಾಧಿಕಾರಿಗಳು)</h1>
-<p class="page-subtitle">Current leadership hierarchy of Karnataka State Postmen, Postwoman and MTS Association.</p>
+<p class="page-subtitle">Current leadership hierarchy of Karnataka State Panchayat Development Officer Welfare Association.</p>
 
 <!-- Quick Jump Bar -->
 <div class="quick-jump-nav">
     <span class="quick-jump-label">Jump to:</span>
-    <a href="#state-council" class="jump-btn">🏛️ State Council (ರಾಜ್ಯ ಪರಿಷತ್ತು)</a>
-    <a href="#state" class="jump-btn">🏛️ State Committee (ರಾಜ್ಯ ಸಂಘ)</a>
-    <a href="#district" class="jump-btn">📍 District Committee (ಜಿಲ್ಲಾ ಸಂಘ)</a>
-    <a href="#taluk" class="jump-btn">🏙️ Taluk Committee (ತಾಲ್ಲೂಕು ಸಂಘ)</a>
+    <a href="#state-council" class="jump-btn"><span class="jump-dot blue"></span> State Council (ರಾಜ್ಯ ಪರಿಷತ್ತು)</a>
+    <a href="#state" class="jump-btn"><span class="jump-dot navy"></span> State Committee (ರಾಜ್ಯ ಸಂಘ)</a>
+    <a href="#district" class="jump-btn"><span class="jump-dot red"></span> District Committee (ಜಿಲ್ಲಾ ಸಂಘ)</a>
+    <a href="#taluk" class="jump-btn"><span class="jump-dot green"></span> Taluk Committee (ತಾಲ್ಲೂಕು ಸಂಘ)</a>
 </div>
 
 <?php if (!$canViewContact): ?>
-    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-left:4px solid #2563eb; border-radius:6px; padding:10px 16px; margin-bottom:20px; font-size:0.84rem; color:var(--ink-700); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
-        <div style="display:flex; align-items:center; gap:8px;">
-            <span>🔒</span>
+    <div style="background:var(--light-blue); border:1px solid rgba(23, 105, 170, 0.2); border-left:4px solid var(--prof-blue); border-radius:var(--radius-sm); padding:12px 18px; margin-bottom:20px; font-size:0.86rem; color:var(--primary-navy); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; color:var(--prof-blue);"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
             <span><strong>ಗಮನಿಸಿ / Member Notice:</strong> ಪದಾಧಿಕಾರಿಗಳ ಸಂಪರ್ಕ ಸಂಖ್ಯೆಗಳನ್ನು (Contact Numbers) ವೀಕ್ಷಿಸಲು ಸಂಘದ ಸದಸ್ಯರು ಲಾಗಿನ್ ಆಗುವುದು ಕಡ್ಡಾಯವಾಗಿದೆ.</span>
         </div>
-        <a href="/login.php" class="btn btn-sm btn-outline" style="white-space:nowrap; padding:4px 12px; font-size:0.8rem; font-weight:600; text-decoration:none;">
-            🔑 Member Login (ಲಾಗಿನ್)
+        <a href="/login.php" class="btn btn-sm" style="white-space:nowrap; padding:6px 14px; font-size:0.82rem; font-weight:600; text-decoration:none;">
+            Member Login (ಲಾಗಿನ್) &rarr;
         </a>
     </div>
 <?php endif; ?>
@@ -285,13 +316,13 @@ require __DIR__ . '/includes/partials/header.php';
 <!-- =======================================================================
      1) STATE COUNCIL SECTION (ರಾಜ್ಯ ಪರಿಷತ್ತು)
      ======================================================================= -->
-<div class="card office-bearer-section" id="state-council">
-    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:12px; border-bottom:1px solid var(--border-soft); padding-bottom:12px;">
+<div class="card office-bearer-section section-accent-blue" id="state-council">
+    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:14px; border-bottom:1px solid var(--border-soft); padding-bottom:12px;">
         <div>
-            <h2 style="margin:0; border:none; padding:0;">
-                <span class="badge badge-blue" style="margin-right:8px;">Council</span>State Council (ರಾಜ್ಯ ಪರಿಷತ್ತು)
+            <h2 style="margin:0; border:none; padding:0; display:flex; align-items:center; gap:8px;">
+                <span class="badge badge-blue">Council</span> State Council (ರಾಜ್ಯ ಪರಿಷತ್ತು)
             </h2>
-            <div style="font-size:0.82rem; color:var(--ink-500); margin-top:4px;">
+            <div style="font-size:0.84rem; color:var(--text-secondary); margin-top:4px;">
                 ಜಿಲ್ಲಾವಾರು ಚುನಾಯಿತ ಅಧ್ಯಕ್ಷರು, ರಾಜ್ಯ ಪರಿಷತ್ ಸದಸ್ಯರು ಹಾಗೂ ಖಜಾಂಚಿಗಳು ರಾಜ್ಯ ಪರಿಷತ್ತಿನ ಸದಸ್ಯರಾಗಿರುತ್ತಾರೆ.
             </div>
         </div>
@@ -301,7 +332,10 @@ require __DIR__ . '/includes/partials/header.php';
     <!-- Council District Filter Toolbar -->
     <div class="filter-toolbar">
         <div class="filter-group">
-            <label for="councilDistrictSelect">📍 Select District (ಜಿಲ್ಲೆ):</label>
+            <label for="councilDistrictSelect">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                <span>Select District (ಜಿಲ್ಲೆ):</span>
+            </label>
             <select id="councilDistrictSelect" onchange="filterCouncilBearers(this.value)">
                 <option value="all">All Districts (ಎಲ್ಲಾ ಜಿಲ್ಲೆಗಳು) — <?= count($stateCouncilBearers) ?> Members</option>
                 <?php foreach ($councilDistrictOptions as $d): ?>
@@ -338,48 +372,49 @@ require __DIR__ . '/includes/partials/header.php';
             <tbody id="councilTableBody">
                 <?php foreach ($stateCouncilBearers as $idx => $ob): ?>
                 <tr class="council-row" data-district-id="<?= (int)$ob['district_id'] ?>">
-                    <td style="color:var(--ink-300); font-weight:700; text-align:center; vertical-align:middle;"><?= $idx + 1 ?></td>
+                    <td style="color:var(--text-secondary); font-weight:700; text-align:center; vertical-align:middle;"><?= $idx + 1 ?></td>
                     <td style="text-align:center; vertical-align:middle;">
                         <?php if (!empty($ob['photo_path']) && file_exists(PUBLIC_HTML . '/' . ltrim($ob['photo_path'], '/'))): ?>
                             <img src="/<?= ltrim(Sanitize::attr($ob['photo_path']), '/') ?>" 
                                  alt="<?= Sanitize::attr($ob['name']) ?>" 
                                  style="width:44px; height:44px; object-fit:cover; border-radius:50%; border:2px solid #cbd5e1; display:inline-block;">
                         <?php else: ?>
-                            <div style="width:44px; height:44px; border-radius:50%; background:#eff6ff; color:#1e40af; display:inline-flex; align-items:center; justify-content:center; font-weight:700; font-size:0.85rem; border:1px solid #dbeafe;">
+                            <div style="width:44px; height:44px; border-radius:50%; background:var(--light-blue); color:var(--prof-blue); display:inline-flex; align-items:center; justify-content:center; font-weight:700; font-size:0.85rem; border:1px solid #BAE6FD;">
                                 <?= mb_substr($ob['name'], 0, 1, 'UTF-8') ?>
                             </div>
                         <?php endif; ?>
                     </td>
                     <td style="vertical-align:middle;">
-                        <strong style="color:var(--ink-900);"><?= Sanitize::html($ob['name']) ?></strong>
+                        <strong style="color:var(--primary-navy);"><?= Sanitize::html($ob['name']) ?></strong>
                         <?php if (!empty($ob['official_designation'])): ?>
-                            <div style="font-size:0.8rem; color:var(--ink-500);"><?= Sanitize::html($ob['official_designation']) ?></div>
+                            <div style="font-size:0.8rem; color:var(--text-secondary);"><?= Sanitize::html($ob['official_designation']) ?></div>
                         <?php endif; ?>
                     </td>
-                    <td style="font-family:'Noto Sans Kannada', sans-serif; font-weight:600; color:#1e3a8a; vertical-align:middle;">
+                    <td style="font-family:'Noto Sans Kannada', sans-serif; font-weight:600; color:var(--prof-blue); vertical-align:middle;">
                         <?= Sanitize::html($ob['association_designation']) ?>
                     </td>
-                    <td style="white-space:nowrap; color:var(--ink-500); font-size:0.86rem; vertical-align:middle;">
+                    <td style="white-space:nowrap; color:var(--text-secondary); font-size:0.86rem; vertical-align:middle;">
                         <?= Sanitize::html($ob['term_start'] ?? '—') ?> to <?= Sanitize::html($ob['term_end'] ?? '—') ?>
                     </td>
                     <?php if ($canViewContact): ?>
                     <td style="white-space:nowrap; font-weight:500; vertical-align:middle;">
                         <?php if (!empty($ob['contact_number'])): ?>
-                            <a href="tel:<?= Sanitize::attr($ob['contact_number']) ?>" style="color:#1d4ed8; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">
-                                📞 <?= Sanitize::html($ob['contact_number']) ?>
+                            <a href="tel:<?= Sanitize::attr($ob['contact_number']) ?>" style="color:var(--prof-blue); text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                                <span><?= Sanitize::html($ob['contact_number']) ?></span>
                             </a>
                         <?php else: ?>
-                            <span style="color:var(--ink-400);">—</span>
+                            <span style="color:var(--text-secondary);">—</span>
                         <?php endif; ?>
                     </td>
                     <?php endif; ?>
                     <td style="vertical-align:middle;">
-                        <span class="badge badge-lav"><?= Sanitize::html($ob['district_name']) ?></span>
+                        <span class="badge badge-blue"><?= Sanitize::html($ob['district_name']) ?></span>
                     </td>
                 </tr>
                 <?php endforeach; ?>
                 <tr id="councilEmptyRow" style="display:none;">
-                    <td colspan="<?= $canViewContact ? 7 : 6 ?>" style="text-align:center; padding:28px; color:var(--ink-500);">
+                    <td colspan="<?= $canViewContact ? 7 : 6 ?>" style="text-align:center; padding:28px; color:var(--text-secondary);">
                         No council members found for the selected district.
                     </td>
                 </tr>
@@ -394,10 +429,10 @@ require __DIR__ . '/includes/partials/header.php';
 <!-- =======================================================================
      2) STATE COMMITTEE SECTION (ರಾಜ್ಯ ಸಂಘ)
      ======================================================================= -->
-<div class="card office-bearer-section" id="state">
+<div class="card office-bearer-section section-accent-navy" id="state">
     <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:18px; border-bottom:1px solid var(--border-soft); padding-bottom:12px;">
-        <h2 style="margin:0; border:none; padding:0;">
-            <span class="badge badge-green" style="margin-right:8px;">State</span>State Committee (ರಾಜ್ಯ ಸಂಘ)
+        <h2 style="margin:0; border:none; padding:0; display:flex; align-items:center; gap:8px;">
+            <span class="badge badge-navy">State</span> State Committee (ರಾಜ್ಯ ಸಂಘ)
         </h2>
         <span class="badge badge-muted"><?= count($stateBearers) ?> Bearers</span>
     </div>
@@ -420,39 +455,40 @@ require __DIR__ . '/includes/partials/header.php';
             <tbody>
                 <?php foreach ($stateBearers as $idx => $ob): ?>
                 <tr>
-                    <td style="color:var(--ink-300); font-weight:700; text-align:center; vertical-align:middle;"><?= $idx + 1 ?></td>
+                    <td style="color:var(--text-secondary); font-weight:700; text-align:center; vertical-align:middle;"><?= $idx + 1 ?></td>
                     <td style="text-align:center; vertical-align:middle;">
                         <?php if (!empty($ob['photo_path']) && file_exists(PUBLIC_HTML . '/' . ltrim($ob['photo_path'], '/'))): ?>
                             <img src="/<?= ltrim(Sanitize::attr($ob['photo_path']), '/') ?>" 
                                  alt="<?= Sanitize::attr($ob['name']) ?>" 
                                  style="width:44px; height:44px; object-fit:cover; border-radius:50%; border:2px solid #cbd5e1; display:inline-block;">
                         <?php else: ?>
-                            <div style="width:44px; height:44px; border-radius:50%; background:#eff6ff; color:#1e40af; display:inline-flex; align-items:center; justify-content:center; font-weight:700; font-size:0.85rem; border:1px solid #dbeafe;">
+                            <div style="width:44px; height:44px; border-radius:50%; background:var(--light-blue); color:var(--primary-navy); display:inline-flex; align-items:center; justify-content:center; font-weight:700; font-size:0.85rem; border:1px solid #BAE6FD;">
                                 <?= mb_substr($ob['name'], 0, 1, 'UTF-8') ?>
                             </div>
                         <?php endif; ?>
                     </td>
                     <td style="vertical-align:middle;">
-                        <strong style="color:var(--ink-900); font-size:0.95rem;"><?= Sanitize::html($ob['name']) ?></strong>
+                        <strong style="color:var(--primary-navy); font-size:0.95rem;"><?= Sanitize::html($ob['name']) ?></strong>
                         <?php if (!empty($ob['official_designation'])): ?>
-                            <div style="font-size:0.8rem; color:var(--ink-500);"><?= Sanitize::html($ob['official_designation']) ?></div>
+                            <div style="font-size:0.8rem; color:var(--text-secondary);"><?= Sanitize::html($ob['official_designation']) ?></div>
                         <?php endif; ?>
                     </td>
-                    <td style="font-family:'Noto Sans Kannada', sans-serif; font-weight:600; color:#1e3a8a; vertical-align:middle;">
+                    <td style="font-family:'Noto Sans Kannada', sans-serif; font-weight:600; color:var(--primary-navy); vertical-align:middle;">
                         <?= Sanitize::html($ob['association_designation']) ?>
                     </td>
                     <?php if ($canViewContact): ?>
                     <td style="white-space:nowrap; font-weight:500; vertical-align:middle;">
                         <?php if (!empty($ob['contact_number'])): ?>
-                            <a href="tel:<?= Sanitize::attr($ob['contact_number']) ?>" style="color:#1d4ed8; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">
-                                📞 <?= Sanitize::html($ob['contact_number']) ?>
+                            <a href="tel:<?= Sanitize::attr($ob['contact_number']) ?>" style="color:var(--prof-blue); text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                                <span><?= Sanitize::html($ob['contact_number']) ?></span>
                             </a>
                         <?php else: ?>
-                            <span style="color:var(--ink-400);">—</span>
+                            <span style="color:var(--text-secondary);">—</span>
                         <?php endif; ?>
                     </td>
                     <?php endif; ?>
-                    <td style="white-space:nowrap; color:var(--ink-500); font-size:0.86rem; vertical-align:middle;">
+                    <td style="white-space:nowrap; color:var(--text-secondary); font-size:0.86rem; vertical-align:middle;">
                         <?= Sanitize::html($ob['term_start'] ?? '—') ?> to <?= Sanitize::html($ob['term_end'] ?? '—') ?>
                     </td>
                 </tr>
@@ -468,10 +504,10 @@ require __DIR__ . '/includes/partials/header.php';
 <!-- =======================================================================
      3) DISTRICT COMMITTEE SECTION (ಜಿಲ್ಲಾ ಸಂಘ)
      ======================================================================= -->
-<div class="card office-bearer-section" id="district">
+<div class="card office-bearer-section section-accent-red" id="district">
     <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:14px; border-bottom:1px solid var(--border-soft); padding-bottom:12px;">
-        <h2 style="margin:0; border:none; padding:0;">
-            <span class="badge badge-lav" style="margin-right:8px;">District</span>District Committee (ಜಿಲ್ಲಾ ಸಂಘ)
+        <h2 style="margin:0; border:none; padding:0; display:flex; align-items:center; gap:8px;">
+            <span class="badge badge-red">District</span> District Committee (ಜಿಲ್ಲಾ ಸಂಘ)
         </h2>
         <span class="badge badge-muted"><?= count($districtBearers) ?> Bearers</span>
     </div>
@@ -479,7 +515,10 @@ require __DIR__ . '/includes/partials/header.php';
     <!-- District Filter Toolbar -->
     <div class="filter-toolbar">
         <div class="filter-group">
-            <label for="districtSelect">📍 Select District (ಜಿಲ್ಲೆ):</label>
+            <label for="districtSelect">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                <span>Select District (ಜಿಲ್ಲೆ):</span>
+            </label>
             <select id="districtSelect" onchange="filterDistrictBearers(this.value)">
                 <option value="all">All Districts (ಎಲ್ಲಾ ಜಿಲ್ಲೆಗಳು) — <?= count($districtBearers) ?> Bearers</option>
                 <?php foreach ($districtOptions as $d): ?>
@@ -516,48 +555,49 @@ require __DIR__ . '/includes/partials/header.php';
             <tbody id="districtTableBody">
                 <?php foreach ($districtBearers as $idx => $ob): ?>
                 <tr class="district-row" data-district-id="<?= (int)$ob['district_id'] ?>">
-                    <td style="color:var(--ink-300); font-weight:700; text-align:center; vertical-align:middle;"><?= $idx + 1 ?></td>
+                    <td style="color:var(--text-secondary); font-weight:700; text-align:center; vertical-align:middle;"><?= $idx + 1 ?></td>
                     <td style="text-align:center; vertical-align:middle;">
                         <?php if (!empty($ob['photo_path']) && file_exists(PUBLIC_HTML . '/' . ltrim($ob['photo_path'], '/'))): ?>
                             <img src="/<?= ltrim(Sanitize::attr($ob['photo_path']), '/') ?>" 
                                  alt="<?= Sanitize::attr($ob['name']) ?>" 
                                  style="width:44px; height:44px; object-fit:cover; border-radius:50%; border:2px solid #cbd5e1; display:inline-block;">
                         <?php else: ?>
-                            <div style="width:44px; height:44px; border-radius:50%; background:#eff6ff; color:#1e40af; display:inline-flex; align-items:center; justify-content:center; font-weight:700; font-size:0.85rem; border:1px solid #dbeafe;">
+                            <div style="width:44px; height:44px; border-radius:50%; background:var(--red-100); color:var(--brand-red); display:inline-flex; align-items:center; justify-content:center; font-weight:700; font-size:0.85rem; border:1px solid #FECACA;">
                                 <?= mb_substr($ob['name'], 0, 1, 'UTF-8') ?>
                             </div>
                         <?php endif; ?>
                     </td>
                     <td style="vertical-align:middle;">
-                        <strong style="color:var(--ink-900);"><?= Sanitize::html($ob['name']) ?></strong>
+                        <strong style="color:var(--primary-navy);"><?= Sanitize::html($ob['name']) ?></strong>
                         <?php if (!empty($ob['official_designation'])): ?>
-                            <div style="font-size:0.8rem; color:var(--ink-500);"><?= Sanitize::html($ob['official_designation']) ?></div>
+                            <div style="font-size:0.8rem; color:var(--text-secondary);"><?= Sanitize::html($ob['official_designation']) ?></div>
                         <?php endif; ?>
                     </td>
-                    <td style="font-family:'Noto Sans Kannada', sans-serif; font-weight:600; color:#1e3a8a; vertical-align:middle;">
+                    <td style="font-family:'Noto Sans Kannada', sans-serif; font-weight:600; color:var(--brand-red); vertical-align:middle;">
                         <?= Sanitize::html($ob['association_designation']) ?>
                     </td>
-                    <td style="white-space:nowrap; color:var(--ink-500); font-size:0.86rem; vertical-align:middle;">
+                    <td style="white-space:nowrap; color:var(--text-secondary); font-size:0.86rem; vertical-align:middle;">
                         <?= Sanitize::html($ob['term_start'] ?? '—') ?> to <?= Sanitize::html($ob['term_end'] ?? '—') ?>
                     </td>
                     <?php if ($canViewContact): ?>
                     <td style="white-space:nowrap; font-weight:500; vertical-align:middle;">
                         <?php if (!empty($ob['contact_number'])): ?>
-                            <a href="tel:<?= Sanitize::attr($ob['contact_number']) ?>" style="color:#1d4ed8; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">
-                                📞 <?= Sanitize::html($ob['contact_number']) ?>
+                            <a href="tel:<?= Sanitize::attr($ob['contact_number']) ?>" style="color:var(--prof-blue); text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                                <span><?= Sanitize::html($ob['contact_number']) ?></span>
                             </a>
                         <?php else: ?>
-                            <span style="color:var(--ink-400);">—</span>
+                            <span style="color:var(--text-secondary);">—</span>
                         <?php endif; ?>
                     </td>
                     <?php endif; ?>
                     <td style="vertical-align:middle;">
-                        <span class="badge badge-lav"><?= Sanitize::html($ob['district_name']) ?></span>
+                        <span class="badge badge-muted"><?= Sanitize::html($ob['district_name']) ?></span>
                     </td>
                 </tr>
                 <?php endforeach; ?>
                 <tr id="districtEmptyRow" style="display:none;">
-                    <td colspan="<?= $canViewContact ? 7 : 6 ?>" style="text-align:center; padding:28px; color:var(--ink-500);">
+                    <td colspan="<?= $canViewContact ? 7 : 6 ?>" style="text-align:center; padding:28px; color:var(--text-secondary);">
                         No office bearers found for the selected district.
                     </td>
                 </tr>
@@ -572,10 +612,10 @@ require __DIR__ . '/includes/partials/header.php';
 <!-- =======================================================================
      4) TALUK COMMITTEE SECTION (ತಾಲ್ಲೂಕು ಸಂಘ)
      ======================================================================= -->
-<div class="card office-bearer-section" id="taluk">
+<div class="card office-bearer-section section-accent-green" id="taluk">
     <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:14px; border-bottom:1px solid var(--border-soft); padding-bottom:12px;">
-        <h2 style="margin:0; border:none; padding:0;">
-            <span class="badge badge-teal" style="margin-right:8px;">Taluk</span>Taluk Committee (ತಾಲ್ಲೂಕು ಸಂಘ)
+        <h2 style="margin:0; border:none; padding:0; display:flex; align-items:center; gap:8px;">
+            <span class="badge badge-green">Taluk</span> Taluk Committee (ತಾಲ್ಲೂಕು ಸಂಘ)
         </h2>
         <span class="badge badge-muted"><?= count($talukBearers) ?> Bearers</span>
     </div>
@@ -583,7 +623,10 @@ require __DIR__ . '/includes/partials/header.php';
     <!-- Taluk Filter Toolbar -->
     <div class="filter-toolbar">
         <div class="filter-group">
-            <label for="talukDistrictSelect">📍 District (ಜಿಲ್ಲೆ):</label>
+            <label for="talukDistrictSelect">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                <span>District (ಜಿಲ್ಲೆ):</span>
+            </label>
             <select id="talukDistrictSelect" onchange="onTalukDistrictChange(this.value)">
                 <option value="all">All Districts (ಎಲ್ಲಾ ಜಿಲ್ಲೆಗಳು)</option>
                 <?php foreach ($talukDistricts as $d): ?>
@@ -592,7 +635,10 @@ require __DIR__ . '/includes/partials/header.php';
             </select>
         </div>
         <div class="filter-group">
-            <label for="talukSelect">🏙️ Taluk (ತಾಲ್ಲೂಕು):</label>
+            <label for="talukSelect">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/></svg>
+                <span>Taluk (ತಾಲ್ಲೂಕು):</span>
+            </label>
             <select id="talukSelect" onchange="filterTalukBearers()">
                 <option value="all">All Taluks (ಎಲ್ಲಾ ತಾಲ್ಲೂಕುಗಳು)</option>
                 <?php foreach ($talukDistricts as $d): ?>
@@ -634,51 +680,52 @@ require __DIR__ . '/includes/partials/header.php';
             <tbody id="talukTableBody">
                 <?php foreach ($talukBearers as $idx => $ob): ?>
                 <tr class="taluk-row" data-district-id="<?= (int)$ob['district_id'] ?>" data-taluk-id="<?= (int)$ob['taluk_id'] ?>">
-                    <td style="color:var(--ink-300); font-weight:700; text-align:center; vertical-align:middle;"><?= $idx + 1 ?></td>
+                    <td style="color:var(--text-secondary); font-weight:700; text-align:center; vertical-align:middle;"><?= $idx + 1 ?></td>
                     <td style="text-align:center; vertical-align:middle;">
                         <?php if (!empty($ob['photo_path']) && file_exists(PUBLIC_HTML . '/' . ltrim($ob['photo_path'], '/'))): ?>
                             <img src="/<?= ltrim(Sanitize::attr($ob['photo_path']), '/') ?>" 
                                  alt="<?= Sanitize::attr($ob['name']) ?>" 
                                  style="width:44px; height:44px; object-fit:cover; border-radius:50%; border:2px solid #cbd5e1; display:inline-block;">
                         <?php else: ?>
-                            <div style="width:44px; height:44px; border-radius:50%; background:#eff6ff; color:#1e40af; display:inline-flex; align-items:center; justify-content:center; font-weight:700; font-size:0.85rem; border:1px solid #dbeafe;">
+                            <div style="width:44px; height:44px; border-radius:50%; background:var(--green-100); color:var(--accent-green); display:inline-flex; align-items:center; justify-content:center; font-weight:700; font-size:0.85rem; border:1px solid #BBF7D0;">
                                 <?= mb_substr($ob['name'], 0, 1, 'UTF-8') ?>
                             </div>
                         <?php endif; ?>
                     </td>
                     <td style="vertical-align:middle;">
-                        <strong style="color:var(--ink-900);"><?= Sanitize::html($ob['name']) ?></strong>
+                        <strong style="color:var(--primary-navy);"><?= Sanitize::html($ob['name']) ?></strong>
                         <?php if (!empty($ob['official_designation'])): ?>
-                            <div style="font-size:0.8rem; color:var(--ink-500);"><?= Sanitize::html($ob['official_designation']) ?></div>
+                            <div style="font-size:0.8rem; color:var(--text-secondary);"><?= Sanitize::html($ob['official_designation']) ?></div>
                         <?php endif; ?>
                     </td>
-                    <td style="font-family:'Noto Sans Kannada', sans-serif; font-weight:600; color:#1e3a8a; vertical-align:middle;">
+                    <td style="font-family:'Noto Sans Kannada', sans-serif; font-weight:600; color:var(--accent-green); vertical-align:middle;">
                         <?= Sanitize::html($ob['association_designation']) ?>
                     </td>
-                    <td style="white-space:nowrap; color:var(--ink-500); font-size:0.86rem; vertical-align:middle;">
+                    <td style="white-space:nowrap; color:var(--text-secondary); font-size:0.86rem; vertical-align:middle;">
                         <?= Sanitize::html($ob['term_start'] ?? '—') ?> to <?= Sanitize::html($ob['term_end'] ?? '—') ?>
                     </td>
                     <?php if ($canViewContact): ?>
                     <td style="white-space:nowrap; font-weight:500; vertical-align:middle;">
                         <?php if (!empty($ob['contact_number'])): ?>
-                            <a href="tel:<?= Sanitize::attr($ob['contact_number']) ?>" style="color:#1d4ed8; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">
-                                📞 <?= Sanitize::html($ob['contact_number']) ?>
+                            <a href="tel:<?= Sanitize::attr($ob['contact_number']) ?>" style="color:var(--prof-blue); text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                                <span><?= Sanitize::html($ob['contact_number']) ?></span>
                             </a>
                         <?php else: ?>
-                            <span style="color:var(--ink-400);">—</span>
+                            <span style="color:var(--text-secondary);">—</span>
                         <?php endif; ?>
                     </td>
                     <?php endif; ?>
                     <td style="vertical-align:middle;">
-                        <span class="badge badge-teal"><?= Sanitize::html($ob['taluk_name']) ?></span>
+                        <span class="badge badge-green"><?= Sanitize::html($ob['taluk_name']) ?></span>
                     </td>
                     <td style="vertical-align:middle;">
-                        <span class="badge badge-lav"><?= Sanitize::html($ob['district_name']) ?></span>
+                        <span class="badge badge-muted"><?= Sanitize::html($ob['district_name']) ?></span>
                     </td>
                 </tr>
                 <?php endforeach; ?>
                 <tr id="talukEmptyRow" style="display:none;">
-                    <td colspan="<?= $canViewContact ? 8 : 7 ?>" style="text-align:center; padding:28px; color:var(--ink-500);">
+                    <td colspan="<?= $canViewContact ? 8 : 7 ?>" style="text-align:center; padding:28px; color:var(--text-secondary);">
                         No office bearers found for the selected taluk.
                     </td>
                 </tr>

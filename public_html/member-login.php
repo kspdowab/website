@@ -163,6 +163,7 @@ $pageTitle = 'Member Portal Access';
 require __DIR__ . '/includes/partials/header.php';
 ?>
 
+<span class="eyebrow">Member Services</span>
 <h1 class="page-title">Member Portal Access</h1>
 <p class="page-subtitle">Enter the email address registered with your current-year annual membership payment.</p>
 
@@ -193,7 +194,7 @@ require __DIR__ . '/includes/partials/header.php';
                 <strong><?= Sanitize::html($resumeEmailValue) ?></strong> -- this will not create a
                 duplicate registration.
             </p>
-            <button type="submit" class="btn btn-teal" style="width:100%; justify-content:center;">Resume My Payment</button>
+            <button type="submit" class="btn" style="width:100%; justify-content:center;">Resume My Payment</button>
         </form>
 
         <p class="form-hint" style="text-align:center; margin-top:var(--space-4);">
