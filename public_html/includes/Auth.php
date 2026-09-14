@@ -152,8 +152,9 @@ class Auth
             return;
         }
 
-        $lifetime = defined('SESSION_LIFETIME') ? SESSION_LIFETIME : 3600;
-        $loginAt  = Session::get('login_at');
+        $rememberMe = Session::get('remember_me') === true;
+        $lifetime   = $rememberMe ? (30 * 86400) : (defined('SESSION_LIFETIME') ? SESSION_LIFETIME : 3600);
+        $loginAt    = Session::get('login_at');
 
         if ($loginAt !== null && (time() - (int) $loginAt) > $lifetime) {
             Session::flash('info', 'Your session has expired. Please log in again.');

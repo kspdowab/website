@@ -50,10 +50,27 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
     $identifier = Sanitize::string($_POST['identifier'] ?? '', 190);
     $password   = (string) ($_POST['password'] ?? '');
+    $remember   = !empty($_POST['remember']);
 
     $result = Auth::login($identifier, $password);
 
     if ($result['success']) {
+        if ($remember) {
+            Session::set('remember_me', true);
+            $params = session_get_cookie_params();
+            setcookie(
+                session_name(),
+                session_id(),
+                time() + (30 * 86400),
+                $params['path'],
+                $params['domain'],
+                $params['secure'],
+                $params['httponly']
+            );
+        } else {
+            Session::set('remember_me', false);
+        }
+
         $memberId = Session::get('member_id');
 
         if ($memberId !== null) {
@@ -153,7 +170,65 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             outline: none;
             border-color: #1a3a6b;
         }
-        button {
+        .password-field-wrap {
+            position: relative;
+            margin-bottom: 16px;
+        }
+        .password-field-wrap input.has-toggle {
+            margin-bottom: 0;
+            padding-right: 44px;
+        }
+        .password-toggle-btn {
+            position: absolute;
+            right: 4px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 36px !important;
+            height: 36px !important;
+            background: transparent !important;
+            border: none !important;
+            border-radius: 4px;
+            padding: 0 !important;
+            cursor: pointer;
+            color: #64748b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 0;
+            transition: color 0.15s, background-color 0.15s;
+        }
+        .password-toggle-btn:hover {
+            color: #1a3a6b;
+            background: #f1f5f9 !important;
+        }
+        .password-toggle-btn:focus-visible {
+            outline: 2px solid #1a3a6b;
+            outline-offset: 1px;
+        }
+        .remember-row {
+            display: flex;
+            align-items: center;
+            margin: 0 0 20px;
+        }
+        .checkbox-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-size: 0.88rem;
+            font-weight: 500;
+            color: #475569;
+            user-select: none;
+            margin-bottom: 0;
+        }
+        .checkbox-label input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            margin: 0;
+            cursor: pointer;
+            accent-color: #1a3a6b;
+        }
+        button[type="submit"] {
             width: 100%;
             background: #1a3a6b;
             color: #fff;
@@ -164,7 +239,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             font-weight: 600;
             cursor: pointer;
         }
-        button:hover { background: #142c52; }
+        button[type="submit"]:hover { background: #142c52; }
         .error {
             background: #fdecea;
             color: #a12622;
@@ -202,23 +277,114 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         // editable), only a GET query value locks the field.
         $identifierFromQuery = ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET' && ($_GET['identifier'] ?? '') !== '';
         $identifierValue     = (string) ($_POST['identifier'] ?? $_GET['identifier'] ?? '');
+        $rememberChecked     = !empty($_POST['remember']);
         ?>
-        <form method="post" action="/login.php" autocomplete="off">
+        <form method="post" action="/login.php" id="login-form">
             <?= CSRF::htmlField() ?>
 
             <label for="identifier">Email, Mobile, or Username</label>
             <input type="text" id="identifier" name="identifier" required
+                   autocomplete="username"
                    <?= $identifierFromQuery ? 'readonly' : 'autofocus' ?>
                    value="<?= Sanitize::attr($identifierValue) ?>">
 
             <label for="password">Password</label>
-            <input type="password" id="password" name="password" required
-                   <?= $identifierFromQuery ? 'autofocus' : '' ?>>
+            <div class="password-field-wrap">
+                <input type="password" id="password" name="password" required class="has-toggle"
+                       autocomplete="current-password"
+                       <?= $identifierFromQuery ? 'autofocus' : '' ?>>
+                <button type="button" class="password-toggle-btn" data-target="password" aria-label="Show password" aria-pressed="false" title="Show password">
+                    <svg class="icon-eye" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                    <svg class="icon-eye-off" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a21.8 21.8 0 0 1 5.06-6.06M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 7 11 7a21.7 21.7 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                </button>
+            </div>
+
+            <div class="remember-row">
+                <label class="checkbox-label" for="remember">
+                    <input type="checkbox" id="remember" name="remember" value="1" <?= $rememberChecked ? 'checked' : '' ?>>
+                    <span>Remember password</span>
+                </label>
+            </div>
 
             <button type="submit">Sign In</button>
         </form>
 
         <div class="back-link"><a href="/">&larr; Back to home</a></div>
     </div>
+
+    <script>
+    // Password show/hide toggle
+    document.querySelectorAll('.password-toggle-btn').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+            e.preventDefault();
+            var targetId = btn.getAttribute('data-target');
+            var input = document.getElementById(targetId);
+            if (!input) return;
+            var isPassword = input.type === 'password';
+            input.type = isPassword ? 'text' : 'password';
+            var eye = btn.querySelector('.icon-eye');
+            var eyeOff = btn.querySelector('.icon-eye-off');
+            if (eye) eye.style.display = isPassword ? 'none' : '';
+            if (eyeOff) eyeOff.style.display = isPassword ? '' : 'none';
+            btn.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
+            btn.setAttribute('title', isPassword ? 'Hide password' : 'Show password');
+            btn.setAttribute('aria-pressed', isPassword ? 'true' : 'false');
+        });
+    });
+
+    // Remember password functionality (localStorage persistence)
+    (function () {
+        var form = document.getElementById('login-form');
+        var idInput = document.getElementById('identifier');
+        var pwdInput = document.getElementById('password');
+        var remCheckbox = document.getElementById('remember');
+
+        if (!form || !idInput || !pwdInput || !remCheckbox) return;
+
+        var STORAGE_KEY = 'kspdowa_saved_credentials';
+        var CHECK_KEY = 'kspdowa_remember_checked';
+
+        try {
+            var isRemembered = localStorage.getItem(CHECK_KEY) === '1';
+            if (isRemembered) {
+                remCheckbox.checked = true;
+                var saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) {
+                    var creds = JSON.parse(saved);
+                    if (!idInput.value && creds.identifier) {
+                        idInput.value = creds.identifier;
+                    }
+                    if (!pwdInput.value && creds.password) {
+                        pwdInput.value = creds.password;
+                    }
+                }
+            }
+        } catch (err) {}
+
+        remCheckbox.addEventListener('change', function () {
+            if (!this.checked) {
+                try {
+                    localStorage.removeItem(CHECK_KEY);
+                    localStorage.removeItem(STORAGE_KEY);
+                } catch (err) {}
+            }
+        });
+
+        form.addEventListener('submit', function () {
+            try {
+                if (remCheckbox.checked) {
+                    localStorage.setItem(CHECK_KEY, '1');
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                        identifier: idInput.value,
+                        password: pwdInput.value
+                    }));
+                } else {
+                    localStorage.removeItem(CHECK_KEY);
+                    localStorage.removeItem(STORAGE_KEY);
+                }
+            } catch (err) {}
+        });
+    })();
+    </script>
 </body>
 </html>
