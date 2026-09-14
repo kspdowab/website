@@ -161,7 +161,7 @@ function sortIndicator(string $col, string $currentSortBy, string $currentSortDi
     if ($currentSortBy !== $col) { return ' <span style="color:#ccc;">⇅</span>'; }
     return $currentSortDir === 'asc' ? ' <span style="color:#1a3a6b;">↑</span>' : ' <span style="color:#1a3a6b;">↓</span>';
 }
-?>
+
 $pageTitle   = 'Members Abstract Reports';
 $activeMenu  = 'reports';
 $breadcrumbs = [
