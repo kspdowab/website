@@ -28,7 +28,7 @@ $columns = [
     'Phone',                  // 4  10-digit, starts 6-9
     'Email',                  // 5
     'KGID No.',               // 6
-    'Date of Birth',          // 7  format: YYYY-MM-DD
+    'Date of Birth',          // 7  format: DD-MM-YYYY or DD/MM/YYYY
     'GP Working?',            // 8  values: yes / no
     'Organization Type',      // 9  when GP=no: secretariat|rdpr|commissionerate|zilla_panchayat|taluk_panchayat|mp_mla_mlc_pa|other
     'Organization Name',      // 10 when GP=no
@@ -53,7 +53,7 @@ $exampleRows = [
         '9876543210',            // Phone
         'rajesh.kumar@example.com', // Email
         'KGD12345',              // KGID No.
-        '1985-06-15',            // Date of Birth
+        '15-06-1985',            // Date of Birth (DD-MM-YYYY)
         'yes',                   // GP Working?
         '',                      // Organization Type (not needed)
         '',                      // Organization Name (not needed)
@@ -75,7 +75,7 @@ $exampleRows = [
         '8765432109',
         'priya.s@example.com',
         'KGD67890',
-        '1990-03-22',
+        '22-03-1990',            // Date of Birth (DD-MM-YYYY)
         'no',
         'zilla_panchayat',       // Organization Type
         'Zilla Panchayat Office Bagalkote', // Organization Name
@@ -97,7 +97,7 @@ $exampleRows = [
         '7654321098',
         'meena.t@example.com',
         'KGD24680',
-        '1988-11-10',
+        '10-11-1988',            // Date of Birth (DD-MM-YYYY)
         'no',
         'secretariat',           // Organization Type
         'Karnataka Secretariat', // Organization Name

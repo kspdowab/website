@@ -385,6 +385,56 @@ function parseExcelFile(string $filePath): array {
 // 17 Offline Reference (when payment_mode = offline)
 // 18 Offline Remarks (optional)
 
+/**
+ * Parse Date of Birth from various formats into standard SQL YYYY-MM-DD.
+ * Supports:
+ * - DD-MM-YYYY, DD/MM/YYYY, DD.MM.YYYY
+ * - D-M-YYYY, D/M/YYYY
+ * - YYYY-MM-DD, YYYY/MM/DD
+ * - Excel numeric serial date (e.g. 31213)
+ */
+function parseDob(string $raw): ?string {
+    $raw = trim($raw);
+    if ($raw === '') return null;
+
+    // 1. Excel serial date number (e.g. 31213 or 31213.0)
+    if (is_numeric($raw) && (float)$raw > 1000 && (float)$raw < 100000) {
+        $timestamp = ((float)$raw - 25569) * 86400;
+        $d = gmdate('Y-m-d', (int)$timestamp);
+        if ($d && $d !== '1970-01-01') return $d;
+    }
+
+    // 2. DD-MM-YYYY or DD/MM/YYYY or DD.MM.YYYY
+    if (preg_match('/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/', $raw, $m)) {
+        $day   = (int)$m[1];
+        $month = (int)$m[2];
+        $year  = (int)$m[3];
+        if (checkdate($month, $day, $year)) {
+            return sprintf('%04d-%02d-%02d', $year, $month, $day);
+        }
+    }
+
+    // 3. YYYY-MM-DD or YYYY/MM/DD
+    if (preg_match('/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/', $raw, $m)) {
+        $year  = (int)$m[1];
+        $month = (int)$m[2];
+        $day   = (int)$m[3];
+        if (checkdate($month, $day, $year)) {
+            return sprintf('%04d-%02d-%02d', $year, $month, $day);
+        }
+    }
+
+    // 4. DateTime fallback
+    try {
+        $dt = new DateTime($raw);
+        if ($dt) {
+            return $dt->format('Y-m-d');
+        }
+    } catch (Exception $e) {}
+
+    return null;
+}
+
 $LOCKED_ORG_TYPES = ['zilla_panchayat', 'taluk_panchayat'];
 
 /**
@@ -461,12 +511,10 @@ function validateImportRow(
     // Date of Birth
     $dob = null;
     if ($dobRaw !== '') {
-        if (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $dobRaw)) {
-            $dob = $dobRaw;
-        } elseif (preg_match('/^(\d{2})-(\d{2})-(\d{4})$/', $dobRaw, $m)) {
-            $dob = $m[3] . '-' . $m[2] . '-' . $m[1];
+        $dob = parseDob($dobRaw);
+        if ($dob === null) {
+            $errors[] = 'Date of Birth format must be DD-MM-YYYY or DD/MM/YYYY';
         }
-        if ($dob === null) { $errors[] = 'Date of Birth format must be YYYY-MM-DD'; }
     } else {
         $errors[] = 'Date of Birth required';
     }
@@ -1323,7 +1371,7 @@ foreach (Database::fetchAll("SELECT id, name FROM gram_panchayatis") as $g) {
                 <td><?= Sanitize::html($row['phone']) ?></td>
                 <td><?= Sanitize::html($row['email']) ?></td>
                 <td><code><?= Sanitize::html($row['kgid_no']) ?></code></td>
-                <td><?= Sanitize::html($row['dob'] ?: '—') ?></td>
+                <td><?= Sanitize::html(!empty($row['dob']) ? date('d-m-Y', strtotime($row['dob'])) : '—') ?></td>
                 <td><?= Sanitize::html(strtoupper($row['gp_working'] ?: '—')) ?></td>
                 <td><?= Sanitize::html($row['organization_type'] ?: '—') ?></td>
                 <td><?= Sanitize::html($row['organization_name'] ?: '—') ?></td>
@@ -1438,7 +1486,7 @@ foreach (Database::fetchAll("SELECT id, name FROM gram_panchayatis") as $g) {
                     ['Phone',                  'Yes (10-digit)'],
                     ['Email',                  'Yes'],
                     ['KGID No.',               'Yes'],
-                    ['Date of Birth',          'Yes (YYYY-MM-DD)'],
+                    ['Date of Birth',          'Yes (DD-MM-YYYY or DD/MM/YYYY)'],
                     ['GP Working?',            'Yes (yes/no)'],
                     ['Organization Type',      'When GP=no'],
                     ['Organization Name',      'When GP=no'],
