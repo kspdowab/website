@@ -39,7 +39,11 @@ require_once __DIR__ . '/includes/bootstrap.php';
 
 // Already logged in? Don't show the login form again.
 if (Auth::isLoggedIn()) {
-    header('Location: /admin/office-bearers.php');
+    if (Auth::getCurrentMemberId() !== null) {
+        header('Location: /member/index.php');
+        exit;
+    }
+    header('Location: /admin/index.php');
     exit;
 }
 
@@ -104,7 +108,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             exit;
         }
 
-        $redirect = Session::getFlash('redirect_after_login', '/admin/office-bearers.php');
+        $redirect = Session::getFlash('redirect_after_login', '/admin/index.php');
         header('Location: ' . $redirect);
         exit;
     }

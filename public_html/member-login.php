@@ -44,7 +44,7 @@ require_once __DIR__ . '/includes/bootstrap.php';
 
 // Already an active session? Send them where that account belongs.
 if (Auth::isLoggedIn()) {
-    header('Location: ' . (Auth::getCurrentMemberId() !== null ? '/member/index.php' : '/admin/office-bearers.php'));
+    header('Location: ' . (Auth::getCurrentMemberId() !== null ? '/member/index.php' : '/admin/index.php'));
     exit;
 }
 

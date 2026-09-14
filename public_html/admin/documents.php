@@ -1,0 +1,445 @@
+<?php
+/**
+ * KSPDOWA — Admin: Documents Library Management
+ * ============================================================
+ * Section 6 Specification:
+ * - Logged-in authorized users only
+ * - Upload
+ * - Edit metadata
+ * - Category
+ * - Description
+ * - Publish / manage (Active / Archived)
+ * - Secure View/Download (via /document.php?id=...)
+ *
+ * Security:
+ * - No unrestricted direct file URLs
+ * - RBAC required
+ * - Path traversal protection
+ * - MIME & extension validation
+ * - Audit logging
+ * ============================================================
+ */
+
+declare(strict_types=1);
+
+require_once dirname(__DIR__) . '/includes/bootstrap.php';
+
+Auth::requireLogin();
+$currentUserId = Auth::getCurrentUserId();
+
+RBAC::requirePermission($currentUserId, 'documents', 'view');
+
+$canManage = RBAC::hasPermission($currentUserId, 'documents', 'manage') ||
+             RBAC::hasPermission($currentUserId, 'documents', 'upload') ||
+             RBAC::hasRole($currentUserId, 'State Super Admin');
+
+// Fetch document categories
+$categories = Database::fetchAll("SELECT * FROM document_categories WHERE status = 'active' ORDER BY name");
+
+// ─── POST Handler ────────────────────────────────────────────────────────────
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    CSRF::requireValid();
+    $action = Sanitize::string($_POST['action'] ?? '', 30);
+
+    if (!$canManage) {
+        ErrorHandler::abort(403, 'You do not have permission to manage documents.');
+    }
+
+    // ── UPLOAD DOCUMENT ──
+    if ($action === 'upload') {
+        $title       = Sanitize::string($_POST['title'] ?? '', 300);
+        $categoryId  = Sanitize::positiveInt($_POST['category_id'] ?? null);
+        $accessLevel = Sanitize::inArray($_POST['access_level'] ?? 'member', ['member', 'public', 'officer', 'admin']) ?: 'member';
+        $description = Sanitize::string($_POST['description'] ?? '', 2000);
+
+        $errors = [];
+        if ($title === '') {
+            $errors[] = 'Document title is required.';
+        }
+
+        if (!isset($_FILES['doc_file']) || $_FILES['doc_file']['error'] !== UPLOAD_ERR_OK) {
+            $errors[] = 'Please select a document file to upload.';
+        } else {
+            $file = $_FILES['doc_file'];
+            $maxBytes = 25 * 1024 * 1024; // 25 MB max
+
+            if ($file['size'] > $maxBytes) {
+                $errors[] = 'File size exceeds 25 MB limit.';
+            }
+
+            $ext = strtolower(pathinfo((string)$file['name'], PATHINFO_EXTENSION));
+            $allowedExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'jpg', 'jpeg', 'png'];
+            if (!in_array($ext, $allowedExtensions, true)) {
+                $errors[] = 'Invalid file extension. Allowed: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG.';
+            }
+
+            $finfo = new finfo(FILEINFO_MIME_TYPE);
+            $mime  = $finfo->file($file['tmp_name']);
+            $allowedMimes = [
+                'application/pdf',
+                'application/msword',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'application/vnd.ms-excel',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'image/jpeg',
+                'image/png'
+            ];
+            if (!in_array($mime, $allowedMimes, true)) {
+                $errors[] = 'Invalid file MIME type (' . htmlspecialchars($mime) . ').';
+            }
+
+            if (empty($errors)) {
+                $docsDir = UPLOADS_DIR . '/documents';
+                if (!is_dir($docsDir)) {
+                    mkdir($docsDir, 0755, true);
+                }
+
+                $safeName = 'doc_' . date('Ymd_His') . '_' . bin2hex(random_bytes(6)) . '.' . $ext;
+                $destPath = $docsDir . '/' . $safeName;
+
+                if (move_uploaded_file($file['tmp_name'], $destPath)) {
+                    Database::execute(
+                        "INSERT INTO documents (title, category_id, description, file_path, access_level, published_at, uploaded_by, status)
+                         VALUES (?, ?, ?, ?, ?, NOW(), ?, 'active')",
+                        [$title, $categoryId ?: null, $description, 'documents/' . $safeName, $accessLevel, $currentUserId]
+                    );
+                    $docId = (int)Database::lastInsertId();
+                    AuditLogger::log('UPLOAD', 'documents', $docId, null, ['title' => $title, 'filename' => $safeName]);
+                    Session::flash('success', "Document '{$title}' uploaded successfully.");
+                    header('Location: /admin/documents.php');
+                    exit;
+                } else {
+                    $errors[] = 'Server error storing file on disk.';
+                }
+            }
+        }
+
+        if (!empty($errors)) {
+            Session::flash('error', implode(' ', $errors));
+        }
+    }
+
+    // ── EDIT METADATA ──
+    if ($action === 'update') {
+        $id          = Sanitize::positiveInt($_POST['id'] ?? null);
+        $title       = Sanitize::string($_POST['title'] ?? '', 300);
+        $categoryId  = Sanitize::positiveInt($_POST['category_id'] ?? null);
+        $accessLevel = Sanitize::inArray($_POST['access_level'] ?? 'member', ['member', 'public', 'officer', 'admin']) ?: 'member';
+        $description = Sanitize::string($_POST['description'] ?? '', 2000);
+
+        if (!$id || $title === '') {
+            Session::flash('error', 'Valid document ID and title required.');
+            header('Location: /admin/documents.php');
+            exit;
+        }
+
+        Database::execute(
+            "UPDATE documents SET title = ?, category_id = ?, description = ?, access_level = ? WHERE id = ?",
+            [$title, $categoryId ?: null, $description, $accessLevel, $id]
+        );
+        AuditLogger::log('UPDATE', 'documents', $id, null, ['title' => $title]);
+        Session::flash('success', "Document '{$title}' updated successfully.");
+        header('Location: /admin/documents.php');
+        exit;
+    }
+
+    // ── TOGGLE ARCHIVE ──
+    if ($action === 'toggle_archive') {
+        $id = Sanitize::positiveInt($_POST['id'] ?? null);
+        if ($id) {
+            $row = Database::fetchOne('SELECT status FROM documents WHERE id = ?', [$id]);
+            if ($row) {
+                $newStatus = ($row['status'] === 'archived') ? 'active' : 'archived';
+                Database::execute('UPDATE documents SET status = ? WHERE id = ?', [$newStatus, $id]);
+                AuditLogger::log('STATUS_CHANGE', 'documents', $id, null, ['new_status' => $newStatus]);
+                Session::flash('success', "Document status changed to " . ucfirst($newStatus) . ".");
+            }
+        }
+        header('Location: /admin/documents.php');
+        exit;
+    }
+}
+
+// ─── Filters & List Query ────────────────────────────────────────────────────
+$qCategory = Sanitize::positiveInt($_GET['category'] ?? null);
+$qSearch   = trim(Sanitize::string($_GET['q'] ?? '', 100));
+$qStatus   = Sanitize::inArray($_GET['status'] ?? 'all', ['all', 'active', 'archived']) ?: 'all';
+$editId    = Sanitize::positiveInt($_GET['edit'] ?? null);
+$showForm  = isset($_GET['upload']) || $editId;
+
+$whereClause = ["1=1"];
+$params      = [];
+
+if ($qCategory) {
+    $whereClause[] = "d.category_id = ?";
+    $params[]      = $qCategory;
+}
+
+if ($qSearch !== '') {
+    $whereClause[] = "(d.title LIKE ? OR d.description LIKE ?)";
+    $like = '%' . $qSearch . '%';
+    $params[] = $like;
+    $params[] = $like;
+}
+
+if ($qStatus !== 'all') {
+    $whereClause[] = "d.status = ?";
+    $params[]      = $qStatus;
+}
+
+$whereSql = implode(' AND ', $whereClause);
+
+$sql = "
+    SELECT d.*, dc.name AS category_name, u.username AS uploader_name
+    FROM documents d
+    LEFT JOIN document_categories dc ON dc.id = d.category_id
+    LEFT JOIN users u ON u.id = d.uploaded_by
+    WHERE {$whereSql}
+    ORDER BY d.published_at DESC, d.id DESC
+";
+$documentsList = Database::fetchAll($sql, $params);
+
+// Edit Row
+$editRow = null;
+if ($editId) {
+    $editRow = Database::fetchOne('SELECT * FROM documents WHERE id = ?', [$editId]);
+}
+
+$pageTitle  = 'Documents Library';
+$activeMenu = 'documents';
+$breadcrumbs = [
+    ['label' => 'Dashboard', 'url' => '/admin/index.php'],
+    ['label' => 'Documents', 'url' => '']
+];
+
+require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
+?>
+
+<div class="page-header-row">
+    <div>
+        <h1 class="page-heading-title">Documents Library</h1>
+        <p class="page-heading-subtitle">Upload, categorize, and securely publish official documents</p>
+    </div>
+    <div>
+        <?php if ($canManage): ?>
+            <?php if ($showForm): ?>
+                <a href="/admin/documents.php" class="btn btn-outline">← Back to List</a>
+            <?php else: ?>
+                <a href="/admin/documents.php?upload=1" class="btn btn-primary">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                    Upload Document
+                </a>
+            <?php endif; ?>
+        <?php endif; ?>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     UPLOAD / EDIT DOCUMENT FORM
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<?php if ($showForm && $canManage): ?>
+<div class="table-card" style="margin-bottom:28px;">
+    <div class="table-card-header" style="background:#f8fafc;">
+        <span class="table-card-title"><?= $editRow ? 'Edit Document: ' . Sanitize::html($editRow['title']) : 'Upload Official Document' ?></span>
+        <a href="/admin/documents.php" class="btn btn-outline btn-sm">✕ Cancel</a>
+    </div>
+    <div style="padding:24px;">
+        <form method="post" action="/admin/documents.php" enctype="multipart/form-data">
+            <?= CSRF::htmlField() ?>
+            <input type="hidden" name="action" value="<?= $editRow ? 'update' : 'upload' ?>">
+            <?php if ($editRow): ?>
+                <input type="hidden" name="id" value="<?= (int)$editRow['id'] ?>">
+            <?php endif; ?>
+
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:18px 24px;">
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <label class="form-label" for="doc_title">Document Title *</label>
+                    <input type="text" name="title" id="doc_title" class="form-control" required maxlength="300" placeholder="e.g. Gram Panchayat Service Regulations 2026" value="<?= Sanitize::attr($editRow['title'] ?? '') ?>">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="category_id">Category</label>
+                    <select name="category_id" id="category_id" class="form-select">
+                        <option value="">— General / Uncategorized —</option>
+                        <?php foreach ($categories as $cat): ?>
+                            <option value="<?= (int)$cat['id'] ?>" <?= ($editRow['category_id'] ?? null) == $cat['id'] ? 'selected' : '' ?>>
+                                <?= Sanitize::html($cat['name']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="access_level">Access Level *</label>
+                    <select name="access_level" id="access_level" class="form-select" required>
+                        <option value="member" <?= ($editRow['access_level'] ?? 'member') === 'member' ? 'selected' : '' ?>>Member Only</option>
+                        <option value="public" <?= ($editRow['access_level'] ?? '') === 'public' ? 'selected' : '' ?>>Public</option>
+                        <option value="officer" <?= ($editRow['access_level'] ?? '') === 'officer' ? 'selected' : '' ?>>Officer Level</option>
+                        <option value="admin" <?= ($editRow['access_level'] ?? '') === 'admin' ? 'selected' : '' ?>>Admin Only</option>
+                    </select>
+                </div>
+
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <label class="form-label" for="doc_desc">Description / Summary</label>
+                    <textarea name="description" id="doc_desc" rows="3" class="form-control" placeholder="Summary of the document contents..."><?= Sanitize::html($editRow['description'] ?? '') ?></textarea>
+                </div>
+
+                <?php if (!$editRow): ?>
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <label class="form-label" for="doc_file">File * (PDF, DOC, DOCX, XLS, XLSX, JPG, PNG — Max 25MB)</label>
+                    <input type="file" name="doc_file" id="doc_file" class="form-control" required accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png">
+                </div>
+                <?php else: ?>
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <span style="font-size:0.84rem; color:var(--text-muted);">
+                        Current file: <a href="/document.php?id=<?= (int)$editRow['id'] ?>" target="_blank" style="font-weight:600;">View Document</a>
+                    </span>
+                </div>
+                <?php endif; ?>
+            </div>
+
+            <div style="margin-top:24px; display:flex; gap:12px;">
+                <button type="submit" class="btn btn-primary">
+                    <?= $editRow ? 'Save Metadata' : 'Upload & Publish Document' ?>
+                </button>
+                <a href="/admin/documents.php" class="btn btn-outline">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+<?php endif; ?>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     FILTERS
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="filter-card">
+    <div class="filter-header-bar">
+        <div class="filter-header-title">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+            Filter Documents
+        </div>
+        <div class="filter-header-actions">
+            <a href="/admin/documents.php" class="filter-header-btn">↺ Reset</a>
+        </div>
+    </div>
+    <form method="get" action="/admin/documents.php" class="filter-body">
+        <div class="filter-grid">
+            <div class="form-group">
+                <label class="form-label">Category</label>
+                <select name="category" class="form-select">
+                    <option value="">All Categories</option>
+                    <?php foreach ($categories as $cat): ?>
+                        <option value="<?= (int)$cat['id'] ?>" <?= $qCategory === (int)$cat['id'] ? 'selected' : '' ?>>
+                            <?= Sanitize::html($cat['name']) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Status</label>
+                <select name="status" class="form-select">
+                    <option value="all" <?= $qStatus === 'all' ? 'selected' : '' ?>>All Statuses</option>
+                    <option value="active" <?= $qStatus === 'active' ? 'selected' : '' ?>>Active</option>
+                    <option value="archived" <?= $qStatus === 'archived' ? 'selected' : '' ?>>Archived</option>
+                </select>
+            </div>
+            <div class="form-group" style="grid-column: span 2;">
+                <label class="form-label">Search</label>
+                <div class="input-with-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <input type="text" name="q" class="form-control" placeholder="Document title, description..." value="<?= Sanitize::attr($qSearch) ?>">
+                </div>
+            </div>
+            <div class="form-group" style="display:flex; gap:10px;">
+                <button type="submit" class="btn btn-primary" style="flex:1;">Search</button>
+                <a href="/admin/documents.php" class="btn btn-outline">Clear</a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     DOCUMENTS TABLE
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="table-card">
+    <div class="table-card-header">
+        <div>
+            <span class="table-card-title">Document Repository</span>
+            <span class="table-card-count">(<?= count($documentsList) ?> files)</span>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th style="width:60px;">Sl No</th>
+                    <th>Document Title</th>
+                    <th>Category</th>
+                    <th>Access</th>
+                    <th>Status</th>
+                    <th>Uploaded By</th>
+                    <th>Date</th>
+                    <th>Secure View</th>
+                    <?php if ($canManage): ?><th style="text-align:right;">Actions</th><?php endif; ?>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if (empty($documentsList)): ?>
+                <tr>
+                    <td colspan="9" style="text-align:center; padding:36px; color:var(--text-muted);">
+                        No documents found matching the filter criteria.
+                    </td>
+                </tr>
+                <?php else: ?>
+                    <?php $idx = 1; foreach ($documentsList as $doc): ?>
+                    <tr>
+                        <td style="color:var(--text-muted); font-weight:600;"><?= $idx++ ?></td>
+                        <td style="font-weight:600; color:var(--text-main);">
+                            <?= Sanitize::html($doc['title']) ?>
+                        </td>
+                        <td>
+                            <span class="badge badge-purple"><?= Sanitize::html($doc['category_name'] ?? 'General') ?></span>
+                        </td>
+                        <td>
+                            <span class="badge badge-neutral"><?= ucfirst(Sanitize::html($doc['access_level'])) ?></span>
+                        </td>
+                        <td>
+                            <?php if ($doc['status'] === 'active'): ?>
+                                <span class="badge badge-success">Active</span>
+                            <?php else: ?>
+                                <span class="badge badge-neutral">Archived</span>
+                            <?php endif; ?>
+                        </td>
+                        <td><?= Sanitize::html($doc['uploader_name'] ?? 'System') ?></td>
+                        <td><?= $doc['published_at'] ? date('d-m-Y', strtotime($doc['published_at'])) : '—' ?></td>
+                        <td>
+                            <a href="/document.php?id=<?= (int)$doc['id'] ?>" target="_blank" class="btn btn-primary btn-sm">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                View File
+                            </a>
+                        </td>
+                        <?php if ($canManage): ?>
+                        <td style="text-align:right;">
+                            <div style="display:inline-flex; gap:6px;">
+                                <a href="/admin/documents.php?edit=<?= (int)$doc['id'] ?>" class="btn btn-outline btn-sm">Edit</a>
+                                <form method="post" action="/admin/documents.php" style="display:inline;" onsubmit="return confirm('Toggle status for this document?');">
+                                    <?= CSRF::htmlField() ?>
+                                    <input type="hidden" name="action" value="toggle_archive">
+                                    <input type="hidden" name="id" value="<?= (int)$doc['id'] ?>">
+                                    <button type="submit" class="btn btn-outline btn-sm" style="color:var(--text-muted);">
+                                        <?= $doc['status'] === 'archived' ? 'Unarchive' : 'Archive' ?>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                        <?php endif; ?>
+                    </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<?php
+require_once dirname(__DIR__) . '/includes/partials/admin-footer.php';

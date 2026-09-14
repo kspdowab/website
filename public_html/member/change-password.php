@@ -1,21 +1,10 @@
 <?php
 /**
- * KSPDOWA — Member: Forced Temporary Password Change
+ * KSPDOWA — Member Portal: Settings & Password Management
  * ============================================================
- * Approved Phase 3 spec: "On first login, force the member to
- * change/reset the temporary password before accessing the member
- * portal." This page is that forced step, and ONLY that step -- it
- * is not a general self-service password-change screen and not the
- * generic password-reset system the spec explicitly excludes from
- * this unit.
- *
- * Reached from login.php immediately after a successful password
- * check when users.must_change_password = 1. Requires an active
- * login (Auth::requireLogin()) but does not require member-portal
- * eligibility to reach THIS page specifically -- the whole point of
- * the temporary password is to get the member far enough to set a
- * real one; eligibility is re-checked once the change succeeds,
- * before they are sent on to the portal.
+ * Section 8: Settings
+ * Supports both forced first-time password setup and voluntary
+ * password changes for logged-in members.
  * ============================================================
  */
 
@@ -24,36 +13,38 @@ declare(strict_types=1);
 require_once dirname(__DIR__) . '/includes/bootstrap.php';
 
 Auth::requireLogin();
-
 $userId   = Auth::getCurrentUserId();
 $memberId = Auth::getCurrentMemberId();
 
-// This page is for member accounts on a temporary password only.
 if ($memberId === null) {
-    header('Location: /admin/office-bearers.php');
+    header('Location: /admin/index.php');
     exit;
 }
 
-$userRow = Database::fetchOne('SELECT must_change_password FROM users WHERE id = ?', [$userId]);
-if (!$userRow || (int) $userRow['must_change_password'] !== 1) {
-    // Nothing to force -- send them to the portal (which will itself
-    // re-check eligibility).
-    header('Location: /member/index.php');
-    exit;
-}
+$userRow = Database::fetchOne('SELECT must_change_password, password_hash FROM users WHERE id = ?', [$userId]);
+$isForced = $userRow && (int)$userRow['must_change_password'] === 1;
 
 $errors = [];
 
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     CSRF::requireValid();
 
-    $newPassword     = (string) ($_POST['new_password'] ?? '');
-    $confirmPassword = (string) ($_POST['confirm_password'] ?? '');
+    $currentPassword = (string)($_POST['current_password'] ?? '');
+    $newPassword     = (string)($_POST['new_password'] ?? '');
+    $confirmPassword = (string)($_POST['confirm_password'] ?? '');
 
-    $errors = Sanitize::password($newPassword);
+    // If voluntary change, verify current password
+    if (!$isForced) {
+        if ($currentPassword === '' || !password_verify($currentPassword, (string)($userRow['password_hash'] ?? ''))) {
+            $errors[] = 'Current password is incorrect.';
+        }
+    }
+
+    $pwdErrors = Sanitize::password($newPassword);
+    $errors    = array_merge($errors, $pwdErrors);
 
     if ($newPassword !== $confirmPassword) {
-        $errors[] = 'The two passwords do not match.';
+        $errors[] = 'The two new passwords do not match.';
     }
 
     if (empty($errors)) {
@@ -63,77 +54,83 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         );
         AuditLogger::log('PASSWORD_CHANGE', 'users', $userId);
 
-        // Re-check eligibility now that the forced step is done -- if
-        // it somehow lapsed between activation and this moment, don't
-        // grant portal access.
         $currentYear = Membership::getCurrentYear();
-        if ($currentYear === null || !Membership::isEligibleForYear($memberId, (int) $currentYear['id'])) {
+        if ($currentYear === null || !Membership::isEligibleForYear($memberId, (int)$currentYear['id'])) {
             Session::destroy();
             Session::flash('error', 'Your password has been updated, but your current-year annual membership fee has not been verified yet.');
             header('Location: /member-login.php');
             exit;
         }
 
-        Session::flash('success', 'Your password has been updated.');
+        Session::flash('success', 'Your password has been updated successfully.');
         header('Location: /member/index.php');
         exit;
     }
 }
 
-$pageTitle = 'Change Password';
-require dirname(__DIR__) . '/includes/partials/header.php';
+$pageTitle  = 'Settings';
+$activeMenu = 'settings';
+$breadcrumbs = [
+    ['label' => 'Dashboard', 'url' => '/member/index.php'],
+    ['label' => 'Settings', 'url' => '']
+];
+
+require_once dirname(__DIR__) . '/includes/partials/member-header.php';
 ?>
 
-<h1 class="page-title">Set Your Password</h1>
-<p class="page-subtitle">You're signing in with a temporary password. Please choose your own password to continue.</p>
-
-<div class="card form-narrow">
-    <?php if (!empty($errors)): ?>
-        <div class="alert alert-error" role="alert">
-            <?= implode('<br>', array_map('Sanitize::html', $errors)) ?>
-        </div>
-    <?php endif; ?>
-
-    <form method="post" action="/member/change-password.php" autocomplete="off">
-        <?= CSRF::htmlField() ?>
-        <div class="form-group">
-            <label for="new_password">New Password</label>
-            <div class="password-field-wrap">
-                <input type="password" id="new_password" name="new_password" required minlength="8" class="has-toggle">
-                <button type="button" class="password-toggle-btn" data-target="new_password" aria-label="Show password" aria-pressed="false">
-                    <svg class="icon-eye" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-                    <svg class="icon-eye-off" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a21.8 21.8 0 0 1 5.06-6.06M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 7 11 7a21.7 21.7 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-                </button>
-            </div>
-        </div>
-        <div class="form-group">
-            <label for="confirm_password">Confirm New Password</label>
-            <div class="password-field-wrap">
-                <input type="password" id="confirm_password" name="confirm_password" required minlength="8" class="has-toggle">
-                <button type="button" class="password-toggle-btn" data-target="confirm_password" aria-label="Show password" aria-pressed="false">
-                    <svg class="icon-eye" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-                    <svg class="icon-eye-off" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a21.8 21.8 0 0 1 5.06-6.06M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 7 11 7a21.7 21.7 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-                </button>
-            </div>
-        </div>
-        <p class="form-hint">At least 8 characters, with an uppercase letter, a lowercase letter, and a digit.</p>
-        <button type="submit" class="btn" style="width:100%; justify-content:center;">Set Password</button>
-    </form>
+<div class="page-header-row">
+    <div>
+        <h1 class="page-heading-title"><?= $isForced ? 'Set Your Password' : 'Account Settings' ?></h1>
+        <p class="page-heading-subtitle">
+            <?= $isForced ? 'You are signing in with a temporary password. Please set a new password to continue.' : 'Manage your login credentials and security settings.' ?>
+        </p>
+    </div>
 </div>
 
-<script>
-document.querySelectorAll('.password-toggle-btn').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-        var input = document.getElementById(btn.getAttribute('data-target'));
-        if (!input) { return; }
-        var showing = input.type === 'text';
-        input.type = showing ? 'password' : 'text';
-        btn.querySelector('.icon-eye').style.display = showing ? '' : 'none';
-        btn.querySelector('.icon-eye-off').style.display = showing ? 'none' : '';
-        btn.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
-        btn.setAttribute('aria-pressed', showing ? 'false' : 'true');
-    });
-});
-</script>
+<div class="table-card" style="max-width:580px;">
+    <div class="table-card-header">
+        <span class="table-card-title"><?= $isForced ? 'Choose New Password' : 'Change Password' ?></span>
+    </div>
+    <div style="padding:24px;">
+        <?php if (!empty($errors)): ?>
+            <div class="alert alert-danger">
+                <div>
+                    <?php foreach ($errors as $e): ?>
+                        <div>• <?= Sanitize::html($e) ?></div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        <?php endif; ?>
 
-<?php require dirname(__DIR__) . '/includes/partials/footer.php'; ?>
+        <form method="post" action="/member/change-password.php">
+            <?= CSRF::htmlField() ?>
+
+            <?php if (!$isForced): ?>
+            <div class="form-group" style="margin-bottom:18px;">
+                <label class="form-label" for="current_password">Current Password *</label>
+                <input type="password" name="current_password" id="current_password" class="form-control" required autocomplete="current-password">
+            </div>
+            <?php endif; ?>
+
+            <div class="form-group" style="margin-bottom:18px;">
+                <label class="form-label" for="new_password">New Password *</label>
+                <input type="password" name="new_password" id="new_password" class="form-control" required minlength="8" autocomplete="new-password">
+                <span style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;">
+                    Must be at least 8 characters long with a mix of letters and numbers.
+                </span>
+            </div>
+
+            <div class="form-group" style="margin-bottom:24px;">
+                <label class="form-label" for="confirm_password">Confirm New Password *</label>
+                <input type="password" name="confirm_password" id="confirm_password" class="form-control" required minlength="8" autocomplete="new-password">
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width:100%;">
+                Update Password
+            </button>
+        </form>
+    </div>
+</div>
+
+<?php
+require_once dirname(__DIR__) . '/includes/partials/member-footer.php';

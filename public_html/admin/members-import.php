@@ -1133,13 +1133,16 @@ foreach (Database::fetchAll("SELECT id, name FROM gram_panchayatis") as $g) {
 <header>
     <h1><?= Sanitize::html(APP_SHORT_NAME) ?> — Members Management</h1>
     <nav>
-        <a href="/admin/office-bearers.php">Office Bearers</a>
+        <a href="/admin/index.php">Dashboard</a>
         <a href="/admin/members.php" class="active">Members</a>
+        <a href="/admin/orders.php">Orders</a>
+        <a href="/admin/circulars.php">Circulars</a>
+        <a href="/admin/documents.php">Documents</a>
+        <a href="/admin/activities.php">Activities</a>
         <a href="/admin/news.php">News</a>
+        <a href="/admin/office-bearers.php">Office Bearers</a>
         <a href="/admin/users.php">Users &amp; Roles</a>
-        <a href="/admin/membership-setup.php">Membership Setup</a>
-        <a href="/admin/donations.php">Donations</a>
-        <a href="/admin/settings.php">Association Settings</a>
+        <a href="/admin/settings.php">Settings</a>
         <a href="/logout.php">Logout</a>
     </nav>
 </header>

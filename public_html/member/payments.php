@@ -2,15 +2,9 @@
 /**
  * KSPDOWA — Member Portal: Payment History
  * ============================================================
- * Phase 3 unit (build order approved by user: Payment History ->
- * Receipts -> Donations). Read-only listing of the logged-in
- * member's own membership_payments rows, joined to membership_years
- * for the financial-year label. Deliberately excludes any
- * "View Receipt" action -- that is the next unit, not yet built.
- *
- * Same auth/eligibility gate pattern as member/index.php (defense
- * in depth: re-checks must_change_password and current-year
- * eligibility independently of what login.php already checked).
+ * Section 8: Payments is KEPT in Member Navigation.
+ * Displays member's official payment receipts and records.
+ * Styled with the UI theme.
  * ============================================================
  */
 
@@ -19,97 +13,118 @@ declare(strict_types=1);
 require_once dirname(__DIR__) . '/includes/bootstrap.php';
 
 Auth::requireLogin();
+$currentMemberId = Auth::getCurrentMemberId();
 
-$userId   = Auth::getCurrentUserId();
-$memberId = Auth::getCurrentMemberId();
-
-if ($memberId === null) {
-    // Not a member account -- this area is not for admin/officer logins.
-    header('Location: /admin/office-bearers.php');
+if ($currentMemberId === null) {
+    header('Location: /login.php');
     exit;
 }
 
-$userRow = Database::fetchOne('SELECT must_change_password FROM users WHERE id = ?', [$userId]);
-if ($userRow && (int) $userRow['must_change_password'] === 1) {
-    header('Location: /member/change-password.php');
-    exit;
-}
+$pageTitle  = 'Payment History';
+$activeMenu = 'payments';
+$breadcrumbs = [
+    ['label' => 'Dashboard', 'url' => '/member/index.php'],
+    ['label' => 'Payments', 'url' => '']
+];
 
-$currentYear = Membership::getCurrentYear();
-if ($currentYear === null || !Membership::isEligibleForYear($memberId, (int) $currentYear['id'])) {
-    AuditLogger::log('LOGIN_DENIED_INELIGIBLE', 'users', $userId);
-    Session::destroy();
-    Session::flash('error', 'Your current-year annual membership fee has not been verified yet. Please complete payment to access the member portal.');
-    header('Location: /member-login.php');
-    exit;
-}
+require_once dirname(__DIR__) . '/includes/partials/member-header.php';
 
 $payments = Database::fetchAll(
-    'SELECT mp.id, mp.amount, mp.status, mp.gateway_payment_id, mp.paid_at, mp.created_at,
-            my.financial_year
+    'SELECT mp.*, my.financial_year, pr.receipt_no
      FROM membership_payments mp
      JOIN membership_years my ON my.id = mp.membership_year_id
+     LEFT JOIN payment_receipts pr ON pr.payment_id = mp.id
      WHERE mp.member_id = ?
      ORDER BY mp.created_at DESC',
-    [$memberId]
+    [$currentMemberId]
 );
-
-$statusBadge = static function (string $status): string {
-    return match ($status) {
-        'completed' => 'badge-green',
-        'pending'   => 'badge-blue',
-        default     => 'badge-muted', // failed, refunded
-    };
-};
-
-$pageTitle = 'Payment History';
-require dirname(__DIR__) . '/includes/partials/header.php';
 ?>
 
-<h1 class="page-title">Payment History</h1>
-<p class="page-subtitle">Member portal — <?= Sanitize::html(APP_SHORT_NAME) ?></p>
+<div class="page-header-row">
+    <div>
+        <h1 class="page-heading-title">Payment History &amp; Receipts</h1>
+        <p class="page-heading-subtitle">Your annual membership subscriptions, verified payments, and downloadable receipts</p>
+    </div>
+    <div>
+        <a href="/member/fee.php" class="btn btn-primary">Membership Fee Status</a>
+    </div>
+</div>
 
-<div class="card">
-    <h2 class="card-title">Your Membership Payments</h2>
-
-    <?php if (empty($payments)): ?>
-        <p>No payment records found yet.</p>
-    <?php else: ?>
-        <table class="plain">
+<div class="table-card">
+    <div class="table-card-header">
+        <div>
+            <span class="table-card-title">Membership Payments</span>
+            <span class="table-card-count">(<?= count($payments) ?> transactions)</span>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="data-table">
             <thead>
                 <tr>
+                    <th style="width:60px;">Sl No</th>
                     <th>Membership Year</th>
-                    <th>Amount</th>
+                    <th>Amount Paid</th>
                     <th>Status</th>
-                    <th>Paid On</th>
-                    <th>Payment Reference</th>
-                    <th>Receipt</th>
+                    <th>Payment Mode</th>
+                    <th>Transaction Reference</th>
+                    <th>Paid Date</th>
+                    <th style="text-align:center;">Official Receipt</th>
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($payments as $p): ?>
+                <?php if (empty($payments)): ?>
+                <tr>
+                    <td colspan="8" style="text-align:center; padding:36px; color:var(--text-muted);">
+                        No payment records found.
+                    </td>
+                </tr>
+                <?php else: ?>
+                    <?php $idx = 1; foreach ($payments as $p): ?>
                     <tr>
-                        <td data-label="Membership Year"><?= Sanitize::html($p['financial_year']) ?></td>
-                        <td data-label="Amount">&#8377;<?= Sanitize::html(number_format((float) $p['amount'], 2)) ?></td>
-                        <td data-label="Status">
-                            <span class="badge <?= $statusBadge((string) $p['status']) ?>"><?= Sanitize::html(ucfirst((string) $p['status'])) ?></span>
+                        <td style="color:var(--text-muted); font-weight:600;"><?= $idx++ ?></td>
+                        <td style="font-weight:700; color:var(--blue-700);">
+                            <?= Sanitize::html($p['financial_year']) ?>
                         </td>
-                        <td data-label="Paid On"><?= $p['paid_at'] !== null ? Sanitize::html(date('d M Y', strtotime((string) $p['paid_at']))) : '&#8212;' ?></td>
-                        <td data-label="Payment Reference"><?= $p['gateway_payment_id'] !== null ? Sanitize::html($p['gateway_payment_id']) : '&#8212;' ?></td>
-                        <td data-label="Receipt">
+                        <td style="font-weight:700; color:var(--text-main);">
+                            ₹<?= number_format((float)$p['amount'], 2) ?>
+                        </td>
+                        <td>
                             <?php if ($p['status'] === 'completed'): ?>
-                                <a href="/member/receipt.php?payment_id=<?= (int) $p['id'] ?>" target="_blank" rel="noopener">View Receipt</a>
+                                <span class="badge badge-success">Completed</span>
+                            <?php elseif ($p['status'] === 'pending'): ?>
+                                <span class="badge badge-warning">Pending</span>
                             <?php else: ?>
-                                &#8212;
+                                <span class="badge badge-danger"><?= ucfirst(Sanitize::html($p['status'])) ?></span>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <span class="badge badge-neutral"><?= ucfirst(Sanitize::html($p['payment_mode'] ?? 'online')) ?></span>
+                        </td>
+                        <td>
+                            <code style="background:var(--blue-50); color:var(--blue-700); padding:2px 6px; border-radius:4px; font-size:0.82rem;">
+                                <?= Sanitize::html($p['gateway_payment_id'] ?? $p['offline_reference'] ?? '—') ?>
+                            </code>
+                        </td>
+                        <td>
+                            <?= $p['paid_at'] ? date('d M Y, h:i A', strtotime((string)$p['paid_at'])) : '—' ?>
+                        </td>
+                        <td style="text-align:center;">
+                            <?php if ($p['status'] === 'completed'): ?>
+                                <a href="/member/receipt.php?id=<?= (int)$p['id'] ?>" class="btn btn-outline btn-sm" target="_blank">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                    Receipt PDF
+                                </a>
+                            <?php else: ?>
+                                <span style="color:var(--text-muted); font-size:0.8rem;">—</span>
                             <?php endif; ?>
                         </td>
                     </tr>
-                <?php endforeach; ?>
+                    <?php endforeach; ?>
+                <?php endif; ?>
             </tbody>
         </table>
-    <?php endif; ?>
+    </div>
 </div>
 
-<p><a href="/member/index.php" class="btn btn-outline">Back to Member Portal</a></p>
-
-<?php require dirname(__DIR__) . '/includes/partials/footer.php'; ?>
+<?php
+require_once dirname(__DIR__) . '/includes/partials/member-footer.php';

@@ -393,7 +393,7 @@ function nav_active(string $path, string $current): string
                 <?php if (Auth::getCurrentMemberId() !== null): ?>
                     <a href="/member/index.php" class="cta">Member Portal</a>
                 <?php else: ?>
-                    <a href="/admin/office-bearers.php" class="cta">Admin</a>
+                    <a href="/admin/index.php" class="cta">Admin</a>
                 <?php endif; ?>
             <?php else: ?>
                 <a href="/register.php"<?= nav_active('/register.php', $currentPath) ?>>Register</a>
