@@ -444,9 +444,10 @@ function nav_active(string $path, string $current): string
                     Office Bearers <span class="nav-caret">▾</span>
                 </a>
                 <div class="nav-sub-menu">
-                    <a href="/office-bearers.php#state">🏛️ State (ರಾಜ್ಯ)</a>
-                    <a href="/office-bearers.php#district">📍 District (ಜಿಲ್ಲೆ)</a>
-                    <a href="/office-bearers.php#taluk">🏙️ Taluk (ತಾಲ್ಲೂಕು)</a>
+                    <a href="/office-bearers.php#state-council">🏛️ State Council (ರಾಜ್ಯ ಪರಿಷತ್ತು)</a>
+                    <a href="/office-bearers.php#state">🏛️ State Committee (ರಾಜ್ಯ ಸಂಘ)</a>
+                    <a href="/office-bearers.php#district">📍 District Committee (ಜಿಲ್ಲಾ ಸಂಘ)</a>
+                    <a href="/office-bearers.php#taluk">🏙️ Taluk Committee (ತಾಲ್ಲೂಕು ಸಂಘ)</a>
                 </div>
             </div>
             <a href="/recognition.php"<?= nav_active('/recognition.php', $currentPath) ?>>Recognition</a>

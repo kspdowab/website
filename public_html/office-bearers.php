@@ -2,9 +2,9 @@
 /**
  * KSPDOWA — Public Office Bearers Page
  * ============================================================
- * Displays State, District, and Taluk Office Bearers with
- * smooth section navigation, district/taluk dropdown filtering,
- * and live search counters.
+ * Displays State Council, State Committee, District Committee,
+ * and Taluk Committee leadership with smooth section navigation,
+ * district/taluk dropdown filtering, and live counters.
  * ============================================================
  */
 
@@ -12,28 +12,51 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/includes/bootstrap.php';
 
-// Fetch State Bearers
+// 1. Fetch State Council Members
+// District-wise elected: President, State Council Member, and Treasurer
+$stateCouncilBearers = Database::fetchAll(
+    "SELECT ob.*, d.name AS district_name FROM office_bearers ob
+     JOIN districts d ON d.id = ob.district_id
+     WHERE ob.status = 'active' AND ob.taluk_id IS NULL
+       AND (
+           (ob.association_designation LIKE '%ಅಧ್ಯಕ್ಷ%' AND ob.association_designation NOT LIKE '%ಉಪಾಧ್ಯಕ್ಷ%')
+           OR ob.association_designation LIKE '%ರಾಜ್ಯ ಪರಿಷತ್%'
+           OR ob.association_designation LIKE '%ಖಜಾಂಚಿ%'
+           OR (ob.association_designation LIKE '%President%' AND ob.association_designation NOT LIKE '%Vice%')
+           OR ob.association_designation LIKE '%Council%'
+           OR ob.association_designation LIKE '%Treasurer%'
+       )
+     ORDER BY d.name, ob.sort_order, ob.name"
+);
+
+// Group unique districts in State Council
+$councilDistrictOptions = [];
+foreach ($stateCouncilBearers as $ob) {
+    $dId = (int) $ob['district_id'];
+    if (!isset($councilDistrictOptions[$dId])) {
+        $councilDistrictOptions[$dId] = [
+            'id'    => $dId,
+            'name'  => $ob['district_name'],
+            'count' => 0,
+        ];
+    }
+    $councilDistrictOptions[$dId]['count']++;
+}
+uasort($councilDistrictOptions, fn($a, $b) => strcmp($a['name'], $b['name']));
+
+// 2. Fetch State Committee Bearers
 $stateBearers = Database::fetchAll(
     "SELECT * FROM office_bearers
      WHERE status = 'active' AND district_id IS NULL AND taluk_id IS NULL
      ORDER BY sort_order, name"
 );
 
-// Fetch District Bearers
+// 3. Fetch District Committee Bearers
 $districtBearers = Database::fetchAll(
     "SELECT ob.*, d.name AS district_name FROM office_bearers ob
      JOIN districts d ON d.id = ob.district_id
      WHERE ob.status = 'active' AND ob.taluk_id IS NULL
      ORDER BY d.name, ob.sort_order, ob.name"
-);
-
-// Fetch Taluk Bearers
-$talukBearers = Database::fetchAll(
-    "SELECT ob.*, d.name AS district_name, t.name AS taluk_name FROM office_bearers ob
-     JOIN taluks t ON t.id = ob.taluk_id
-     JOIN districts d ON d.id = t.district_id
-     WHERE ob.status = 'active'
-     ORDER BY d.name, t.name, ob.sort_order, ob.name"
 );
 
 // Group unique districts in District Committee
@@ -50,6 +73,15 @@ foreach ($districtBearers as $ob) {
     $districtOptions[$dId]['count']++;
 }
 uasort($districtOptions, fn($a, $b) => strcmp($a['name'], $b['name']));
+
+// 4. Fetch Taluk Committee Bearers
+$talukBearers = Database::fetchAll(
+    "SELECT ob.*, d.name AS district_name, t.name AS taluk_name FROM office_bearers ob
+     JOIN taluks t ON t.id = ob.taluk_id
+     JOIN districts d ON d.id = t.district_id
+     WHERE ob.status = 'active'
+     ORDER BY d.name, t.name, ob.sort_order, ob.name"
+);
 
 // Group districts and taluks for Taluk Committee
 $talukDistricts = [];
@@ -205,23 +237,120 @@ require __DIR__ . '/includes/partials/header.php';
 
 <span class="eyebrow">Association Leadership</span>
 <h1 class="page-title">Office Bearers (ಪದಾಧಿಕಾರಿಗಳು)</h1>
-<p class="page-subtitle">Current state, district, and taluk leadership of Karnataka State Postmen, Postwoman and MTS Association.</p>
+<p class="page-subtitle">Current leadership hierarchy of Karnataka State Postmen, Postwoman and MTS Association.</p>
 
 <!-- Quick Jump Bar -->
 <div class="quick-jump-nav">
     <span style="font-size:0.85rem; font-weight:700; color:var(--ink-500);">Jump to:</span>
-    <a href="#state" class="jump-btn">🏛️ State Committee (ರಾಜ್ಯ)</a>
-    <a href="#district" class="jump-btn">📍 District Committees (ಜಿಲ್ಲೆ)</a>
-    <a href="#taluk" class="jump-btn">🏙️ Taluk Committees (ತಾಲ್ಲೂಕು)</a>
+    <a href="#state-council" class="jump-btn">🏛️ State Council (ರಾಜ್ಯ ಪರಿಷತ್ತು)</a>
+    <a href="#state" class="jump-btn">🏛️ State Committee (ರಾಜ್ಯ ಸಂಘ)</a>
+    <a href="#district" class="jump-btn">📍 District Committee (ಜಿಲ್ಲಾ ಸಂಘ)</a>
+    <a href="#taluk" class="jump-btn">🏙️ Taluk Committee (ತಾಲ್ಲೂಕು ಸಂಘ)</a>
 </div>
 
 <!-- =======================================================================
-     STATE COMMITTEE SECTION
+     1) STATE COUNCIL SECTION (ರಾಜ್ಯ ಪರಿಷತ್ತು)
+     ======================================================================= -->
+<div class="card office-bearer-section" id="state-council">
+    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:12px; border-bottom:1px solid var(--border-soft); padding-bottom:12px;">
+        <div>
+            <h2 style="margin:0; border:none; padding:0;">
+                <span class="badge badge-blue" style="margin-right:8px;">Council</span>State Council (ರಾಜ್ಯ ಪರಿಷತ್ತು)
+            </h2>
+            <div style="font-size:0.82rem; color:var(--ink-500); margin-top:4px;">
+                ಜಿಲ್ಲಾವಾರು ಚುನಾಯಿತ ಅಧ್ಯಕ್ಷರು, ರಾಜ್ಯ ಪರಿಷತ್ ಸದಸ್ಯರು ಹಾಗೂ ಖಜಾಂಚಿಗಳು ರಾಜ್ಯ ಪರಿಷತ್ತಿನ ಸದಸ್ಯರಾಗಿರುತ್ತಾರೆ.
+            </div>
+        </div>
+        <span class="badge badge-muted"><?= count($stateCouncilBearers) ?> Members</span>
+    </div>
+
+    <!-- Council District Filter Toolbar -->
+    <div class="filter-toolbar">
+        <div class="filter-group">
+            <label for="councilDistrictSelect">📍 Select District (ಜಿಲ್ಲೆ):</label>
+            <select id="councilDistrictSelect" onchange="filterCouncilBearers(this.value)">
+                <option value="all">All Districts (ಎಲ್ಲಾ ಜಿಲ್ಲೆಗಳು) — <?= count($stateCouncilBearers) ?> Members</option>
+                <?php foreach ($councilDistrictOptions as $d): ?>
+                    <option value="<?= $d['id'] ?>">
+                        <?= Sanitize::html($d['name']) ?> (<?= $d['count'] ?>)
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <button type="button" id="councilClearBtn" class="filter-clear-btn" style="display:none;" onclick="resetCouncilFilter()">
+            ✕ Show All Districts
+        </button>
+        <span id="councilCountBadge" class="filter-count-badge">
+            Showing all <?= count($stateCouncilBearers) ?> Council Members
+        </span>
+    </div>
+
+    <?php if (!empty($stateCouncilBearers)): ?>
+        <div class="table-wrap">
+        <table class="plain">
+            <thead>
+                <tr>
+                    <th style="width:50px;">#</th>
+                    <th>Name</th>
+                    <th>Designation (ಹುದ್ದೆ)</th>
+                    <th>Term</th>
+                    <th>Representative District (ಪ್ರತಿನಿಧಿಸುವ ಜಿಲ್ಲೆ)</th>
+                </tr>
+            </thead>
+            <tbody id="councilTableBody">
+                <?php foreach ($stateCouncilBearers as $idx => $ob): ?>
+                <tr class="council-row" data-district-id="<?= (int)$ob['district_id'] ?>">
+                    <td style="color:var(--ink-300); font-weight:700;"><?= $idx + 1 ?></td>
+                    <td>
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <?php if (!empty($ob['photo_path']) && file_exists(PUBLIC_HTML . '/' . ltrim($ob['photo_path'], '/'))): ?>
+                                <img src="/<?= ltrim(Sanitize::attr($ob['photo_path']), '/') ?>" 
+                                     alt="<?= Sanitize::attr($ob['name']) ?>" 
+                                     style="width:40px; height:40px; object-fit:cover; border-radius:50%; border:2px solid #cbd5e1; flex-shrink:0;">
+                            <?php else: ?>
+                                <div style="width:40px; height:40px; border-radius:50%; background:#eff6ff; color:#1e40af; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.85rem; flex-shrink:0; border:1px solid #dbeafe;">
+                                    <?= mb_substr($ob['name'], 0, 1, 'UTF-8') ?>
+                                </div>
+                            <?php endif; ?>
+                            <div>
+                                <strong style="color:var(--ink-900);"><?= Sanitize::html($ob['name']) ?></strong>
+                                <?php if (!empty($ob['official_designation'])): ?>
+                                    <div style="font-size:0.8rem; color:var(--ink-500);"><?= Sanitize::html($ob['official_designation']) ?></div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </td>
+                    <td style="font-family:'Noto Sans Kannada', sans-serif; font-weight:600; color:#1e3a8a;">
+                        <?= Sanitize::html($ob['association_designation']) ?>
+                    </td>
+                    <td style="white-space:nowrap; color:var(--ink-500); font-size:0.86rem;">
+                        <?= Sanitize::html($ob['term_start'] ?? '—') ?> to <?= Sanitize::html($ob['term_end'] ?? '—') ?>
+                    </td>
+                    <td>
+                        <span class="badge badge-lav"><?= Sanitize::html($ob['district_name']) ?></span>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+                <tr id="councilEmptyRow" style="display:none;">
+                    <td colspan="5" style="text-align:center; padding:28px; color:var(--ink-500);">
+                        No council members found for the selected district.
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        </div>
+    <?php else: ?>
+        <p class="empty-state">State Council member details will appear here as district office bearers are added.</p>
+    <?php endif; ?>
+</div>
+
+<!-- =======================================================================
+     2) STATE COMMITTEE SECTION (ರಾಜ್ಯ ಸಂಘ)
      ======================================================================= -->
 <div class="card office-bearer-section" id="state">
     <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:18px; border-bottom:1px solid var(--border-soft); padding-bottom:12px;">
         <h2 style="margin:0; border:none; padding:0;">
-            <span class="badge badge-green" style="margin-right:8px;">State</span>State Committee (ರಾಜ್ಯ ಸಂಘ — ಉಪನಿಯಮ 46)
+            <span class="badge badge-green" style="margin-right:8px;">State</span>State Committee (ರಾಜ್ಯ ಸಂಘ)
         </h2>
         <span class="badge badge-muted"><?= count($stateBearers) ?> Bearers</span>
     </div>
@@ -277,12 +406,12 @@ require __DIR__ . '/includes/partials/header.php';
 </div>
 
 <!-- =======================================================================
-     DISTRICT COMMITTEES SECTION
+     3) DISTRICT COMMITTEE SECTION (ಜಿಲ್ಲಾ ಸಂಘ)
      ======================================================================= -->
 <div class="card office-bearer-section" id="district">
     <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:14px; border-bottom:1px solid var(--border-soft); padding-bottom:12px;">
         <h2 style="margin:0; border:none; padding:0;">
-            <span class="badge badge-lav" style="margin-right:8px;">District</span>District Committees (ಜಿಲ್ಲಾ ಸಂಘ — ಉಪನಿಯಮ 26)
+            <span class="badge badge-lav" style="margin-right:8px;">District</span>District Committee (ಜಿಲ್ಲಾ ಸಂಘ)
         </h2>
         <span class="badge badge-muted"><?= count($districtBearers) ?> Bearers</span>
     </div>
@@ -313,18 +442,17 @@ require __DIR__ . '/includes/partials/header.php';
         <table class="plain">
             <thead>
                 <tr>
-                    <th style="width:140px;">District</th>
+                    <th style="width:50px;">#</th>
                     <th>Name</th>
                     <th>Designation (ಹುದ್ದೆ)</th>
                     <th>Term</th>
+                    <th>Representative District (ಪ್ರತಿನಿಧಿಸುವ ಜಿಲ್ಲೆ)</th>
                 </tr>
             </thead>
             <tbody id="districtTableBody">
-                <?php foreach ($districtBearers as $ob): ?>
+                <?php foreach ($districtBearers as $idx => $ob): ?>
                 <tr class="district-row" data-district-id="<?= (int)$ob['district_id'] ?>">
-                    <td>
-                        <span class="badge badge-lav"><?= Sanitize::html($ob['district_name']) ?></span>
-                    </td>
+                    <td style="color:var(--ink-300); font-weight:700;"><?= $idx + 1 ?></td>
                     <td>
                         <div style="display:flex; align-items:center; gap:12px;">
                             <?php if (!empty($ob['photo_path']) && file_exists(PUBLIC_HTML . '/' . ltrim($ob['photo_path'], '/'))): ?>
@@ -350,10 +478,13 @@ require __DIR__ . '/includes/partials/header.php';
                     <td style="white-space:nowrap; color:var(--ink-500); font-size:0.86rem;">
                         <?= Sanitize::html($ob['term_start'] ?? '—') ?> to <?= Sanitize::html($ob['term_end'] ?? '—') ?>
                     </td>
+                    <td>
+                        <span class="badge badge-lav"><?= Sanitize::html($ob['district_name']) ?></span>
+                    </td>
                 </tr>
                 <?php endforeach; ?>
                 <tr id="districtEmptyRow" style="display:none;">
-                    <td colspan="4" style="text-align:center; padding:28px; color:var(--ink-500);">
+                    <td colspan="5" style="text-align:center; padding:28px; color:var(--ink-500);">
                         No office bearers found for the selected district.
                     </td>
                 </tr>
@@ -366,12 +497,12 @@ require __DIR__ . '/includes/partials/header.php';
 </div>
 
 <!-- =======================================================================
-     TALUK COMMITTEES SECTION
+     4) TALUK COMMITTEE SECTION (ತಾಲ್ಲೂಕು ಸಂಘ)
      ======================================================================= -->
 <div class="card office-bearer-section" id="taluk">
     <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:14px; border-bottom:1px solid var(--border-soft); padding-bottom:12px;">
         <h2 style="margin:0; border:none; padding:0;">
-            <span class="badge badge-teal" style="margin-right:8px;">Taluk</span>Taluk Committees (ತಾಲ್ಲೂಕು ಸಂಘ)
+            <span class="badge badge-teal" style="margin-right:8px;">Taluk</span>Taluk Committee (ತಾಲ್ಲೂಕು ಸಂಘ)
         </h2>
         <span class="badge badge-muted"><?= count($talukBearers) ?> Bearers</span>
     </div>
@@ -415,22 +546,18 @@ require __DIR__ . '/includes/partials/header.php';
         <table class="plain">
             <thead>
                 <tr>
-                    <th style="width:130px;">Taluk</th>
-                    <th style="width:130px;">District</th>
+                    <th style="width:50px;">#</th>
                     <th>Name</th>
                     <th>Designation (ಹುದ್ದೆ)</th>
                     <th>Term</th>
+                    <th>Taluk (ತಾಲ್ಲೂಕು)</th>
+                    <th>Representative District (ಪ್ರತಿನಿಧಿಸುವ ಜಿಲ್ಲೆ)</th>
                 </tr>
             </thead>
             <tbody id="talukTableBody">
-                <?php foreach ($talukBearers as $ob): ?>
+                <?php foreach ($talukBearers as $idx => $ob): ?>
                 <tr class="taluk-row" data-district-id="<?= (int)$ob['district_id'] ?>" data-taluk-id="<?= (int)$ob['taluk_id'] ?>">
-                    <td>
-                        <span class="badge badge-teal"><?= Sanitize::html($ob['taluk_name']) ?></span>
-                    </td>
-                    <td style="color:var(--ink-500); font-weight:500;">
-                        <?= Sanitize::html($ob['district_name']) ?>
-                    </td>
+                    <td style="color:var(--ink-300); font-weight:700;"><?= $idx + 1 ?></td>
                     <td>
                         <div style="display:flex; align-items:center; gap:12px;">
                             <?php if (!empty($ob['photo_path']) && file_exists(PUBLIC_HTML . '/' . ltrim($ob['photo_path'], '/'))): ?>
@@ -456,10 +583,16 @@ require __DIR__ . '/includes/partials/header.php';
                     <td style="white-space:nowrap; color:var(--ink-500); font-size:0.86rem;">
                         <?= Sanitize::html($ob['term_start'] ?? '—') ?> to <?= Sanitize::html($ob['term_end'] ?? '—') ?>
                     </td>
+                    <td>
+                        <span class="badge badge-teal"><?= Sanitize::html($ob['taluk_name']) ?></span>
+                    </td>
+                    <td>
+                        <span class="badge badge-lav"><?= Sanitize::html($ob['district_name']) ?></span>
+                    </td>
                 </tr>
                 <?php endforeach; ?>
                 <tr id="talukEmptyRow" style="display:none;">
-                    <td colspan="5" style="text-align:center; padding:28px; color:var(--ink-500);">
+                    <td colspan="6" style="text-align:center; padding:28px; color:var(--ink-500);">
                         No office bearers found for the selected taluk.
                     </td>
                 </tr>
@@ -472,6 +605,46 @@ require __DIR__ . '/includes/partials/header.php';
 </div>
 
 <script>
+// --- STATE COUNCIL FILTER ---
+function filterCouncilBearers(districtId) {
+    var rows = document.querySelectorAll('.council-row');
+    var visible = 0;
+
+    rows.forEach(function(row) {
+        if (districtId === 'all' || row.getAttribute('data-district-id') === districtId) {
+            row.style.display = '';
+            visible++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+
+    var emptyRow = document.getElementById('councilEmptyRow');
+    if (emptyRow) emptyRow.style.display = (visible === 0) ? '' : 'none';
+
+    var clearBtn = document.getElementById('councilClearBtn');
+    if (clearBtn) clearBtn.style.display = (districtId !== 'all') ? 'inline-flex' : 'none';
+
+    var badge = document.getElementById('councilCountBadge');
+    if (badge) {
+        var sel = document.getElementById('councilDistrictSelect');
+        var name = (districtId !== 'all' && sel.selectedIndex >= 0)
+            ? sel.options[sel.selectedIndex].text.split('(')[0].trim()
+            : 'all';
+        badge.textContent = (districtId === 'all')
+            ? 'Showing all ' + visible + ' Council Members'
+            : 'Showing ' + visible + ' in ' + name;
+    }
+}
+
+function resetCouncilFilter() {
+    var sel = document.getElementById('councilDistrictSelect');
+    if (sel) {
+        sel.value = 'all';
+        filterCouncilBearers('all');
+    }
+}
+
 // --- DISTRICT FILTER ---
 function filterDistrictBearers(districtId) {
     var rows = document.querySelectorAll('.district-row');
@@ -589,13 +762,18 @@ function resetTalukFilter() {
     filterTalukBearers();
 }
 
-// Auto-select on initial page load from URL parameters or hash
+// Auto-select on initial page load from URL parameters
 document.addEventListener('DOMContentLoaded', function() {
     var params = new URLSearchParams(window.location.search);
     var dParam = params.get('district');
     var tParam = params.get('taluk');
 
     if (dParam) {
+        var cSel = document.getElementById('councilDistrictSelect');
+        if (cSel && cSel.querySelector('option[value="' + dParam + '"]')) {
+            cSel.value = dParam;
+            filterCouncilBearers(dParam);
+        }
         var dSel = document.getElementById('districtSelect');
         if (dSel && dSel.querySelector('option[value="' + dParam + '"]')) {
             dSel.value = dParam;
