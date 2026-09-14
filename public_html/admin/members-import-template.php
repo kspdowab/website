@@ -130,9 +130,7 @@ $out = fopen('php://output', 'w');
 // Row 1: Column headers (clean — no notes)
 fputcsv($out, $columns, ',', '"', '\\');
 
-// Row 2-4: Example rows (user should delete before uploading)
-// Instruction row
-fputcsv($out, ['=== EXAMPLE ROWS BELOW — REPLACE WITH REAL DATA AND DELETE THIS LINE ==='], ',', '"', '\\');
+// Rows 2-4: Example data rows (header is row 1, examples start immediately at row 2)
 foreach ($exampleRows as $row) {
     fputcsv($out, $row, ',', '"', '\\');
 }
