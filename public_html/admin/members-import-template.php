@@ -10,6 +10,9 @@
  */
 declare(strict_types=1);
 
+ini_set('display_errors', '0');
+ob_start();
+
 require_once dirname(__DIR__) . '/includes/bootstrap.php';
 
 Auth::requireLogin();
@@ -112,6 +115,8 @@ $exampleRows = [
 
 $filename = 'KSPDOWA_Members_Import_Template_' . date('Ymd') . '.csv';
 
+ob_end_clean();
+
 header('Content-Type: text/csv; charset=UTF-8');
 header('Content-Disposition: attachment; filename="' . $filename . '"');
 header('Cache-Control: no-cache, no-store, must-revalidate');
@@ -123,13 +128,13 @@ echo "\xEF\xBB\xBF";
 $out = fopen('php://output', 'w');
 
 // Row 1: Column headers (clean — no notes)
-fputcsv($out, $columns);
+fputcsv($out, $columns, ',', '"', '\\');
 
 // Row 2-4: Example rows (user should delete before uploading)
 // Instruction row
-fputcsv($out, ['=== EXAMPLE ROWS BELOW — REPLACE WITH REAL DATA AND DELETE THIS LINE ===']);
+fputcsv($out, ['=== EXAMPLE ROWS BELOW — REPLACE WITH REAL DATA AND DELETE THIS LINE ==='], ',', '"', '\\');
 foreach ($exampleRows as $row) {
-    fputcsv($out, $row);
+    fputcsv($out, $row, ',', '"', '\\');
 }
 
 fclose($out);
