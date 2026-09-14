@@ -83,6 +83,7 @@ require_once INCLUDES_DIR . '/Receipt.php';       // needs Database, AuditLogger
 require_once INCLUDES_DIR . '/Donation.php';       // needs Database, AuditLogger
 require_once INCLUDES_DIR . '/DonationGateway.php'; // needs Database, RazorpayClient, AuditLogger, Donation
 require_once INCLUDES_DIR . '/DonationReceipt.php'; // needs Database, AuditLogger, Settings, Receipt (renderLetterhead/latin1)
+require_once INCLUDES_DIR . '/Grievance.php';       // Phase 5 Grievance Engine
 
 // ------------------------------------------------------------------
 // 4. Register centralized error handler
