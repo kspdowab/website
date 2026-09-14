@@ -186,18 +186,18 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
     .row > div { flex: 1; min-width: 160px; }
     .btn { background: #1a3a6b; color: #fff; border: none; border-radius: 6px; padding: 9px 18px; font-size: 0.9rem; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-block; }
     .btn:hover { background: #142c52; }
-    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-    th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #eef1f5; }
-    th { color: #33415c; font-weight: 600; background: #f8fafc; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
-    th a { color: #1a3a6b; text-decoration: none; }
-    th a:hover { text-decoration: underline; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+    th, td { text-align: left; padding: 12px 14px; border-bottom: 1px solid #f1f5f9; }
+    th { color: #ffffff; font-weight: 600; background: var(--blue-800, #1e40af); font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.5px; border: none; white-space: nowrap; }
+    th a { color: #93c5fd; text-decoration: none; }
+    th a:hover { color: #ffffff; text-decoration: underline; }
     td.num { text-align: right; font-weight: 600; }
-    td.paid { color: #1e6b3a; }
-    td.unpaid { color: #a12622; }
-    tfoot { font-weight: bold; background: #f0f5ff; border-top: 2px solid #cbd5e1; }
+    td.paid { color: #15803d; }
+    td.unpaid { color: #b91c1c; }
+    tfoot { font-weight: bold; background: #f8fafc; border-top: 2px solid #cbd5e1; }
     tfoot td.num { font-weight: 700; }
-    tr:hover { background: #f1f5f9; }
-    .table-wrap { overflow-x: auto; }
+    tr:hover { background: #f8fafc; }
+    .table-wrap { overflow-x: auto; background: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.04); margin-top: 14px; }
 </style>
 
 <div class="sub-nav">

@@ -1037,38 +1037,69 @@ a:hover {
   -webkit-overflow-scrolling: touch;
 }
 
-.data-table {
+.data-table,
+.table-wrap table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  font-size: 0.87rem;
+  font-size: 0.85rem;
 }
 
-.data-table thead th {
+.data-table thead th,
+.table-wrap table thead th,
+.table-wrap table th {
   background-color: var(--blue-800);
   color: #ffffff;
-  padding: 13px 16px;
+  padding: 12px 14px;
   font-weight: 600;
-  font-size: 0.8rem;
+  font-size: 0.76rem;
   letter-spacing: 0.5px;
   text-transform: uppercase;
   border: none;
   white-space: nowrap;
 }
 
-.data-table tbody td {
-  padding: 13px 16px;
+.table-wrap table th a {
+  color: #93c5fd;
+  text-decoration: none;
+}
+
+.table-wrap table th a:hover {
+  color: #ffffff;
+  text-decoration: underline;
+}
+
+.data-table tbody td,
+.table-wrap table tbody td,
+.table-wrap table td {
+  padding: 11px 14px;
   border-bottom: 1px solid var(--border-subtle);
   color: var(--text-main);
   vertical-align: middle;
 }
 
-.data-table tbody tr:hover {
+.data-table tbody tr:hover,
+.table-wrap table tbody tr:hover,
+.table-wrap table tr:hover {
   background-color: #f8fafc;
 }
 
-.data-table tbody tr:last-child td {
+.data-table tbody tr:last-child td,
+.table-wrap table tbody tr:last-child td,
+.table-wrap table tr:last-child td {
   border-bottom: none;
+}
+
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  background: #ffffff;
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--border-color, #e2e8f0);
+  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0,0,0,0.05));
+  margin-top: 14px;
+  margin-bottom: 20px;
 }
 
 /* ==============================================================

@@ -359,19 +359,19 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
     .filter-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
     .filter-row > div { flex: 1; min-width: 160px; }
 
-    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
-    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #eef1f5; vertical-align: middle; }
-    th { color: #556; font-weight: 600; background: #f8fafc; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+    th, td { text-align: left; padding: 12px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+    th { color: #ffffff; font-weight: 600; background: var(--blue-800, #1e40af); font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; border: none; }
     tr:hover { background: #f8fafc; }
 
-    .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 600; }
-    .badge.paid, .badge.active { background: #e7f6ec; color: #1e6b3a; }
-    .badge.unpaid, .badge.inactive { background: #f1f2f4; color: #666; }
-    .badge.retired, .badge.resigned { background: #fdf6e8; color: #8a5a22; }
-    .badge.terminated, .badge.deceased { background: #fdecea; color: #a12622; }
+    .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 9999px; font-size: 0.72rem; font-weight: 600; }
+    .badge.paid, .badge.active { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+    .badge.unpaid, .badge.inactive { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+    .badge.retired, .badge.resigned { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+    .badge.terminated, .badge.deceased { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
     .hint { font-size: 0.75rem; color: #888; }
 
-    .table-wrap { overflow-x: auto; }
+    .table-wrap { overflow-x: auto; background: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.04); margin-top: 14px; }
 
     /* Actions dropdown */
     .act-select { padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.8rem; cursor: pointer; }

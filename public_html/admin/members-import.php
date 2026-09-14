@@ -1084,7 +1084,7 @@ $gpNameMap = [];
 foreach (Database::fetchAll("SELECT id, name FROM gram_panchayatis") as $g) {
     $gpNameMap[(int)$g['id']] = $g['name'];
 }
-?>
+
 $pageTitle   = 'Bulk Import Members';
 $activeMenu  = 'members_import';
 $breadcrumbs = [
@@ -1110,9 +1110,11 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
     .btn:hover { background: #142c52; }
     select, input[type="text"], input[type="file"] { width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; font-family: inherit; }
     label { display: block; font-size: 0.8rem; font-weight: 600; color: #33415c; margin: 10px 0 4px; }
-    table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-top: 12px; }
-    th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #eef1f5; }
-    th { background: #f8fafc; color: #33415c; font-weight: 600; border-bottom: 2px solid #e2e8f0; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.84rem; margin-top: 14px; }
+    th, td { text-align: left; padding: 12px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+    th { color: #ffffff; font-weight: 600; background: var(--blue-800, #1e40af); font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.5px; border: none; white-space: nowrap; }
+    tr:hover { background: #f8fafc; }
+    .table-wrap { overflow-x: auto; background: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.04); margin-top: 14px; }
     .err-cell { color: #a12622; font-size: 0.78rem; font-weight: 500; }
     .ok-cell  { color: #1e6b3a; font-size: 0.78rem; }
     code { background: #f0f3f7; padding: 1px 5px; border-radius: 3px; font-size: 0.85em; }

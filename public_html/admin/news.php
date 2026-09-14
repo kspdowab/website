@@ -191,15 +191,17 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
     .row > div { flex: 1; min-width: 200px; }
     button, .btn { background: #1a3a6b; color: #fff; border: none; border-radius: 6px; padding: 10px 18px; font-size: 0.9rem; font-weight: 600; cursor: pointer; margin-top: 18px; }
     button:hover, .btn:hover { background: #142c52; }
-    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #eef1f5; vertical-align: top; }
-    .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 600; }
-    .badge.published { background: #e7f6ec; color: #1e6b3a; }
-    .badge.draft     { background: #f1f2f4; color: #666; }
-    .badge.archived  { background: #fdecea; color: #a12622; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+    th, td { text-align: left; padding: 12px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+    th { color: #ffffff; font-weight: 600; background: var(--blue-800, #1e40af); font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.5px; border: none; white-space: nowrap; }
+    tr:hover { background: #f8fafc; }
+    .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 9999px; font-size: 0.72rem; font-weight: 600; }
+    .badge.published { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+    .badge.draft     { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+    .badge.archived  { background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
     .actions form { display: inline; margin-right: 8px; }
     .actions a, .actions button.link { font-size: 0.8rem; margin-right: 8px; background: none; color: #1a3a6b; border: none; padding: 0; font-weight: 600; cursor: pointer; text-decoration: underline; }
-    .table-wrap { overflow-x: auto; }
+    .table-wrap { overflow-x: auto; background: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.04); margin-top: 14px; }
     @media (max-width: 640px) {
         table, thead, tbody, th, td, tr { display: block; }
         thead { display: none; }
