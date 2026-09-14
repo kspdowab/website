@@ -214,7 +214,19 @@ $breadcrumbs = [
 require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
 ?>
 <style>
+    .panel {
+        background: #fff; border-radius: 8px; box-shadow: 0 1px 6px rgba(26,58,107,0.08);
+        padding: 20px; margin-bottom: 24px;
+    }
+    .panel h2 { font-size: 1rem; color: #1a3a6b; margin: 0 0 4px; }
     .panel .section-hint { font-size: 0.78rem; color: #888; margin: 0 0 16px; }
+    .msg { padding: 10px 14px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 16px; }
+    .msg.success { background: #e7f6ec; color: #1e6b3a; border: 1px solid #b9e5c6; }
+    .msg.error   { background: #fdecea; color: #a12622; border: 1px solid #f5c2be; }
+    label { display: block; font-size: 0.8rem; font-weight: 600; color: #33415c; margin: 12px 0 4px; }
+    input[type="text"], input[type="email"], input[type="number"], textarea {
+        width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95rem; font-family: inherit;
+    }
     textarea { resize: vertical; min-height: 60px; }
     .logo-row { display: flex; gap: 24px; flex-wrap: wrap; margin-top: 8px; }
     .logo-row > div { flex: 1; min-width: 160px; }
@@ -223,6 +235,11 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
         border: 1px solid #e2e6ec; border-radius: 6px; background: #fafbfc; margin: 6px 0 8px;
     }
     input[type="file"] { font-size: 0.85rem; }
+    button, .btn {
+        background: #1a3a6b; color: #fff; border: none; border-radius: 6px;
+        padding: 10px 18px; font-size: 0.9rem; font-weight: 600; cursor: pointer; margin-top: 18px;
+    }
+    button:hover, .btn:hover { background: #142c52; }
 </style>
 
     <?php

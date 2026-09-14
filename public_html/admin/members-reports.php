@@ -173,13 +173,31 @@ $breadcrumbs = [
 require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
 ?>
 <style>
+    .sub-nav { background: #fff; border-bottom: 1px solid #cbd5e1; padding: 0 24px; display: flex; gap: 20px; margin-bottom: 24px; border-radius: 6px; }
+    .sub-nav a { display: inline-block; padding: 12px 4px; color: #556; text-decoration: none; font-weight: 600; font-size: 0.9rem; border-bottom: 3px solid transparent; }
+    .sub-nav a:hover { color: #1a3a6b; }
+    .sub-nav a.active { color: #1a3a6b; border-bottom-color: #1a3a6b; }
+    .panel { background: #fff; border-radius: 8px; box-shadow: 0 1px 6px rgba(26,58,107,0.08); padding: 20px; margin-bottom: 24px; }
+    .panel h2 { font-size: 1.1rem; color: #1a3a6b; margin: 0 0 16px; }
+    label { display: block; font-size: 0.8rem; font-weight: 600; color: #33415c; margin: 10px 0 4px; }
+    select, input[type="text"] { width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; font-family: inherit; }
+    input[readonly] { background: #f0f3f7; color: #888; }
     .row { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 16px; }
     .row > div { flex: 1; min-width: 160px; }
+    .btn { background: #1a3a6b; color: #fff; border: none; border-radius: 6px; padding: 9px 18px; font-size: 0.9rem; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-block; }
+    .btn:hover { background: #142c52; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #eef1f5; }
+    th { color: #33415c; font-weight: 600; background: #f8fafc; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
+    th a { color: #1a3a6b; text-decoration: none; }
+    th a:hover { text-decoration: underline; }
     td.num { text-align: right; font-weight: 600; }
     td.paid { color: #1e6b3a; }
     td.unpaid { color: #a12622; }
     tfoot { font-weight: bold; background: #f0f5ff; border-top: 2px solid #cbd5e1; }
     tfoot td.num { font-weight: 700; }
+    tr:hover { background: #f1f5f9; }
+    .table-wrap { overflow-x: auto; }
 </style>
 
 <div class="sub-nav">
