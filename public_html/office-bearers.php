@@ -45,7 +45,22 @@ require __DIR__ . '/includes/partials/header.php';
             <thead><tr><th>Name</th><th>Designation</th><th>Term</th></tr></thead>
             <?php foreach ($stateBearers as $ob): ?>
             <tr>
-                <td><?= Sanitize::html($ob['name']) ?></td>
+                <td>
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <?php if (!empty($ob['photo_path']) && file_exists(PUBLIC_HTML . '/' . ltrim($ob['photo_path'], '/'))): ?>
+                            <img src="/<?= ltrim(Sanitize::attr($ob['photo_path']), '/') ?>" 
+                                 alt="<?= Sanitize::attr($ob['name']) ?>" 
+                                 style="width:40px; height:40px; object-fit:cover; border-radius:50%; border:2px solid #cbd5e1; flex-shrink:0;">
+                        <?php else: ?>
+                            <div style="width:40px; height:40px; border-radius:50%; background:#eff6ff; color:#1e40af; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.85rem; flex-shrink:0; border:1px solid #dbeafe;">
+                                <?= mb_substr($ob['name'], 0, 1, 'UTF-8') ?>
+                            </div>
+                        <?php endif; ?>
+                        <div>
+                            <strong><?= Sanitize::html($ob['name']) ?></strong>
+                        </div>
+                    </div>
+                </td>
                 <td><?= Sanitize::html($ob['association_designation']) ?></td>
                 <td style="white-space:nowrap; color:var(--ink-300);">
                     <?= Sanitize::html($ob['term_start'] ?? '—') ?> – <?= Sanitize::html($ob['term_end'] ?? '—') ?>
@@ -68,7 +83,22 @@ require __DIR__ . '/includes/partials/header.php';
             <?php foreach ($districtBearers as $ob): ?>
             <tr>
                 <td><?= Sanitize::html($ob['district_name']) ?></td>
-                <td><?= Sanitize::html($ob['name']) ?></td>
+                <td>
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <?php if (!empty($ob['photo_path']) && file_exists(PUBLIC_HTML . '/' . ltrim($ob['photo_path'], '/'))): ?>
+                            <img src="/<?= ltrim(Sanitize::attr($ob['photo_path']), '/') ?>" 
+                                 alt="<?= Sanitize::attr($ob['name']) ?>" 
+                                 style="width:40px; height:40px; object-fit:cover; border-radius:50%; border:2px solid #cbd5e1; flex-shrink:0;">
+                        <?php else: ?>
+                            <div style="width:40px; height:40px; border-radius:50%; background:#eff6ff; color:#1e40af; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.85rem; flex-shrink:0; border:1px solid #dbeafe;">
+                                <?= mb_substr($ob['name'], 0, 1, 'UTF-8') ?>
+                            </div>
+                        <?php endif; ?>
+                        <div>
+                            <strong><?= Sanitize::html($ob['name']) ?></strong>
+                        </div>
+                    </div>
+                </td>
                 <td><?= Sanitize::html($ob['association_designation']) ?></td>
             </tr>
             <?php endforeach; ?>
@@ -89,7 +119,22 @@ require __DIR__ . '/includes/partials/header.php';
             <tr>
                 <td><?= Sanitize::html($ob['taluk_name']) ?></td>
                 <td><?= Sanitize::html($ob['district_name']) ?></td>
-                <td><?= Sanitize::html($ob['name']) ?></td>
+                <td>
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <?php if (!empty($ob['photo_path']) && file_exists(PUBLIC_HTML . '/' . ltrim($ob['photo_path'], '/'))): ?>
+                            <img src="/<?= ltrim(Sanitize::attr($ob['photo_path']), '/') ?>" 
+                                 alt="<?= Sanitize::attr($ob['name']) ?>" 
+                                 style="width:40px; height:40px; object-fit:cover; border-radius:50%; border:2px solid #cbd5e1; flex-shrink:0;">
+                        <?php else: ?>
+                            <div style="width:40px; height:40px; border-radius:50%; background:#eff6ff; color:#1e40af; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.85rem; flex-shrink:0; border:1px solid #dbeafe;">
+                                <?= mb_substr($ob['name'], 0, 1, 'UTF-8') ?>
+                            </div>
+                        <?php endif; ?>
+                        <div>
+                            <strong><?= Sanitize::html($ob['name']) ?></strong>
+                        </div>
+                    </div>
+                </td>
                 <td><?= Sanitize::html($ob['association_designation']) ?></td>
             </tr>
             <?php endforeach; ?>
