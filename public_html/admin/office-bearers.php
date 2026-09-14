@@ -933,14 +933,16 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
 
             <div class="row">
                 <div>
-                    <label for="term_start">Term Start — optional</label>
+                    <label for="term_start">Term Start (ಆರಂಭ ದಿನಾಂಕ) — optional</label>
                     <input type="date" id="term_start" name="term_start"
-                           value="<?= Sanitize::attr($editRow['term_start'] ?? '') ?>">
+                           value="<?= Sanitize::attr($editRow['term_start'] ?? '2026-05-17') ?>">
+                    <div class="hint">ರಾಜ್ಯ ಸಂಘದ ಪ್ರಥಮ ಸಭೆಯ ದಿನಾಂಕ: 17-05-2026</div>
                 </div>
                 <div>
-                    <label for="term_end">Term End — optional</label>
+                    <label for="term_end">Term End (ಅಂತ್ಯ ದಿನಾಂಕ) — optional</label>
                     <input type="date" id="term_end" name="term_end"
-                           value="<?= Sanitize::attr($editRow['term_end'] ?? '') ?>">
+                           value="<?= Sanitize::attr($editRow['term_end'] ?? '2029-05-16') ?>">
+                    <div class="hint">3 ವರ್ಷಗಳ ಅವಧಿ: 17-05-2026 ರಿಂದ 16-05-2029</div>
                 </div>
             </div>
 
@@ -1018,7 +1020,6 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
                             <?php endif; ?>
                             <div>
                                 <strong><?= Sanitize::html($row['name']) ?></strong>
-                                <div class="hint">Order: <?= (int)$row['sort_order'] ?></div>
                             </div>
                         </div>
                     </td>
