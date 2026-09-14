@@ -87,11 +87,17 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 $gpId           = $clean['membership_gp_id'] ?? null;
                 $joiningDate    = date('Y-m-d');
 
+                $tempMemberNo   = 'PENDING-' . bin2hex(random_bytes(8));
                 Database::execute(
-                    "INSERT INTO members (name, designation, gp_id, taluk_id, district_id, joining_date, membership_status) VALUES (?, 'PDO', ?, ?, ?, ?, 'active')",
-                    [$name, $gpId, $talukId, $districtId, $joiningDate]
+                    "INSERT INTO members (member_no, name, designation, gp_id, taluk_id, district_id, joining_date, membership_status) VALUES (?, ?, 'PDO', ?, ?, ?, ?, 'active')",
+                    [$tempMemberNo, $name, $gpId, $talukId, $districtId, $joiningDate]
                 );
                 $memberId = (int)Database::lastInsertId();
+                $regPlaceholder = 'REG-' . str_pad((string)$memberId, 6, '0', STR_PAD_LEFT);
+                Database::execute("UPDATE members SET member_no = ? WHERE id = ?", [$regPlaceholder, $memberId]);
+                Database::transaction(function () use ($memberId) {
+                    MembershipNumber::assignIfPlaceholder($memberId);
+                });
 
                 // Profile fields
                 Database::execute(
@@ -778,7 +784,7 @@ $showAddForm = isset($_GET['add']) || $editRow;
                             <br><span class="badge <?= Sanitize::html($m['membership_status']) ?>" style="margin-top:4px;"><?= Sanitize::html(ucfirst($m['membership_status'])) ?></span>
                         </td>
                         <td>
-                            <?= Sanitize::html(ucfirst($m['payment_mode'] ?? '—')) ?>
+                            <?= Sanitize::html(($m['payment_mode'] === 'online' || $m['payment_mode'] === 'razorpay') ? 'Razorpay' : ($m['payment_mode'] ? ucfirst($m['payment_mode']) : '—')) ?>
                             <?php if ($m['gateway_payment_id'] || $m['offline_reference']): ?>
                                 <br><span class="hint"><?= Sanitize::html($m['gateway_payment_id'] ?? $m['offline_reference'] ?? '') ?></span>
                             <?php endif; ?>

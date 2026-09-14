@@ -38,9 +38,9 @@ $columns = [
     'Working GP',             // 14 optional (when GP Working=yes)
     'Membership District',    // 15 when GP=no + other org type
     'Membership Taluk',       // 16 when GP=no + other org type
-    'Payment Mode',           // 17 values: offline / (leave blank for unpaid)
-    'Offline Reference',      // 18 when Payment Mode=offline
-    'Offline Remarks',        // 19 optional
+    'Payment Mode',           // 17 values: offline | razorpay / (leave blank for unpaid)
+    'Payment Reference',      // 18 when Payment Mode=offline or razorpay
+    'Payment Remarks',        // 19 optional
 ];
 
 // ── Example rows — 3 scenarios ────────────────────────────────────────────────
@@ -64,8 +64,8 @@ $exampleRows = [
         '',                      // Membership District (auto from working)
         '',                      // Membership Taluk (auto from working)
         '',                      // Payment Mode (unpaid)
-        '',                      // Offline Reference
-        '',                      // Offline Remarks
+        '',                      // Payment Reference
+        '',                      // Payment Remarks
     ],
     // Row 3: GP Working = no, Zilla Panchayat (locked org type) + offline paid
     [
@@ -86,10 +86,10 @@ $exampleRows = [
         '',                      // Membership District (auto from working)
         '',                      // Membership Taluk (auto from working)
         'offline',               // Payment Mode
-        'RCPT-001',              // Offline Reference
-        'Cash received at office', // Offline Remarks
+        'RCPT-001',              // Payment Reference
+        'Cash received at office', // Payment Remarks
     ],
-    // Row 4: GP Working = no, other org (manual membership location)
+    // Row 4: GP Working = no, other org + Razorpay online paid
     [
         'MEENA T',
         'TEJA T',
@@ -107,9 +107,9 @@ $exampleRows = [
         '',                      // Working GP
         'BENGALURU',             // Membership District
         'BENGALURU NORTH',       // Membership Taluk
-        '',                      // Payment Mode
-        '',                      // Offline Reference
-        '',                      // Offline Remarks
+        'razorpay',              // Payment Mode (Razorpay online)
+        'pay_NZ1234567890',      // Payment Reference
+        'Paid via Razorpay gateway', // Payment Remarks
     ],
 ];
 

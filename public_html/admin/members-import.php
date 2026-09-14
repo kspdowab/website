@@ -622,8 +622,15 @@ function validateImportRow(
         }
     }
 
-    $payModeClean = in_array($payMode, ['offline','online']) ? $payMode : null;
-    $importPaid   = ($payModeClean === 'offline');
+    $payModeClean = null;
+    $importPaid   = false;
+    if (in_array($payMode, ['razorpay', 'online'])) {
+        $payModeClean = 'razorpay';
+        $importPaid   = true;
+    } elseif ($payMode === 'offline') {
+        $payModeClean = 'offline';
+        $importPaid   = true;
+    }
 
     return [
         'valid'       => empty($errors),
@@ -941,15 +948,17 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 // Existing member — do NOT re-insert, add FY payment if applicable
                 $memberId = (int)$existingProfile['member_id'];
             } else {
-                // Insert new member into members table
+                // Insert new member into members table with temporary member_no
+                $tempMemberNo = 'PENDING-' . bin2hex(random_bytes(8));
                 Database::execute(
                     "INSERT INTO members
-                        (name, designation, gp_id, taluk_id, district_id,
+                        (member_no, name, designation, gp_id, taluk_id, district_id,
                          gp_working, organization_type, organization_name, organization_address,
                          working_district_id, working_taluk_id, working_gp_id,
                          joining_date, membership_status)
-                     VALUES (?, 'PDO', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE(), 'active')",
+                     VALUES (?, ?, 'PDO', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE(), 'active')",
                     [
+                        $tempMemberNo,
                         $row['full_name'],
                         $row['working_gp_id'],
                         $row['membership_taluk_id'],
@@ -964,6 +973,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                     ]
                 );
                 $memberId = (int)Database::lastInsertId();
+
+                // Set standard REG- placeholder so MembershipNumber recognizes it
+                $regPlaceholder = 'REG-' . str_pad((string)$memberId, 6, '0', STR_PAD_LEFT);
+                Database::execute("UPDATE members SET member_no = ? WHERE id = ?", [$regPlaceholder, $memberId]);
 
                 // Insert into member_profiles table
                 Database::execute(
@@ -981,23 +994,35 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                     ]
                 );
 
-                // Assign provisional placeholder member number
-                MembershipNumber::assignIfPlaceholder($memberId);
+                // Assign provisional / official district-coded member number
+                Database::transaction(function () use ($memberId) {
+                    MembershipNumber::assignIfPlaceholder($memberId);
+                });
                 $count++;
             }
 
-            // Offline payment processing
+            // Payment processing (offline or Razorpay / online)
             if ($row['import_paid'] && $importFyIdCommit && $memberId) {
                 $already = Database::fetchOne("SELECT id FROM membership_payments WHERE member_id=? AND membership_year_id=? AND status='completed'", [$memberId, $importFyIdCommit]);
                 if (!$already) {
                     $fyRow = Database::fetchOne("SELECT fee_amount FROM membership_years WHERE id=?", [$importFyIdCommit]);
                     $feeAmt = $fyRow ? (float)$fyRow['fee_amount'] : 0;
-                    Database::execute(
-                        "INSERT INTO membership_payments (member_id, membership_year_id, amount, status, payment_mode, offline_reference, offline_remarks, paid_at, created_at) VALUES (?, ?, ?, 'completed', 'offline', ?, ?, NOW(), NOW())",
-                        [$memberId, $importFyIdCommit, $feeAmt, $row['offline_reference'], $row['offline_remarks']]
-                    );
-                    // On verified payment, generate permanent membership number
-                    MembershipNumber::assignIfPlaceholder($memberId);
+                    $isOnline = in_array($row['payment_mode'], ['online', 'razorpay']);
+                    if ($isOnline) {
+                        Database::execute(
+                            "INSERT INTO membership_payments (member_id, membership_year_id, amount, status, payment_mode, gateway_payment_id, offline_remarks, paid_at, created_at) VALUES (?, ?, ?, 'completed', 'online', ?, ?, NOW(), NOW())",
+                            [$memberId, $importFyIdCommit, $feeAmt, $row['offline_reference'] ?: null, $row['offline_remarks'] ?: null]
+                        );
+                    } else {
+                        Database::execute(
+                            "INSERT INTO membership_payments (member_id, membership_year_id, amount, status, payment_mode, offline_reference, offline_remarks, paid_at, created_at) VALUES (?, ?, ?, 'completed', 'offline', ?, ?, NOW(), NOW())",
+                            [$memberId, $importFyIdCommit, $feeAmt, $row['offline_reference'] ?: null, $row['offline_remarks'] ?: null]
+                        );
+                    }
+                    // On verified payment, generate / finalize permanent membership number
+                    Database::transaction(function () use ($memberId) {
+                        MembershipNumber::assignIfPlaceholder($memberId);
+                    });
                     $paidCount++;
                 }
             }
@@ -1381,7 +1406,7 @@ foreach (Database::fetchAll("SELECT id, name FROM gram_panchayatis") as $g) {
                 <td><?= Sanitize::html($gpNameMap[$row['working_gp_id'] ?? 0] ?? '—') ?></td>
                 <td><?= Sanitize::html($districtNameMap[$row['membership_district_id'] ?? 0] ?? '—') ?></td>
                 <td><?= Sanitize::html($talukNameMap[$row['membership_taluk_id'] ?? 0] ?? '—') ?></td>
-                <td><?= Sanitize::html($row['payment_mode'] ? ucfirst($row['payment_mode']) : '—') ?></td>
+                <td><?= Sanitize::html(in_array($row['payment_mode'], ['razorpay', 'online']) ? 'Razorpay' : ($row['payment_mode'] === 'offline' ? 'Offline' : '—')) ?></td>
                 <td><?= Sanitize::html($row['offline_reference'] ?: '—') ?></td>
                 <td><?= Sanitize::html($row['offline_remarks'] ?: '—') ?></td>
             </tr>
@@ -1496,9 +1521,9 @@ foreach (Database::fetchAll("SELECT id, name FROM gram_panchayatis") as $g) {
                     ['Working GP',             'Optional (when GP=yes)'],
                     ['Membership District',    'When GP=no + other org'],
                     ['Membership Taluk',       'When GP=no + other org'],
-                    ['Payment Mode',           'Optional (offline/blank)'],
-                    ['Offline Reference',      'When mode=offline'],
-                    ['Offline Remarks',        'Optional'],
+                    ['Payment Mode',           'Optional (offline / razorpay / blank)'],
+                    ['Payment Reference',      'When mode=offline or razorpay'],
+                    ['Payment Remarks',        'Optional'],
                 ];
                 foreach ($cols as $i => [$name, $req]):
                 ?>
