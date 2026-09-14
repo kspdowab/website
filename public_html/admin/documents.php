@@ -167,7 +167,7 @@ $qStatus   = Sanitize::inArray($_GET['status'] ?? 'all', ['all', 'active', 'arch
 $editId    = Sanitize::positiveInt($_GET['edit'] ?? null);
 $showForm  = isset($_GET['upload']) || $editId;
 
-$hasActiveFilters = ($qCategory !== null || $qSearch !== '' || $qStatus !== 'all');
+$hasActiveFilters = (!empty($qCategory) || $qSearch !== '' || ($qStatus !== 'all' && $qStatus !== ''));
 
 $whereClause = ["1=1"];
 $params      = [];
