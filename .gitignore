@@ -40,6 +40,8 @@ public_html/uploads/grievances/
 public_html/uploads/news/
 public_html/uploads/temp/
 public_html/uploads/receipts/
+public_html/assets/images/office-bearers/*
+!public_html/assets/images/office-bearers/.gitkeep
 
 # One-off debug / diagnostic scripts (never deploy to production)
 public_html/_check_*.php
