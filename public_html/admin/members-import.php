@@ -480,6 +480,19 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 if ($previewData === null && isset($_SESSION['members_import_preview'])) {
     $previewData = $_SESSION['members_import_preview'];
 }
+// Build name-lookup maps for the preview table (avoids N+1 queries)
+$districtNameMap = [];
+foreach (Database::fetchAll("SELECT id, name FROM districts") as $d) {
+    $districtNameMap[(int)$d['id']] = $d['name'];
+}
+$talukNameMap = [];
+foreach (Database::fetchAll("SELECT id, name FROM taluks") as $t) {
+    $talukNameMap[(int)$t['id']] = $t['name'];
+}
+$gpNameMap = [];
+foreach (Database::fetchAll("SELECT id, name FROM gram_panchayatis") as $g) {
+    $gpNameMap[(int)$g['id']] = $g['name'];
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -498,7 +511,7 @@ if ($previewData === null && isset($_SESSION['members_import_preview'])) {
         .sub-nav a { display: inline-block; padding: 12px 4px; color: #556; text-decoration: none; font-weight: 600; font-size: 0.9rem; border-bottom: 3px solid transparent; }
         .sub-nav a:hover { color: #1a3a6b; }
         .sub-nav a.active { color: #1a3a6b; border-bottom-color: #1a3a6b; }
-        main { max-width: 960px; margin: 24px auto; padding: 0 16px; }
+        main { max-width: 1400px; margin: 24px auto; padding: 0 16px; }
         .panel { background: #fff; border-radius: 8px; box-shadow: 0 1px 6px rgba(26,58,107,0.08); padding: 24px; margin-bottom: 24px; }
         .panel h2 { font-size: 1.15rem; color: #1a3a6b; margin: 0 0 16px; border-bottom: 2px solid #eef1f5; padding-bottom: 12px; }
         .msg { padding: 10px 14px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 16px; }
@@ -552,19 +565,52 @@ if ($previewData === null && isset($_SESSION['members_import_preview'])) {
         <?php if (!empty($previewData['valid'])): ?>
         <h3 style="color:#1e6b3a;">✓ Valid Rows (<?= count($previewData['valid']) ?>)</h3>
         <div style="overflow-x:auto;">
-        <table>
-            <thead><tr><th>#</th><th>Full Name</th><th>KGID</th><th>Phone</th><th>Email</th><th>Membership District</th><th>Membership Taluk</th><th>Paid?</th></tr></thead>
+        <table style="font-size:0.78rem; white-space:nowrap;">
+            <thead><tr>
+                <th>#</th>
+                <th>Full Name</th>
+                <th>Father / Husband Name</th>
+                <th>Gender</th>
+                <th>Phone</th>
+                <th>Email</th>
+                <th>KGID No.</th>
+                <th>Date of Birth</th>
+                <th>GP Working?</th>
+                <th>Org Type</th>
+                <th>Org Name</th>
+                <th>Org Address</th>
+                <th>Working District</th>
+                <th>Working Taluk</th>
+                <th>Working GP</th>
+                <th>Membership District</th>
+                <th>Membership Taluk</th>
+                <th>Payment Mode</th>
+                <th>Offline Ref.</th>
+                <th>Offline Remarks</th>
+            </tr></thead>
             <tbody>
             <?php $i=1; foreach ($previewData['valid'] as $row): ?>
             <tr>
                 <td><?= $i++ ?></td>
                 <td><?= Sanitize::html($row['full_name']) ?></td>
-                <td><?= Sanitize::html($row['kgid_no']) ?></td>
+                <td><?= Sanitize::html($row['father_spouse_name'] ?? '—') ?></td>
+                <td><?= Sanitize::html(ucfirst($row['gender'] ?? '—')) ?></td>
                 <td><?= Sanitize::html($row['phone']) ?></td>
                 <td><?= Sanitize::html($row['email']) ?></td>
-                <td><?= Sanitize::html($row['membership_district_id'] ? (Database::fetchOne("SELECT name FROM districts WHERE id=?", [$row['membership_district_id']])['name'] ?? $row['membership_district_id']) : '—') ?></td>
-                <td><?= Sanitize::html($row['membership_taluk_id'] ? (Database::fetchOne("SELECT name FROM taluks WHERE id=?", [$row['membership_taluk_id']])['name'] ?? $row['membership_taluk_id']) : '—') ?></td>
-                <td><?= $row['import_paid'] ? '<span class="ok-cell">Offline Paid</span>' : '—' ?></td>
+                <td><?= Sanitize::html($row['kgid_no']) ?></td>
+                <td><?= Sanitize::html($row['dob'] ?? '—') ?></td>
+                <td><?= Sanitize::html($row['gp_working'] ?? '—') ?></td>
+                <td><?= Sanitize::html($row['organization_type'] ?? '—') ?></td>
+                <td><?= Sanitize::html($row['organization_name'] ?? '—') ?></td>
+                <td><?= Sanitize::html($row['organization_address'] ?? '—') ?></td>
+                <td><?= Sanitize::html($districtNameMap[$row['working_district_id'] ?? 0] ?? '—') ?></td>
+                <td><?= Sanitize::html($talukNameMap[$row['working_taluk_id'] ?? 0] ?? '—') ?></td>
+                <td><?= Sanitize::html($gpNameMap[$row['working_gp_id'] ?? 0] ?? '—') ?></td>
+                <td><?= Sanitize::html($districtNameMap[$row['membership_district_id'] ?? 0] ?? '—') ?></td>
+                <td><?= Sanitize::html($talukNameMap[$row['membership_taluk_id'] ?? 0] ?? '—') ?></td>
+                <td><?= Sanitize::html($row['payment_mode'] ? ucfirst($row['payment_mode']) : '—') ?></td>
+                <td><?= Sanitize::html($row['offline_reference'] ?? '—') ?></td>
+                <td><?= Sanitize::html($row['offline_remarks'] ?? '—') ?></td>
             </tr>
             <?php endforeach; ?>
             </tbody>
