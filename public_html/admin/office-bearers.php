@@ -31,6 +31,38 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
     $action = Sanitize::string($_POST['action'] ?? '', 40);
 
+    // ── OFFICE BEARER: Save Drag and Drop Order ───────────────────────────
+    if ($action === 'save_ob_drag_order') {
+        $orderedIds = $_POST['ordered_ids'] ?? [];
+        if (is_array($orderedIds) && !empty($orderedIds)) {
+            $newOrder = 1;
+            foreach ($orderedIds as $obId) {
+                $id = Sanitize::positiveInt($obId);
+                if ($id !== false) {
+                    Database::execute(
+                        "UPDATE office_bearers SET sort_order = ?, updated_at = NOW() WHERE id = ?",
+                        [$newOrder, $id]
+                    );
+                    $newOrder++;
+                }
+            }
+        }
+
+        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest' || !empty($_POST['ajax'])) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true]);
+            exit;
+        }
+
+        Session::flash('success', 'Office bearer display orders saved.');
+        $redirectUrl = '/admin/office-bearers.php';
+        if (!empty($_POST['redirect_ob_level'])) {
+            $redirectUrl .= '?ob_level=' . urlencode($_POST['redirect_ob_level']);
+        }
+        header('Location: ' . $redirectUrl);
+        exit;
+    }
+
     // ── OFFICE BEARER: Terminate ───────────────────────────────────────────
     if ($action === 'terminate') {
         $id = Sanitize::positiveInt($_POST['id'] ?? null);
@@ -531,11 +563,24 @@ $taluks    = Database::fetchAll(
      ORDER BY d.name, t.name"
 );
 
+$obLevelFilter = Sanitize::inArray($_GET['ob_level'] ?? 'all', ['all', 'state', 'district', 'taluk']) ?: 'all';
+$obWhere = "";
+if ($obLevelFilter === 'state') {
+    $obWhere = "WHERE ob.district_id IS NULL AND ob.taluk_id IS NULL";
+} elseif ($obLevelFilter === 'district') {
+    $obWhere = "WHERE ob.district_id IS NOT NULL AND ob.taluk_id IS NULL";
+} elseif ($obLevelFilter === 'taluk') {
+    $obWhere = "WHERE ob.taluk_id IS NOT NULL";
+}
+
+$totalBearersCount = (int) Database::fetchScalar("SELECT COUNT(*) FROM office_bearers");
+
 $officeBearers = Database::fetchAll(
     "SELECT ob.*, d.name AS district_name, t.name AS taluk_name
      FROM office_bearers ob
      LEFT JOIN districts d ON d.id = ob.district_id
      LEFT JOIN taluks t    ON t.id = ob.taluk_id
+     $obWhere
      ORDER BY
         CASE WHEN ob.taluk_id IS NOT NULL THEN 3
              WHEN ob.district_id IS NOT NULL THEN 2
@@ -847,7 +892,7 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
 <div class="sub-nav">
     <a href="/admin/office-bearers.php" class="<?= $currentTab === 'bearers' ? 'active' : '' ?>">
         <span>👥 Office Bearers (ಪದಾಧಿಕಾರಿಗಳು)</span>
-        <span class="nav-count"><?= count($officeBearers) ?></span>
+        <span class="nav-count"><?= $totalBearersCount ?></span>
     </a>
     <a href="/admin/office-bearers.php?view=designations" class="<?= $currentTab === 'designations' ? 'active' : '' ?>">
         <span>🏷️ Manage Designations (ಹುದ್ದೆಗಳ ನಿರ್ವಹಣೆ)</span>
@@ -1045,9 +1090,27 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
     <!-- Existing Office Bearers Table Panel -->
     <div class="panel">
         <div class="panel-header-flex">
-            <h2>Existing Office Bearers (<?= count($officeBearers) ?>)</h2>
-            <div class="hint">Table Actions are accessible via the single dropdown in each row.</div>
+            <div>
+                <h2 style="margin-bottom:4px;">Existing Office Bearers (<?= count($officeBearers) ?>)</h2>
+                <div class="hint">Drag and drop rows using the <strong>⋮⋮</strong> handle to change display sequence. Changes save automatically.</div>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <span id="ob-reorder-status" style="display:none; font-size:0.85rem; font-weight:600; padding:5px 12px; border-radius:6px; transition:all 0.3s ease;"></span>
+            </div>
         </div>
+
+        <!-- Level Filter Pills for Office Bearers -->
+        <div class="filter-pills">
+            <a href="/admin/office-bearers.php?ob_level=all" 
+               class="filter-pill <?= $obLevelFilter === 'all' ? 'active' : '' ?>">All Levels</a>
+            <a href="/admin/office-bearers.php?ob_level=state" 
+               class="filter-pill <?= $obLevelFilter === 'state' ? 'active' : '' ?>">State</a>
+            <a href="/admin/office-bearers.php?ob_level=district" 
+               class="filter-pill <?= $obLevelFilter === 'district' ? 'active' : '' ?>">District</a>
+            <a href="/admin/office-bearers.php?ob_level=taluk" 
+               class="filter-pill <?= $obLevelFilter === 'taluk' ? 'active' : '' ?>">Taluk</a>
+        </div>
+
         <div class="table-wrap">
         <table>
             <thead>
@@ -1057,13 +1120,14 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
                     <th>Designation (Kannada)</th>
                     <th>Official Post</th>
                     <th>Term</th>
-                    <th>Status</th>
+                    <th style="width:110px; text-align:center;">Reorder</th>
+                    <th style="width:90px;">Status</th>
                     <th style="width:130px; text-align:center;">Actions</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="obTableBody">
                 <?php foreach ($officeBearers as $row): $level = ob_level($row); ?>
-                <tr>
+                <tr class="draggable-row" draggable="true" data-id="<?= (int)$row['id'] ?>">
                     <td data-label="Level">
                         <span class="badge <?= $level ?>"><?= strtoupper($level) ?></span>
                         <?php if ($level === 'district'): ?>
@@ -1100,6 +1164,12 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
                     <td data-label="Term" style="white-space:nowrap;">
                         <?= Sanitize::html($row['term_start'] ?? '—') ?> to <?= Sanitize::html($row['term_end'] ?? '—') ?>
                     </td>
+                    <td data-label="Reorder" style="text-align:center;">
+                        <div class="drag-handle" title="Click and drag to reorder">
+                            <span class="drag-icon">⋮⋮</span>
+                            <span class="order-badge"><?= (int)$row['sort_order'] ?></span>
+                        </div>
+                    </td>
                     <td data-label="Status">
                         <span class="badge <?= $row['status'] === 'active' ? 'active' : 'former' ?>">
                             <?= $row['status'] === 'active' ? 'Active' : 'Former' ?>
@@ -1121,7 +1191,7 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
                 </tr>
                 <?php endforeach; ?>
                 <?php if (empty($officeBearers)): ?>
-                <tr><td colspan="7" style="text-align:center; padding:24px; color:#64748b;">No office bearers added yet.</td></tr>
+                <tr><td colspan="8" style="text-align:center; padding:24px; color:#64748b;">No office bearers added yet.</td></tr>
                 <?php endif; ?>
             </tbody>
         </table>
@@ -1461,15 +1531,17 @@ function submitDesigForm(action, id) {
     form.submit();
 }
 
-// Drag and Drop Designation Reordering
-function initDragAndDrop() {
-    var tbody = document.getElementById('desigTableBody');
+// Drag and Drop Table Reordering
+function setupTableDragAndDrop(tbodyId, statusSpanId, actionName, redirectParamName, redirectParamVal) {
+    var tbody = document.getElementById(tbodyId);
     if (!tbody) return;
 
     var rows = tbody.querySelectorAll('.draggable-row');
     var draggedRow = null;
 
     rows.forEach(function(row) {
+        row.setAttribute('draggable', 'true');
+
         row.addEventListener('dragstart', function(e) {
             draggedRow = this;
             this.classList.add('is-dragging');
@@ -1523,13 +1595,13 @@ function initDragAndDrop() {
                 tbody.insertBefore(draggedRow, this.nextSibling);
             }
 
-            updateRowOrdersAndSave();
+            saveReorderedTable(tbodyId, statusSpanId, actionName, redirectParamName, redirectParamVal);
         });
     });
 }
 
-function updateRowOrdersAndSave() {
-    var tbody = document.getElementById('desigTableBody');
+function saveReorderedTable(tbodyId, statusSpanId, actionName, redirectParamName, redirectParamVal) {
+    var tbody = document.getElementById(tbodyId);
     if (!tbody) return;
 
     var rows = tbody.querySelectorAll('.draggable-row');
@@ -1541,15 +1613,15 @@ function updateRowOrdersAndSave() {
         if (badge) {
             badge.textContent = newOrder;
         }
-        var desigId = row.getAttribute('data-id');
-        if (desigId) {
-            orderedIds.push(desigId);
+        var rowId = row.getAttribute('data-id');
+        if (rowId) {
+            orderedIds.push(rowId);
         }
     });
 
     if (orderedIds.length === 0) return;
 
-    var statusSpan = document.getElementById('reorder-status');
+    var statusSpan = document.getElementById(statusSpanId);
     if (statusSpan) {
         statusSpan.style.display = 'inline-block';
         statusSpan.style.background = '#eff6ff';
@@ -1562,9 +1634,12 @@ function updateRowOrdersAndSave() {
     var csrfToken = csrfInput ? csrfInput.value : '';
 
     var formData = new FormData();
-    formData.append('action', 'save_drag_order');
+    formData.append('action', actionName);
     formData.append('csrf_token', csrfToken);
     formData.append('ajax', '1');
+    if (redirectParamName && redirectParamVal) {
+        formData.append(redirectParamName, redirectParamVal);
+    }
     orderedIds.forEach(function(id) {
         formData.append('ordered_ids[]', id);
     });
@@ -1610,7 +1685,8 @@ function updateRowOrdersAndSave() {
 // Initialize on DOM load
 document.addEventListener('DOMContentLoaded', function() {
     obUpdateLevel();
-    initDragAndDrop();
+    setupTableDragAndDrop('desigTableBody', 'reorder-status', 'save_drag_order', 'redirect_level', <?= json_encode($desigLevelFilter) ?>);
+    setupTableDragAndDrop('obTableBody', 'ob-reorder-status', 'save_ob_drag_order', 'redirect_ob_level', <?= json_encode($obLevelFilter) ?>);
 });
 </script>
 <?php
