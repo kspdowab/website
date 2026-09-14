@@ -178,15 +178,128 @@ function parseCSVFile(string $filePath): array {
     return $rows;
 }
 
-function parseXlsxFile(string $filePath): array {
-    $rows = [];
-    $zip = new ZipArchive();
-    if ($zip->open($filePath) !== true) { return $rows; }
+function colLetterToIndex(string $cellRef): int {
+    preg_match('/^([A-Z]+)/', strtoupper($cellRef), $m);
+    if (empty($m[1])) return -1;
+    $letters = $m[1];
+    $idx = 0;
+    for ($i = 0; $i < strlen($letters); $i++) {
+        $idx = $idx * 26 + (ord($letters[$i]) - ord('A') + 1);
+    }
+    return $idx - 1;
+}
 
+function extractZipEntryUniversal(string $zipPath, string $targetEntry): ?string {
+    // 1. Try PHP ZipArchive if available
+    if (class_exists('ZipArchive')) {
+        $zip = new ZipArchive();
+        if ($zip->open($zipPath) === true) {
+            $content = $zip->getFromName($targetEntry);
+            $zip->close();
+            if ($content !== false) {
+                return $content;
+            }
+        }
+    }
+
+    // 2. Pure-PHP ZIP reader using core gzinflate (no ZipArchive extension required)
+    $fh = @fopen($zipPath, 'rb');
+    if ($fh) {
+        while (!feof($fh)) {
+            $sig = fread($fh, 4);
+            if ($sig !== "PK\x03\x04") {
+                break;
+            }
+            $header = fread($fh, 26);
+            if (strlen($header) < 26) break;
+            $fields = unpack('vversion/vflags/vmethod/vmtime/vmdate/Vcrc/VcompSize/VuncompSize/vfnLen/vextraLen', $header);
+            $filename = fread($fh, $fields['fnLen']);
+            if ($fields['extraLen'] > 0) { fread($fh, $fields['extraLen']); }
+
+            $compSize = $fields['compSize'];
+            $data = ($compSize > 0) ? fread($fh, $compSize) : '';
+
+            $normFilename = str_replace('\\', '/', $filename);
+            $normTarget   = str_replace('\\', '/', $targetEntry);
+
+            if (strtolower($normFilename) === strtolower($normTarget)) {
+                fclose($fh);
+                if ($fields['method'] == 8) {
+                    $uncompressed = @gzinflate($data);
+                    return ($uncompressed !== false) ? $uncompressed : null;
+                } elseif ($fields['method'] == 0) {
+                    return $data;
+                }
+            }
+        }
+        fclose($fh);
+    }
+
+    // 3. Fallback to Windows built-in tar.exe
+    $tempDir = sys_get_temp_dir() . '/xlsx_' . bin2hex(random_bytes(6));
+    @mkdir($tempDir, 0777, true);
+    $tarPath = 'C:\\Windows\\System32\\tar.exe';
+    if (file_exists($tarPath)) {
+        $cmd = escapeshellarg($tarPath) . ' -xf ' . escapeshellarg($zipPath) . ' -C ' . escapeshellarg($tempDir) . ' ' . escapeshellarg($targetEntry);
+        exec($cmd, $out, $ret);
+        $extractedFile = $tempDir . '/' . $targetEntry;
+        if ($ret === 0 && file_exists($extractedFile)) {
+            $content = file_get_contents($extractedFile);
+            @unlink($extractedFile);
+            @rmdir($tempDir);
+            return $content;
+        }
+    }
+
+    return null;
+}
+
+function parseExcelFile(string $filePath): array {
+    $rows = [];
+
+    // Check if it's an XML Spreadsheet or HTML table saved as .xls
+    $prefix = @file_get_contents($filePath, false, null, 0, 1024);
+    if ($prefix && (str_contains($prefix, '<?xml') || str_contains($prefix, '<html') || str_contains($prefix, '<table'))) {
+        $content = file_get_contents($filePath);
+        if (str_contains($content, '<Workbook') || str_contains($content, '<workbook')) {
+            $xml = @simplexml_load_string($content);
+            if ($xml) {
+                $headerSkipped = false;
+                foreach ($xml->xpath('//Row|//ss:Row') as $row) {
+                    if (!$headerSkipped) { $headerSkipped = true; continue; }
+                    $cells = [];
+                    foreach ($row->xpath('Cell|ss:Cell') as $cell) {
+                        $data = $cell->xpath('Data|ss:Data');
+                        $cells[] = isset($data[0]) ? (string)$data[0] : '';
+                    }
+                    if (count(array_filter($cells, fn($v) => trim($v) !== '')) > 0) {
+                        $rows[] = $cells;
+                    }
+                }
+                return $rows;
+            }
+        }
+        if (str_contains($content, '<table') || str_contains($content, '<Table')) {
+            preg_match_all('/<tr[^>]*>(.*?)<\/tr>/is', $content, $trMatches);
+            $headerSkipped = false;
+            foreach ($trMatches[1] as $tr) {
+                if (!$headerSkipped) { $headerSkipped = true; continue; }
+                preg_match_all('/<t[dh][^>]*>(.*?)<\/t[dh]>/is', $tr, $tdMatches);
+                $cells = array_map('strip_tags', $tdMatches[1]);
+                $cells = array_map('html_entity_decode', $cells);
+                if (count(array_filter($cells, fn($v) => trim($v) !== '')) > 0) {
+                    $rows[] = $cells;
+                }
+            }
+            return $rows;
+        }
+    }
+
+    // Standard OpenXML (.xlsx)
+    $sharedStringsXml = extractZipEntryUniversal($filePath, 'xl/sharedStrings.xml');
     $sharedStrings = [];
-    $ssXml = $zip->getFromName('xl/sharedStrings.xml');
-    if ($ssXml !== false) {
-        $ss = simplexml_load_string($ssXml);
+    if ($sharedStringsXml) {
+        $ss = @simplexml_load_string($sharedStringsXml);
         if ($ss) {
             foreach ($ss->si as $si) {
                 $text = '';
@@ -197,29 +310,57 @@ function parseXlsxFile(string $filePath): array {
         }
     }
 
-    $sheetXml = $zip->getFromName('xl/worksheets/sheet1.xml');
-    $zip->close();
-    if ($sheetXml === false) { return $rows; }
+    $sheetXml = extractZipEntryUniversal($filePath, 'xl/worksheets/sheet1.xml');
+    if (!$sheetXml) {
+        $sheetXml = extractZipEntryUniversal($filePath, 'worksheets/sheet1.xml');
+    }
+    if (!$sheetXml) {
+        return $rows;
+    }
 
-    $sheet = simplexml_load_string($sheetXml);
-    if (!$sheet) { return $rows; }
+    $sheet = @simplexml_load_string($sheetXml);
+    if (!$sheet || !isset($sheet->sheetData)) {
+        return $rows;
+    }
 
     $headerSkipped = false;
     foreach ($sheet->sheetData->row as $row) {
         if (!$headerSkipped) { $headerSkipped = true; continue; }
         $cells = [];
+        $colCounter = 0;
         foreach ($row->c as $c) {
+            $r = (string)($c['r'] ?? '');
+            $colIdx = ($r !== '') ? colLetterToIndex($r) : $colCounter;
+            if ($colIdx < 0) { $colIdx = $colCounter; }
+
             $t = (string)($c['t'] ?? '');
-            $v = isset($c->v) ? (string)$c->v : '';
-            if ($t === 's' && isset($sharedStrings[(int)$v])) {
-                $cells[] = $sharedStrings[(int)$v];
-            } else {
-                $cells[] = $v;
+            $val = '';
+
+            if ($t === 's') {
+                $v = (int)(string)$c->v;
+                $val = $sharedStrings[$v] ?? '';
+            } elseif ($t === 'inlineStr' && isset($c->is->t)) {
+                $val = (string)$c->is->t;
+            } elseif (isset($c->v)) {
+                $val = (string)$c->v;
             }
+
+            $cells[$colIdx] = $val;
+            $colCounter = $colIdx + 1;
         }
-        if (count(array_filter($cells, fn($v) => trim($v) !== '')) === 0) { continue; }
-        $rows[] = $cells;
+
+        $maxCol = max(array_keys($cells) ?: [0]);
+        $normRow = [];
+        for ($i = 0; $i <= max(18, $maxCol); $i++) {
+            $normRow[$i] = $cells[$i] ?? '';
+        }
+        ksort($normRow);
+
+        if (count(array_filter($normRow, fn($v) => trim((string)$v) !== '')) > 0) {
+            $rows[] = array_values($normRow);
+        }
     }
+
     return $rows;
 }
 
@@ -591,12 +732,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         $origName = strtolower(basename($_FILES['import_file']['name']));
 
         if (str_ends_with($origName, '.xlsx') || str_ends_with($origName, '.xls')) {
-            if (!class_exists('ZipArchive')) {
-                Session::flash('error', 'Excel import requires the PHP Zip extension. Please use CSV instead.');
-                header('Location: /admin/members-import.php');
-                exit;
-            }
-            $rawRows = parseXlsxFile($tmpName);
+            $rawRows = parseExcelFile($tmpName);
         } else {
             $rawRows = parseCSVFile($tmpName);
         }
