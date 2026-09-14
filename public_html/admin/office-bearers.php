@@ -522,8 +522,16 @@ if ($editId !== false && $editId) {
 
 // Designations master data
 $desigLevelFilter = Sanitize::inArray($_GET['desig_level'] ?? 'all', ['all', 'state', 'district', 'taluk']) ?: 'all';
-$desigWhere = ($desigLevelFilter !== 'all') ? "WHERE level = " . Database::quote($desigLevelFilter) : "";
-$allDesignations = Database::fetchAll("SELECT * FROM office_bearer_designations {$desigWhere} ORDER BY level, sort_order, id");
+if ($desigLevelFilter !== 'all') {
+    $allDesignations = Database::fetchAll(
+        "SELECT * FROM office_bearer_designations WHERE level = ? ORDER BY level, sort_order, id",
+        [$desigLevelFilter]
+    );
+} else {
+    $allDesignations = Database::fetchAll(
+        "SELECT * FROM office_bearer_designations ORDER BY level, sort_order, id"
+    );
+}
 
 $activeDesignations = Database::fetchAll("SELECT * FROM office_bearer_designations WHERE status = 'active' ORDER BY level, sort_order, id");
 $designationsByLevel = [
