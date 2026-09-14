@@ -120,30 +120,18 @@ $breadcrumbs = $breadcrumbs ?? [
                 My Profile
             </a>
 
-            <!-- 3. My Membership -->
-            <a href="/member/membership.php" class="nav-link <?= $activeMenu === 'membership' ? 'active' : '' ?>">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-                My Membership
-            </a>
-
-            <!-- 4. Digital ID -->
+            <!-- 3. Digital ID -->
             <a href="/member/id-card.php" class="nav-link <?= $activeMenu === 'id-card' ? 'active' : '' ?>">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"/></svg>
                 Digital ID
             </a>
 
-            <div class="nav-group-title">Finance &amp; Dues</div>
+            <div class="nav-group-title">My Membership</div>
 
-            <!-- 5. Membership Fee -->
-            <a href="/member/fee.php" class="nav-link <?= $activeMenu === 'fee' ? 'active' : '' ?>">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                Membership Fee
-            </a>
-
-            <!-- 6. Payments (KEPT) -->
-            <a href="/member/payments.php" class="nav-link <?= $activeMenu === 'payments' ? 'active' : '' ?>">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
-                Payments
+            <!-- 4. My Membership (Merged Membership, Fee Status & Payments) -->
+            <a href="/member/membership.php" class="nav-link <?= in_array($activeMenu, ['membership', 'fee', 'payments'], true) ? 'active' : '' ?>">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                My Membership
             </a>
 
             <div class="nav-group-title">Official Resources</div>
