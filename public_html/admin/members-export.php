@@ -51,6 +51,14 @@ $filterTalukId     = Sanitize::positiveInt($_GET['taluk_id']        ?? null);
 $paymentStatus     = Sanitize::inArray($_GET['payment_status']      ?? '', ['all','paid','unpaid']) ?: 'all';
 $search            = trim(Sanitize::string($_GET['q']               ?? '', 100));
 
+// Sort params (used by abstract exports to match report page sort)
+$allowedSortDistrict = ['district_name','total_members','paid_members','unpaid_members'];
+$allowedSortTaluk    = ['district_name','taluk_name','total_members','paid_members','unpaid_members'];
+$allowedSort         = ($reportType === 'abstract_taluk') ? $allowedSortTaluk : $allowedSortDistrict;
+$sortBy  = Sanitize::inArray($_GET['sort_by']  ?? '', $allowedSort)  ?: 'paid_members';
+$sortDir = Sanitize::inArray($_GET['sort_dir'] ?? '', ['asc','desc']) ?: 'desc';
+$sqlDir  = $sortDir === 'asc' ? 'ASC' : 'DESC';
+
 // Server-side RBAC override — cannot be bypassed via GET params
 if ($lockedDistrictId) { $filterDistrictId = $lockedDistrictId; }
 if ($lockedTalukId)    { $filterTalukId    = $lockedTalukId;    }
@@ -208,6 +216,11 @@ if ($reportType === 'detailed') {
     if ($reportType === 'abstract_district') {
         $whereStr = '';
         if ($lockedDistrictId) { $whereStr .= " AND m.district_id = {$lockedDistrictId}"; }
+        elseif ($filterDistrictId) { $whereStr .= " AND m.district_id = {$filterDistrictId}"; }
+
+        $orderExpr = in_array($sortBy, ['total_members','paid_members','unpaid_members'])
+            ? "CAST({$sortBy} AS UNSIGNED) {$sqlDir}"
+            : "{$sortBy} {$sqlDir}";
 
         $sql = "SELECT d.name AS district_name,
                        COUNT(m.id) AS total_members,
@@ -218,16 +231,20 @@ if ($reportType === 'detailed') {
                 LEFT JOIN membership_payments p ON p.member_id = m.id AND p.membership_year_id = " . ($fyId ?: 0) . " AND p.status = 'completed'
                 WHERE 1=1 {$whereStr}
                 GROUP BY d.id, d.name
-                ORDER BY paid_members DESC, d.name";
+                ORDER BY {$orderExpr}";
         $data    = Database::fetchAll($sql);
         $columns = ['Sl.No', 'District', 'Total Members', 'Paid Members', 'Unpaid Members'];
 
     } else { // abstract_taluk
         $whereStr = '';
         if ($lockedDistrictId) { $whereStr .= " AND m.district_id = {$lockedDistrictId}"; }
-        if ($lockedTalukId)    { $whereStr .= " AND m.taluk_id = {$lockedTalukId}"; }
-        if ($filterDistrictId && !$lockedDistrictId) { $whereStr .= " AND m.district_id = {$filterDistrictId}"; }
-        if ($filterTalukId    && !$lockedTalukId)    { $whereStr .= " AND m.taluk_id = {$filterTalukId}"; }
+        elseif ($filterDistrictId) { $whereStr .= " AND m.district_id = {$filterDistrictId}"; }
+        if ($lockedTalukId)        { $whereStr .= " AND m.taluk_id = {$lockedTalukId}"; }
+        elseif ($filterTalukId)    { $whereStr .= " AND m.taluk_id = {$filterTalukId}"; }
+
+        $orderExpr = in_array($sortBy, ['total_members','paid_members','unpaid_members'])
+            ? "CAST({$sortBy} AS UNSIGNED) {$sqlDir}"
+            : "{$sortBy} {$sqlDir}";
 
         $sql = "SELECT d.name AS district_name,
                        t.name AS taluk_name,
@@ -240,7 +257,7 @@ if ($reportType === 'detailed') {
                 LEFT JOIN membership_payments p ON p.member_id = m.id AND p.membership_year_id = " . ($fyId ?: 0) . " AND p.status = 'completed'
                 WHERE 1=1 {$whereStr}
                 GROUP BY d.name, t.name
-                ORDER BY paid_members DESC, d.name, t.name";
+                ORDER BY {$orderExpr}";
         $data    = Database::fetchAll($sql);
         $columns = ['Sl.No', 'District', 'Taluk', 'Total Members', 'Paid Members', 'Unpaid Members'];
     }
