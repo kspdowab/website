@@ -429,6 +429,35 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         exit;
     }
 
+    // ── DESIGNATION: Save Drag and Drop Order ──────────────────────────────
+    if ($action === 'save_drag_order') {
+        $orderedIds = $_POST['ordered_ids'] ?? [];
+        if (is_array($orderedIds) && !empty($orderedIds)) {
+            $newOrder = 1;
+            foreach ($orderedIds as $desigId) {
+                $dId = Sanitize::positiveInt($desigId);
+                if ($dId !== false) {
+                    Database::execute(
+                        "UPDATE office_bearer_designations SET sort_order = ?, updated_at = NOW() WHERE id = ?",
+                        [$newOrder, $dId]
+                    );
+                    $newOrder++;
+                }
+            }
+        }
+
+        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest' || !empty($_POST['ajax'])) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true]);
+            exit;
+        }
+
+        Session::flash('success', 'Designation display orders saved.');
+        $filterLevel = $_POST['redirect_level'] ?? 'all';
+        header('Location: /admin/office-bearers.php?view=designations&desig_level=' . urlencode($filterLevel));
+        exit;
+    }
+
     // ── DESIGNATION: Bulk Save Order ───────────────────────────────────────
     if ($action === 'save_orders') {
         $orders = $_POST['orders'] ?? [];
@@ -764,25 +793,54 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
     }
     .byelaw-banner strong { color: #1e3a8a; }
 
-    .order-input {
-        width: 60px !important;
-        padding: 4px 6px !important;
-        font-size: 0.82rem !important;
+    /* Drag & Drop Reorder Styling */
+    .draggable-row {
+        cursor: grab;
+        transition: background-color 0.15s ease;
+    }
+    .draggable-row.is-dragging {
+        opacity: 0.4;
+        background-color: #eff6ff !important;
+    }
+    .draggable-row.drag-over-top {
+        border-top: 3px solid #2563eb !important;
+    }
+    .draggable-row.drag-over-bottom {
+        border-bottom: 3px solid #2563eb !important;
+    }
+    .drag-handle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 5px 12px;
+        background: #f8fafc;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        cursor: grab;
+        user-select: none;
+        transition: all 0.15s ease;
+    }
+    .drag-handle:hover {
+        background: #e2e8f0;
+        border-color: #2563eb;
+    }
+    .drag-handle:active {
+        cursor: grabbing;
+    }
+    .drag-icon {
+        font-size: 1rem;
+        line-height: 1;
+        color: #64748b;
+        letter-spacing: -2px;
+        display: inline-block;
+    }
+    .order-badge {
+        font-weight: 700;
+        font-size: 0.82rem;
+        color: #1e40af;
+        min-width: 18px;
         text-align: center;
     }
-    .order-btns { display: inline-flex; gap: 4px; vertical-align: middle; margin-left: 4px; }
-    .order-btn {
-        background: #f1f5f9;
-        border: 1px solid #cbd5e1;
-        color: #334155;
-        padding: 2px 6px;
-        border-radius: 4px;
-        font-size: 0.72rem;
-        cursor: pointer;
-        line-height: 1;
-        font-weight: bold;
-    }
-    .order-btn:hover { background: #2563eb; color: #fff; border-color: #2563eb; }
 </style>
 
 <!-- Sub Navigation Tabs -->
@@ -1154,10 +1212,13 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
     <!-- Designations List & Reorder Panel -->
     <div class="panel">
         <div class="panel-header-flex">
-            <h2>Designations Master List (ಹುದ್ದೆಗಳ ಪಟ್ಟಿ)</h2>
-            <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('bulkOrderForm').submit()">
-                💾 Save All Display Orders
-            </button>
+            <div>
+                <h2 style="margin-bottom:4px;">Designations Master List (ಹುದ್ದೆಗಳ ಪಟ್ಟಿ)</h2>
+                <div class="hint">Drag and drop rows using the <strong>⋮⋮</strong> handle to change display sequence. Changes save automatically.</div>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <span id="reorder-status" style="display:none; font-size:0.85rem; font-weight:600; padding:5px 12px; border-radius:6px; transition:all 0.3s ease;"></span>
+            </div>
         </div>
 
         <!-- Level Filter Pills -->
@@ -1174,7 +1235,7 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
 
         <form id="bulkOrderForm" method="post" action="/admin/office-bearers.php">
             <?= CSRF::htmlField() ?>
-            <input type="hidden" name="action" value="save_orders">
+            <input type="hidden" name="action" value="save_drag_order">
             <input type="hidden" name="redirect_level" value="<?= Sanitize::attr($desigLevelFilter) ?>">
 
             <div class="table-wrap">
@@ -1185,14 +1246,14 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
                         <th>Designation (Kannada)</th>
                         <th>Designation (English)</th>
                         <th style="width:90px; text-align:center;">Seats</th>
-                        <th style="width:160px;">Display Order & Reorder</th>
+                        <th style="width:110px; text-align:center;">Reorder</th>
                         <th style="width:90px;">Status</th>
                         <th style="width:130px; text-align:center;">Actions</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="desigTableBody">
                     <?php foreach ($allDesignations as $des): ?>
-                    <tr>
+                    <tr class="draggable-row" draggable="true" data-id="<?= (int)$des['id'] ?>">
                         <td data-label="Level">
                             <span class="badge <?= $des['level'] ?>"><?= strtoupper($des['level']) ?></span>
                         </td>
@@ -1205,14 +1266,10 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
                         <td data-label="Seats" style="text-align:center; font-weight:700;">
                             <?= sprintf('%02d', (int)$des['seats']) ?>
                         </td>
-                        <td data-label="Display Order">
-                            <input type="number" name="orders[<?= (int)$des['id'] ?>]" 
-                                   value="<?= (int)$des['sort_order'] ?>" min="0" class="order-input">
-                            <div class="order-btns">
-                                <button type="button" class="order-btn" title="Move Up" 
-                                        onclick="moveDesignation(<?= (int)$des['id'] ?>, 'up')">▲</button>
-                                <button type="button" class="order-btn" title="Move Down" 
-                                        onclick="moveDesignation(<?= (int)$des['id'] ?>, 'down')">▼</button>
+                        <td data-label="Reorder" style="text-align:center;">
+                            <div class="drag-handle" title="Click and drag to reorder">
+                                <span class="drag-icon">⋮⋮</span>
+                                <span class="order-badge"><?= (int)$des['sort_order'] ?></span>
                             </div>
                         </td>
                         <td data-label="Status">
@@ -1239,6 +1296,21 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
         </form>
     </div>
 <?php endif; ?>
+
+<!-- Hidden Action Forms for OB and Desig Row Actions -->
+<form id="obActionForm" method="post" action="/admin/office-bearers.php" style="display:none;">
+    <?= CSRF::htmlField() ?>
+    <input type="hidden" name="action" id="obActionVal" value="">
+    <input type="hidden" name="id" id="obActionId" value="">
+</form>
+
+<form id="desigActionForm" method="post" action="/admin/office-bearers.php" style="display:none;">
+    <?= CSRF::htmlField() ?>
+    <input type="hidden" name="action" id="desigActionVal" value="">
+    <input type="hidden" name="desig_id" id="desigActionId" value="">
+    <input type="hidden" name="direction" id="desigActionDir" value="">
+    <input type="hidden" name="redirect_level" value="<?= Sanitize::attr($desigLevelFilter) ?>">
+</form>
 
 <script>
 // Designation master records per level
@@ -1389,9 +1461,156 @@ function submitDesigForm(action, id) {
     form.submit();
 }
 
+// Drag and Drop Designation Reordering
+function initDragAndDrop() {
+    var tbody = document.getElementById('desigTableBody');
+    if (!tbody) return;
+
+    var rows = tbody.querySelectorAll('.draggable-row');
+    var draggedRow = null;
+
+    rows.forEach(function(row) {
+        row.addEventListener('dragstart', function(e) {
+            draggedRow = this;
+            this.classList.add('is-dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', this.getAttribute('data-id') || '');
+        });
+
+        row.addEventListener('dragend', function() {
+            this.classList.remove('is-dragging');
+            rows.forEach(function(r) {
+                r.classList.remove('drag-over-top', 'drag-over-bottom');
+            });
+            draggedRow = null;
+        });
+
+        row.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            if (!draggedRow || draggedRow === this) return;
+            e.dataTransfer.dropEffect = 'move';
+
+            var rect = this.getBoundingClientRect();
+            var offset = e.clientY - rect.top;
+            var middle = rect.height / 2;
+
+            if (offset < middle) {
+                this.classList.add('drag-over-top');
+                this.classList.remove('drag-over-bottom');
+            } else {
+                this.classList.add('drag-over-bottom');
+                this.classList.remove('drag-over-top');
+            }
+        });
+
+        row.addEventListener('dragleave', function() {
+            this.classList.remove('drag-over-top', 'drag-over-bottom');
+        });
+
+        row.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.classList.remove('drag-over-top', 'drag-over-bottom');
+
+            if (!draggedRow || draggedRow === this) return;
+
+            var rect = this.getBoundingClientRect();
+            var offset = e.clientY - rect.top;
+            var middle = rect.height / 2;
+
+            if (offset < middle) {
+                tbody.insertBefore(draggedRow, this);
+            } else {
+                tbody.insertBefore(draggedRow, this.nextSibling);
+            }
+
+            updateRowOrdersAndSave();
+        });
+    });
+}
+
+function updateRowOrdersAndSave() {
+    var tbody = document.getElementById('desigTableBody');
+    if (!tbody) return;
+
+    var rows = tbody.querySelectorAll('.draggable-row');
+    var orderedIds = [];
+
+    rows.forEach(function(row, index) {
+        var newOrder = index + 1;
+        var badge = row.querySelector('.order-badge');
+        if (badge) {
+            badge.textContent = newOrder;
+        }
+        var desigId = row.getAttribute('data-id');
+        if (desigId) {
+            orderedIds.push(desigId);
+        }
+    });
+
+    if (orderedIds.length === 0) return;
+
+    var statusSpan = document.getElementById('reorder-status');
+    if (statusSpan) {
+        statusSpan.style.display = 'inline-block';
+        statusSpan.style.background = '#eff6ff';
+        statusSpan.style.color = '#1d4ed8';
+        statusSpan.style.border = '1px solid #bfdbfe';
+        statusSpan.textContent = '⏳ Saving order...';
+    }
+
+    var csrfInput = document.querySelector('input[name="csrf_token"]');
+    var csrfToken = csrfInput ? csrfInput.value : '';
+
+    var formData = new FormData();
+    formData.append('action', 'save_drag_order');
+    formData.append('csrf_token', csrfToken);
+    formData.append('ajax', '1');
+    orderedIds.forEach(function(id) {
+        formData.append('ordered_ids[]', id);
+    });
+
+    fetch('/admin/office-bearers.php', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(function(res) {
+        return res.json();
+    })
+    .then(function(data) {
+        if (statusSpan) {
+            if (data && data.success) {
+                statusSpan.style.background = '#dcfce7';
+                statusSpan.style.color = '#15803d';
+                statusSpan.style.border = '1px solid #86efac';
+                statusSpan.textContent = '✓ Order saved!';
+                setTimeout(function() {
+                    statusSpan.style.display = 'none';
+                }, 2500);
+            } else {
+                statusSpan.style.background = '#fee2e2';
+                statusSpan.style.color = '#b91c1c';
+                statusSpan.style.border = '1px solid #fca5a5';
+                statusSpan.textContent = '✕ Save failed';
+            }
+        }
+    })
+    .catch(function() {
+        if (statusSpan) {
+            statusSpan.style.background = '#fee2e2';
+            statusSpan.style.color = '#b91c1c';
+            statusSpan.style.border = '1px solid #fca5a5';
+            statusSpan.textContent = '✕ Connection error.';
+        }
+    });
+}
+
 // Initialize on DOM load
 document.addEventListener('DOMContentLoaded', function() {
     obUpdateLevel();
+    initDragAndDrop();
 });
 </script>
 <?php
