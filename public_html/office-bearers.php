@@ -127,17 +127,34 @@ require __DIR__ . '/includes/partials/header.php';
     }
     .quick-jump-nav {
         display: flex;
-        gap: 10px;
+        gap: 8px;
         margin: -8px 0 24px;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         align-items: center;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 6px;
+    }
+    .quick-jump-nav::-webkit-scrollbar {
+        height: 4px;
+    }
+    .quick-jump-nav::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    .quick-jump-label {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--ink-500);
+        white-space: nowrap;
+        flex-shrink: 0;
     }
     .quick-jump-nav a.jump-btn {
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        padding: 7px 16px;
-        font-size: 0.85rem;
+        padding: 6px 13px;
+        font-size: 0.82rem;
         font-weight: 600;
         color: var(--blue-700);
         background: #ffffff;
@@ -146,6 +163,8 @@ require __DIR__ . '/includes/partials/header.php';
         text-decoration: none;
         transition: all 0.15s ease;
         box-shadow: var(--shadow-sm);
+        white-space: nowrap;
+        flex-shrink: 0;
     }
     .quick-jump-nav a.jump-btn:hover {
         background: var(--blue-100);
@@ -241,7 +260,7 @@ require __DIR__ . '/includes/partials/header.php';
 
 <!-- Quick Jump Bar -->
 <div class="quick-jump-nav">
-    <span style="font-size:0.85rem; font-weight:700; color:var(--ink-500);">Jump to:</span>
+    <span class="quick-jump-label">Jump to:</span>
     <a href="#state-council" class="jump-btn">🏛️ State Council (ರಾಜ್ಯ ಪರಿಷತ್ತು)</a>
     <a href="#state" class="jump-btn">🏛️ State Committee (ರಾಜ್ಯ ಸಂಘ)</a>
     <a href="#district" class="jump-btn">📍 District Committee (ಜಿಲ್ಲಾ ಸಂಘ)</a>
