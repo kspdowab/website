@@ -30,7 +30,7 @@ if ($memberId === null) {
     exit;
 }
 
-$paymentId = Sanitize::positiveInt($_GET['payment_id'] ?? null);
+$paymentId = Sanitize::positiveInt($_GET['id'] ?? $_GET['payment_id'] ?? null);
 if ($paymentId === false) {
     ErrorHandler::abort(404, 'Receipt not found.');
 }
