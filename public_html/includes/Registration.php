@@ -133,9 +133,11 @@ class Registration
         }
         $clean['email'] = $email ?: '';
 
-        $kgid = Sanitize::string($post['kgid_no'] ?? '', 50);
+        $kgid = trim(Sanitize::string($post['kgid_no'] ?? '', 50));
         if ($kgid === '') {
             $errors['kgid_no'] = 'KGID No. is required.';
+        } elseif (!preg_match('/^\d+$/', $kgid)) {
+            $errors['kgid_no'] = 'KGID No. must contain only numeric digits.';
         }
         $clean['kgid_no'] = $kgid;
 
@@ -234,7 +236,7 @@ class Registration
             && !self::emailBelongsToRetryableMember($email, $kgid)) {
             $errors['email'] = 'This email address is already registered.';
         }
-        if ($kgid !== '' && Database::fetchOne('SELECT id FROM member_profiles WHERE kgid_no = ?', [$kgid]) !== false
+        if ($kgid !== '' && empty($errors['kgid_no']) && Database::fetchOne('SELECT id FROM member_profiles WHERE kgid_no = ?', [$kgid]) !== false
             && !self::kgidBelongsToRetryableMember($kgid, $email !== false ? $email : '')) {
             $errors['kgid_no'] = 'This KGID No. is already registered.';
         }

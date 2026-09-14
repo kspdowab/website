@@ -156,6 +156,11 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             if ($name === '') { $errors[] = 'Name is required.'; }
             if ($status === false) { $errors[] = 'Status is required.'; }
 
+            $kgidClean = trim(Sanitize::string($_POST['kgid_no'] ?? '', 100)) ?: null;
+            if ($kgidClean !== null && !preg_match('/^\d+$/', $kgidClean)) {
+                $errors[] = 'KGID No. must contain only numeric digits.';
+            }
+
             if (empty($errors)) {
                 $existing = Database::fetchOne('SELECT * FROM members WHERE id = ?', [$id]);
                 if ($existing) {
@@ -165,7 +170,6 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                     );
 
                     // Profile
-                    $kgidClean   = trim(Sanitize::string($_POST['kgid_no'] ?? '', 100)) ?: null;
                     $emailClean  = Sanitize::email($_POST['personal_email'] ?? '') ?: null;
                     $mobileClean = Sanitize::mobile($_POST['personal_mobile'] ?? '') ?: null;
                     $father      = trim(Sanitize::string($_POST['father_spouse_name'] ?? '', 200)) ?: null;
@@ -453,7 +457,7 @@ $showAddForm = isset($_GET['add']) || $editRow;
                 </div>
                 <div>
                     <label>KGID No.</label>
-                    <input type="text" name="kgid_no" maxlength="100" value="<?= Sanitize::attr($editProfile['kgid_no'] ?? '') ?>">
+                    <input type="text" name="kgid_no" maxlength="100" inputmode="numeric" pattern="[0-9]*" title="Numeric digits only" value="<?= Sanitize::attr($editProfile['kgid_no'] ?? '') ?>">
                 </div>
                 <div>
                     <label>Date of Birth</label>
@@ -552,7 +556,7 @@ $showAddForm = isset($_GET['add']) || $editRow;
                 </div>
                 <div>
                     <label>KGID No. *</label>
-                    <input type="text" name="kgid_no" required maxlength="50">
+                    <input type="text" name="kgid_no" required maxlength="50" inputmode="numeric" pattern="[0-9]+" title="Numeric digits only">
                 </div>
                 <div>
                     <label>Date of Birth *</label>
@@ -799,7 +803,7 @@ $showAddForm = isset($_GET['add']) || $editRow;
                         <td>
                             <!-- Single Actions dropdown -->
                             <select class="act-select" onchange="handleAction(this, <?= (int)$m['id'] ?>, '<?= Sanitize::attr($m['name']) ?>', <?= $selectedYear ? (int)$selectedYear['id'] : 0 ?>, <?= $selectedYear ? (float)$selectedYear['fee_amount'] : 0 ?>)">
-                                <option value="">— Actions —</option>
+                                <option value="">Actions</option>
                                 <option value="view">View Details</option>
                                 <option value="edit">Edit</option>
                                 <?php if (!$m['payment_id'] && $selectedYear && in_array($m['membership_status'], ['active','inactive'])): ?>

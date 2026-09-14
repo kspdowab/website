@@ -459,7 +459,7 @@ function validateImportRow(
     $gender      = strtolower($pad(2));
     $phone       = preg_replace('/\s+/', '', $pad(3));
     $email       = strtolower(trim($pad(4)));
-    $kgid        = $pad(5);
+    $kgid        = preg_replace('/\.0+$/', '', trim($pad(5)));
     $dobRaw      = $pad(6);
     $gpWorkingRaw= strtolower($pad(7));
     $orgTypeRaw  = strtolower($pad(8));
@@ -505,7 +505,11 @@ function validateImportRow(
     if (!in_array($gender, ['male','female'])) { $errors[] = 'Gender must be male or female'; }
     if (!preg_match('/^[6-9][0-9]{9}$/', $phone)) { $errors[] = 'Phone must be 10-digit starting 6-9'; }
     if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) { $errors[] = 'Valid email required'; }
-    if ($kgid === '') { $errors[] = 'KGID required'; }
+    if ($kgid === '') {
+        $errors[] = 'KGID required';
+    } elseif (!preg_match('/^\d+$/', $kgid)) {
+        $errors[] = 'KGID No. must contain only numeric digits';
+    }
     if ($gpWorkingRaw === '' || !in_array($gpWorkingRaw, ['yes','no'])) { $errors[] = 'GP Working must be yes or no'; }
 
     // Date of Birth
@@ -1510,7 +1514,7 @@ foreach (Database::fetchAll("SELECT id, name FROM gram_panchayatis") as $g) {
                     ['Gender',                 'Yes (male/female)'],
                     ['Phone',                  'Yes (10-digit)'],
                     ['Email',                  'Yes'],
-                    ['KGID No.',               'Yes'],
+                    ['KGID No.',               'Yes (Numeric digits only)'],
                     ['Date of Birth',          'Yes (DD-MM-YYYY or DD/MM/YYYY)'],
                     ['GP Working?',            'Yes (yes/no)'],
                     ['Organization Type',      'When GP=no'],

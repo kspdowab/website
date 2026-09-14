@@ -345,7 +345,7 @@ require __DIR__ . '/includes/partials/header.php';
                 </div>
                 <div class="form-group">
                     <label for="kgid_no">KGID No. *</label>
-                    <input type="text" id="kgid_no" name="kgid_no" required maxlength="50" value="<?= reg_old($clean, $post, 'kgid_no') ?>">
+                    <input type="text" id="kgid_no" name="kgid_no" required maxlength="50" inputmode="numeric" pattern="[0-9]+" title="KGID No. must contain only numeric digits" value="<?= reg_old($clean, $post, 'kgid_no') ?>">
                     <?php if (!empty($errors['kgid_no'])): ?><div class="reg-field-error"><?= Sanitize::html($errors['kgid_no']) ?></div><?php endif; ?>
                 </div>
                 <div class="form-group">
