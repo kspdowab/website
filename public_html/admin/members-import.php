@@ -14,6 +14,9 @@
  */
 declare(strict_types=1);
 
+// Suppress PHP notices/warnings from appearing in the HTML output
+ini_set('display_errors', '0');
+
 require_once dirname(__DIR__) . '/includes/bootstrap.php';
 require_once dirname(__DIR__) . '/includes/MembershipNumber.php';
 
@@ -69,13 +72,22 @@ foreach ($gps as $g) {
 
 /**
  * Parse a CSV file; return array of rows (each row is an indexed array).
- * Skips blank rows.
+ * Skips blank rows and the header row.
+ *
+ * PHP 8.1+: fgetcsv() requires explicit $escape parameter — use '\\' (backslash).
+ * Also strips the UTF-8 BOM (\xEF\xBB\xBF) that Excel writes at the start of
+ * the file; without stripping it, the first field of the header row gets a
+ * 3-byte prefix and downstream code may miscount columns.
  */
 function parseCSVFile(string $filePath): array {
     $rows = [];
     if (($h = fopen($filePath, 'r')) !== false) {
-        fgetcsv($h); // skip header row
-        while (($data = fgetcsv($h)) !== false) {
+        // Skip header row; strip BOM from first field if present
+        $header = fgetcsv($h, 0, ',', '"', '\\');
+        if ($header && isset($header[0])) {
+            $header[0] = ltrim($header[0], "\xEF\xBB\xBF");
+        }
+        while (($data = fgetcsv($h, 0, ',', '"', '\\')) !== false) {
             if (count(array_filter($data, fn($v) => trim($v) !== '')) === 0) { continue; }
             $rows[] = $data;
         }
