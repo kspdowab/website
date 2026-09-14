@@ -182,83 +182,23 @@ $editYear   = $editYearId !== false ? Database::fetchOne('SELECT * FROM membersh
 $membershipTypes = Database::fetchAll('SELECT * FROM membership_types ORDER BY name');
 $membershipYears = Database::fetchAll('SELECT * FROM membership_years ORDER BY start_date DESC');
 $currentYear     = Membership::getCurrentYear(); // single source of truth -- see includes/Membership.php
-?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Membership Setup — Admin — <?= Sanitize::html(APP_SHORT_NAME) ?></title>
-    <style>
-        * { box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: #f5f7fa; color: #1a1a2e; margin: 0; padding: 0 0 60px;
-        }
-        header {
-            background: #1a3a6b; color: #fff; padding: 16px 24px;
-            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
-        }
-        header h1 { font-size: 1.1rem; margin: 0; }
-        header .links a { color: #cfe0ff; text-decoration: none; font-size: 0.85rem; margin-left: 14px; }
-        main { max-width: 1040px; margin: 24px auto; padding: 0 16px; }
-        .panel {
-            background: #fff; border-radius: 8px; box-shadow: 0 1px 6px rgba(26,58,107,0.08);
-            padding: 20px; margin-bottom: 24px;
-        }
-        .panel h2 { font-size: 1rem; color: #1a3a6b; margin: 0 0 4px; }
-        .panel .section-hint { font-size: 0.78rem; color: #888; margin: 0 0 16px; }
-        .msg { padding: 10px 14px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 16px; }
-        .msg.success { background: #e7f6ec; color: #1e6b3a; border: 1px solid #b9e5c6; }
-        .msg.error   { background: #fdecea; color: #a12622; border: 1px solid #f5c2be; }
-        .msg.notice  { background: #eef2f9; color: #1a3a6b; border: 1px solid #cddcf0; }
-        label { display: block; font-size: 0.8rem; font-weight: 600; color: #33415c; margin: 12px 0 4px; }
-        input[type="text"], input[type="number"], input[type="date"], select, textarea {
-            width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95rem; font-family: inherit;
-        }
-        .row { display: flex; gap: 16px; flex-wrap: wrap; }
-        .row > div { flex: 1; min-width: 180px; }
-        button, .btn {
-            background: #1a3a6b; color: #fff; border: none; border-radius: 6px;
-            padding: 10px 18px; font-size: 0.9rem; font-weight: 600; cursor: pointer; margin-top: 18px;
-        }
-        button:hover, .btn:hover { background: #142c52; }
-        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-        th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #eef1f5; vertical-align: top; }
-        th { color: #556; font-weight: 600; }
-        .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 600; }
-        .badge.active   { background: #e7f6ec; color: #1e6b3a; }
-        .badge.inactive { background: #f1f2f4; color: #666; }
-        .badge.closed   { background: #fdf6e8; color: #8a5a22; }
-        .actions a { font-size: 0.8rem; color: #1a3a6b; font-weight: 600; text-decoration: underline; margin-right: 10px; }
-        .table-wrap { overflow-x: auto; }
-        @media (max-width: 640px) {
-            table, thead, tbody, th, td, tr { display: block; }
-            thead { display: none; }
-            tr { border-bottom: 2px solid #e2e6ec; padding: 10px 0; }
-            td { border: none; padding: 4px 0; }
-            td::before { content: attr(data-label) ": "; font-weight: 600; color: #556; }
-        }
-    </style>
-</head>
-<body>
-<header>
-    <h1><?= Sanitize::html(APP_SHORT_NAME) ?> — Membership Setup</h1>
-    <div class="links">
-        <a href="/admin/office-bearers.php">Office Bearers</a>
-        <a href="/admin/members.php">Members</a>
-        <a href="/admin/news.php">News</a>
-        <a href="/admin/users.php">Users &amp; Roles</a>
-        <a href="/admin/membership-setup.php" style="text-decoration:underline;">Membership Setup</a>
-        <a href="/admin/donations.php">Donations</a>
-        <a href="/admin/settings.php">Association Settings</a>
-        <a href="/logout.php">Logout</a>
-    </div>
-</header>
-<main>
 
-    <?php if ($successMsg): ?><div class="msg success" role="status"><?= Sanitize::html($successMsg) ?></div><?php endif; ?>
-    <?php if ($errorMsg): ?><div class="msg error" role="alert"><?= Sanitize::html($errorMsg) ?></div><?php endif; ?>
+$pageTitle   = 'Membership Setup';
+$activeMenu  = 'membership';
+$breadcrumbs = [
+    ['label' => 'Dashboard', 'url' => '/admin/index.php'],
+    ['label' => 'Members', 'url' => '/admin/members.php'],
+    ['label' => 'Membership Setup', 'url' => '']
+];
+
+require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
+?>
+<style>
+    .row { display: flex; gap: 16px; flex-wrap: wrap; }
+    .row > div { flex: 1; min-width: 180px; }
+    .actions a { font-size: 0.8rem; color: #1a3a6b; font-weight: 600; text-decoration: underline; margin-right: 10px; }
+    .msg.notice { background: #eef2f9; color: #1a3a6b; border: 1px solid #cddcf0; }
+</style>
 
     <div class="msg notice" role="status">
         Current financial year:
@@ -382,7 +322,6 @@ $currentYear     = Membership::getCurrentYear(); // single source of truth -- se
         </table>
         </div>
     </div>
-</main>
-</body>
-</html>
+<?php
+require_once dirname(__DIR__) . '/includes/partials/admin-footer.php';
 

@@ -29,6 +29,36 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
+    // Sidebar Accordion: only expand and hold until click on new main menu
+    var dropdownToggles = document.querySelectorAll('.nav-dropdown-toggle');
+    dropdownToggles.forEach(function(toggle) {
+        toggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            var parentDropdown = this.closest('.nav-dropdown');
+            if (!parentDropdown) return;
+
+            // If already open, keep it open (hold until click on new main menu)
+            if (parentDropdown.classList.contains('open')) {
+                return;
+            }
+
+            // Close all other open dropdowns
+            document.querySelectorAll('.nav-dropdown.open').forEach(function(other) {
+                if (other !== parentDropdown) {
+                    other.classList.remove('open');
+                    var otherToggle = other.querySelector('.nav-dropdown-toggle');
+                    if (otherToggle) {
+                        otherToggle.setAttribute('aria-expanded', 'false');
+                    }
+                }
+            });
+
+            // Expand clicked dropdown
+            parentDropdown.classList.add('open');
+            this.setAttribute('aria-expanded', 'true');
+        });
+    });
 });
 </script>
 </body>

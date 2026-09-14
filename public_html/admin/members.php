@@ -318,106 +318,42 @@ if ($editId !== false && $editId) {
 }
 
 $showAddForm = isset($_GET['add']) || $editRow;
+$pageTitle   = 'Members Management';
+$activeMenu  = isset($_GET['add']) ? 'members_add' : 'members';
+$breadcrumbs = [
+    ['label' => 'Dashboard', 'url' => '/admin/index.php'],
+    ['label' => 'Members', 'url' => '/admin/members.php'],
+    ['label' => isset($_GET['add']) ? 'Add Member' : ($editRow ? 'Edit Member' : 'Members List'), 'url' => '']
+];
+
+require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Members List — Admin — <?= Sanitize::html(APP_SHORT_NAME) ?></title>
-    <style>
-        * { box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f7fa; color: #1a1a2e; margin: 0; padding: 0 0 60px; }
-        header { background: #1a3a6b; color: #fff; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
-        header h1 { font-size: 1.1rem; margin: 0; }
-        header nav a { color: #cfe0ff; text-decoration: none; font-size: 0.85rem; margin-left: 14px; }
-        header nav a.active { color: #fff; font-weight: 700; text-decoration: underline; }
+<style>
+    /* Specific styling for members add/edit form & offline payment modal */
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px 20px; }
+    .span2 { grid-column: 1 / -1; }
+    .radio-group { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 4px; }
+    .radio-group label { font-weight: 500; color: #33415c; display: flex; align-items: center; gap: 6px; }
+    .locked-info { background: #eef4ff; border: 1px solid #93b4e9; border-radius: 6px; padding: 10px 14px; font-size: 0.85rem; color: #1a3a6b; }
+    .section-title { font-size: 0.95rem; font-weight: 700; color: #1a3a6b; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin: 20px 0 12px; }
+    .filter-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+    .filter-row > div { flex: 1; min-width: 160px; }
+    .act-select { padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.8rem; cursor: pointer; }
+    #member-form-wrap { display: none; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 24px; }
+    #member-form-wrap.visible { display: block; }
+    [hidden] { display: none !important; }
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: #fff; padding: 24px; border-radius: 8px; max-width: 540px; width: 96%; max-height: 92vh; overflow-y: auto; }
+    .modal h3 { margin-top: 0; color: #1a3a6b; }
+</style>
 
-        .sub-nav { background: #fff; border-bottom: 1px solid #cbd5e1; padding: 0 24px; display: flex; gap: 20px; }
-        .sub-nav a { display: inline-block; padding: 12px 4px; color: #556; text-decoration: none; font-weight: 600; font-size: 0.9rem; border-bottom: 3px solid transparent; }
-        .sub-nav a:hover { color: #1a3a6b; }
-        .sub-nav a.active { color: #1a3a6b; border-bottom-color: #1a3a6b; }
-
-        main { max-width: 1400px; margin: 24px auto; padding: 0 16px; }
-        .panel { background: #fff; border-radius: 8px; box-shadow: 0 1px 6px rgba(26,58,107,0.08); padding: 20px; margin-bottom: 24px; }
-        .panel-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-        .panel-h h2 { font-size: 1.1rem; color: #1a3a6b; margin: 0; }
-
-        .msg { padding: 10px 14px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 16px; }
-        .msg.success { background: #e7f6ec; color: #1e6b3a; border: 1px solid #b9e5c6; }
-        .msg.error   { background: #fdecea; color: #a12622; border: 1px solid #f5c2be; }
-
-        label { display: block; font-size: 0.8rem; font-weight: 600; color: #33415c; margin: 10px 0 4px; }
-        input[type="text"], input[type="email"], input[type="date"], select, textarea { width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; font-family: inherit; }
-        input[readonly], input[disabled] { background: #f0f3f7; color: #888; cursor: not-allowed; }
-
-        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px 20px; }
-        .span2 { grid-column: 1 / -1; }
-        .radio-group { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 4px; }
-        .radio-group label { font-weight: 500; color: #33415c; display: flex; align-items: center; gap: 6px; }
-        .locked-info { background: #eef4ff; border: 1px solid #93b4e9; border-radius: 6px; padding: 10px 14px; font-size: 0.85rem; color: #1a3a6b; }
-        .section-title { font-size: 0.95rem; font-weight: 700; color: #1a3a6b; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin: 20px 0 12px; }
-        .btn { background: #1a3a6b; color: #fff; border: none; border-radius: 6px; padding: 9px 18px; font-size: 0.9rem; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-block; }
-        .btn:hover { background: #142c52; }
-        .btn-sm { padding: 5px 12px; font-size: 0.8rem; }
-
-        .filter-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
-        .filter-row > div { flex: 1; min-width: 160px; }
-
-        table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
-        th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #eef1f5; vertical-align: middle; }
-        th { color: #556; font-weight: 600; background: #f8fafc; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
-        tr:hover { background: #f8fafc; }
-
-        .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 600; }
-        .badge.paid, .badge.active { background: #e7f6ec; color: #1e6b3a; }
-        .badge.unpaid, .badge.inactive { background: #f1f2f4; color: #666; }
-        .badge.retired, .badge.resigned { background: #fdf6e8; color: #8a5a22; }
-        .badge.terminated, .badge.deceased { background: #fdecea; color: #a12622; }
-        .hint { font-size: 0.75rem; color: #888; }
-
-        .table-wrap { overflow-x: auto; }
-
-        /* Actions dropdown */
-        .act-select { padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.8rem; cursor: pointer; }
-
-        /* Collapsible Add/Edit form */
-        #member-form-wrap { display: none; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 24px; }
-        #member-form-wrap.visible { display: block; }
-        [hidden] { display: none !important; }
-
-        /* Modal */
-        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; align-items: center; justify-content: center; }
-        .modal-overlay.open { display: flex; }
-        .modal { background: #fff; padding: 24px; border-radius: 8px; max-width: 540px; width: 96%; max-height: 92vh; overflow-y: auto; }
-        .modal h3 { margin-top: 0; color: #1a3a6b; }
-    </style>
-</head>
-<body>
-<header>
-    <h1><?= Sanitize::html(APP_SHORT_NAME) ?> — Members Management</h1>
-    <nav>
-        <a href="/admin/index.php">Dashboard</a>
-        <a href="/admin/members.php" class="active">Members</a>
-        <a href="/admin/orders.php">Orders</a>
-        <a href="/admin/circulars.php">Circulars</a>
-        <a href="/admin/documents.php">Documents</a>
-        <a href="/admin/activities.php">Activities</a>
-        <a href="/admin/news.php">News</a>
-        <a href="/admin/office-bearers.php">Office Bearers</a>
-        <a href="/admin/users.php">Users &amp; Roles</a>
-        <a href="/admin/settings.php">Settings</a>
-        <a href="/logout.php">Logout</a>
-    </nav>
-</header>
 <div class="sub-nav">
-    <a href="/admin/members.php" class="active">Members List</a>
+    <a href="/admin/members.php" class="<?= !$showAddForm ? 'active' : '' ?>">Members List</a>
+    <a href="/admin/members.php?add=1" class="<?= $showAddForm && !$editRow ? 'active' : '' ?>">+ Add Member</a>
     <a href="/admin/members-import.php">Bulk Import</a>
     <a href="/admin/members-reports.php">Abstract Reports</a>
 </div>
-<main>
-    <?php if ($successMsg): ?><div class="msg success"><?= Sanitize::html($successMsg) ?></div><?php endif; ?>
-    <?php if ($errorMsg): ?><div class="msg error"><?= Sanitize::html($errorMsg) ?></div><?php endif; ?>
 
     <!-- ═══════════════════════════════════════════════════════════════════════
          ADD / EDIT MEMBER FORM — mirrors register.php exactly
@@ -827,7 +763,6 @@ $showAddForm = isset($_GET['add']) || $editRow;
             </table>
         </div>
     </div>
-</main>
 
 <!-- Offline Payment Modal -->
 <div class="modal-overlay" id="offline-modal">
@@ -1034,5 +969,5 @@ document.getElementById('offline-modal').addEventListener('click', function(e) {
     if (e.target === this) closeModal();
 });
 </script>
-</body>
-</html>
+<?php
+require_once dirname(__DIR__) . '/includes/partials/admin-footer.php';

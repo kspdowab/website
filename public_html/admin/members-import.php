@@ -1085,75 +1085,35 @@ foreach (Database::fetchAll("SELECT id, name FROM gram_panchayatis") as $g) {
     $gpNameMap[(int)$g['id']] = $g['name'];
 }
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bulk Import — Admin — <?= Sanitize::html(APP_SHORT_NAME) ?></title>
-    <style>
-        * { box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f7fa; color: #1a1a2e; margin: 0; padding: 0 0 60px; }
-        header { background: #1a3a6b; color: #fff; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
-        header h1 { font-size: 1.1rem; margin: 0; }
-        header nav a { color: #cfe0ff; text-decoration: none; font-size: 0.85rem; margin-left: 14px; }
-        header nav a.active { color: #fff; font-weight: 700; text-decoration: underline; }
-        .sub-nav { background: #fff; border-bottom: 1px solid #cbd5e1; padding: 0 24px; display: flex; gap: 20px; }
-        .sub-nav a { display: inline-block; padding: 12px 4px; color: #556; text-decoration: none; font-weight: 600; font-size: 0.9rem; border-bottom: 3px solid transparent; }
-        .sub-nav a:hover { color: #1a3a6b; }
-        .sub-nav a.active { color: #1a3a6b; border-bottom-color: #1a3a6b; }
-        main { max-width: 1400px; margin: 24px auto; padding: 0 16px; }
-        .panel { background: #fff; border-radius: 8px; box-shadow: 0 1px 6px rgba(26,58,107,0.08); padding: 24px; margin-bottom: 24px; }
-        .panel h2 { font-size: 1.15rem; color: #1a3a6b; margin: 0 0 16px; border-bottom: 2px solid #eef1f5; padding-bottom: 12px; }
-        .panel h3 { font-size: 1rem; color: #1a3a6b; margin: 20px 0 10px; }
-        .msg { padding: 10px 14px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 16px; }
-        .msg.success { background: #e7f6ec; color: #1e6b3a; border: 1px solid #b9e5c6; }
-        .msg.error   { background: #fdecea; color: #a12622; border: 1px solid #f5c2be; }
-        .btn { display: inline-block; background: #1a3a6b; color: #fff; border: none; border-radius: 6px; padding: 10px 18px; font-size: 0.9rem; font-weight: 600; cursor: pointer; text-decoration: none; }
-        .btn:hover { background: #142c52; }
-        select, input[type="text"], input[type="file"] { width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; font-family: inherit; }
-        label { display: block; font-size: 0.8rem; font-weight: 600; color: #33415c; margin: 10px 0 4px; }
-        table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-top: 12px; }
-        th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #eef1f5; }
-        th { background: #f8fafc; color: #33415c; font-weight: 600; border-bottom: 2px solid #e2e8f0; }
-        .err-cell { color: #a12622; font-size: 0.78rem; font-weight: 500; }
-        .ok-cell  { color: #1e6b3a; font-size: 0.78rem; }
-        code { background: #f0f3f7; padding: 1px 5px; border-radius: 3px; font-size: 0.85em; }
-        .drop-zone { border: 2px dashed #cbd5e1; border-radius: 10px; padding: 36px 24px; text-align: center; background: #f8fafc; }
-        .badge { display: inline-block; font-size: 0.75rem; padding: 2px 7px; border-radius: 4px; font-weight: 600; }
-        .badge-suggest { background: #e0f2fe; color: #0369a1; }
-        .workflow-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; padding: 10px 16px; background: #fff; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 0.85rem; }
-        .workflow-step { padding: 4px 10px; border-radius: 4px; font-weight: 600; color: #64748b; }
-        .workflow-step.active { background: #1a3a6b; color: #fff; }
-        .workflow-step.completed { color: #166534; }
-        .workflow-sep { color: #94a3b8; }
-    </style>
-</head>
-<body>
-<header>
-    <h1><?= Sanitize::html(APP_SHORT_NAME) ?> — Members Management</h1>
-    <nav>
-        <a href="/admin/index.php">Dashboard</a>
-        <a href="/admin/members.php" class="active">Members</a>
-        <a href="/admin/orders.php">Orders</a>
-        <a href="/admin/circulars.php">Circulars</a>
-        <a href="/admin/documents.php">Documents</a>
-        <a href="/admin/activities.php">Activities</a>
-        <a href="/admin/news.php">News</a>
-        <a href="/admin/office-bearers.php">Office Bearers</a>
-        <a href="/admin/users.php">Users &amp; Roles</a>
-        <a href="/admin/settings.php">Settings</a>
-        <a href="/logout.php">Logout</a>
-    </nav>
-</header>
+$pageTitle   = 'Bulk Import Members';
+$activeMenu  = 'members_import';
+$breadcrumbs = [
+    ['label' => 'Dashboard', 'url' => '/admin/index.php'],
+    ['label' => 'Members', 'url' => '/admin/members.php'],
+    ['label' => 'Bulk Import', 'url' => '']
+];
+
+require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
+?>
+<style>
+    .err-cell { color: #a12622; font-size: 0.78rem; font-weight: 500; }
+    .ok-cell  { color: #1e6b3a; font-size: 0.78rem; }
+    code { background: #f0f3f7; padding: 1px 5px; border-radius: 3px; font-size: 0.85em; }
+    .drop-zone { border: 2px dashed #cbd5e1; border-radius: 10px; padding: 36px 24px; text-align: center; background: #f8fafc; }
+    .badge-suggest { background: #e0f2fe; color: #0369a1; }
+    .workflow-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; padding: 10px 16px; background: #fff; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 0.85rem; }
+    .workflow-step { padding: 4px 10px; border-radius: 4px; font-weight: 600; color: #64748b; }
+    .workflow-step.active { background: #1a3a6b; color: #fff; }
+    .workflow-step.completed { color: #166534; }
+    .workflow-sep { color: #94a3b8; }
+</style>
+
 <div class="sub-nav">
     <a href="/admin/members.php">Members List</a>
+    <a href="/admin/members.php?add=1">+ Add Member</a>
     <a href="/admin/members-import.php" class="active">Bulk Import</a>
     <a href="/admin/members-reports.php">Abstract Reports</a>
 </div>
-<main>
-    <?php if ($successMsg): ?><div class="msg success"><?= Sanitize::html($successMsg) ?></div><?php endif; ?>
-    <?php if ($errorMsg): ?><div class="msg error"><?= Sanitize::html($errorMsg) ?></div><?php endif; ?>
 
     <?php if ($remapStep): ?>
     <!-- ── Step 2: Remap Locations with GP Master Data ───────────────────────── -->
@@ -1545,6 +1505,6 @@ foreach (Database::fetchAll("SELECT id, name FROM gram_panchayatis") as $g) {
         </div>
     </div>
     <?php endif; ?>
-</main>
-</body>
-</html>
+<?php
+require_once dirname(__DIR__) . '/includes/partials/admin-footer.php';
+

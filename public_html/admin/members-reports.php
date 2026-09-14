@@ -162,70 +162,32 @@ function sortIndicator(string $col, string $currentSortBy, string $currentSortDi
     return $currentSortDir === 'asc' ? ' <span style="color:#1a3a6b;">↑</span>' : ' <span style="color:#1a3a6b;">↓</span>';
 }
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Members Abstract — Admin — <?= Sanitize::html(APP_SHORT_NAME) ?></title>
-    <style>
-        * { box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f7fa; color: #1a1a2e; margin: 0; padding: 0 0 60px; }
-        header { background: #1a3a6b; color: #fff; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
-        header h1 { font-size: 1.1rem; margin: 0; }
-        header nav a { color: #cfe0ff; text-decoration: none; font-size: 0.85rem; margin-left: 14px; }
-        header nav a.active { color: #fff; font-weight: 700; text-decoration: underline; }
-        .sub-nav { background: #fff; border-bottom: 1px solid #cbd5e1; padding: 0 24px; display: flex; gap: 20px; }
-        .sub-nav a { display: inline-block; padding: 12px 4px; color: #556; text-decoration: none; font-weight: 600; font-size: 0.9rem; border-bottom: 3px solid transparent; }
-        .sub-nav a:hover { color: #1a3a6b; }
-        .sub-nav a.active { color: #1a3a6b; border-bottom-color: #1a3a6b; }
-        main { max-width: 1100px; margin: 24px auto; padding: 0 16px; }
-        .panel { background: #fff; border-radius: 8px; box-shadow: 0 1px 6px rgba(26,58,107,0.08); padding: 20px; margin-bottom: 24px; }
-        .panel h2 { font-size: 1.1rem; color: #1a3a6b; margin: 0 0 16px; }
-        label { display: block; font-size: 0.8rem; font-weight: 600; color: #33415c; margin: 10px 0 4px; }
-        select, input[type="text"] { width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; font-family: inherit; }
-        input[readonly] { background: #f0f3f7; color: #888; }
-        .row { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 16px; }
-        .row > div { flex: 1; min-width: 160px; }
-        .btn { background: #1a3a6b; color: #fff; border: none; border-radius: 6px; padding: 9px 18px; font-size: 0.9rem; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-block; }
-        .btn:hover { background: #142c52; }
-        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-        th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #eef1f5; }
-        th { color: #33415c; font-weight: 600; background: #f8fafc; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
-        th a { color: #1a3a6b; text-decoration: none; }
-        th a:hover { text-decoration: underline; }
-        td.num { text-align: right; font-weight: 600; }
-        td.paid { color: #1e6b3a; }
-        td.unpaid { color: #a12622; }
-        tfoot { font-weight: bold; background: #f0f5ff; border-top: 2px solid #cbd5e1; }
-        tfoot td.num { font-weight: 700; }
-        tr:hover { background: #f1f5f9; }
-        .table-wrap { overflow-x: auto; }
-    </style>
-</head>
-<body>
-<header>
-    <h1><?= Sanitize::html(APP_SHORT_NAME) ?> — Members Management</h1>
-    <nav>
-        <a href="/admin/index.php">Dashboard</a>
-        <a href="/admin/members.php" class="active">Members</a>
-        <a href="/admin/orders.php">Orders</a>
-        <a href="/admin/circulars.php">Circulars</a>
-        <a href="/admin/documents.php">Documents</a>
-        <a href="/admin/activities.php">Activities</a>
-        <a href="/admin/news.php">News</a>
-        <a href="/admin/office-bearers.php">Office Bearers</a>
-        <a href="/admin/users.php">Users &amp; Roles</a>
-        <a href="/admin/settings.php">Settings</a>
-        <a href="/logout.php">Logout</a>
-    </nav>
-</header>
+$pageTitle   = 'Members Abstract Reports';
+$activeMenu  = 'reports';
+$breadcrumbs = [
+    ['label' => 'Dashboard', 'url' => '/admin/index.php'],
+    ['label' => 'Members', 'url' => '/admin/members.php'],
+    ['label' => 'Reports', 'url' => '']
+];
+
+require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
+?>
+<style>
+    .row { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 16px; }
+    .row > div { flex: 1; min-width: 160px; }
+    td.num { text-align: right; font-weight: 600; }
+    td.paid { color: #1e6b3a; }
+    td.unpaid { color: #a12622; }
+    tfoot { font-weight: bold; background: #f0f5ff; border-top: 2px solid #cbd5e1; }
+    tfoot td.num { font-weight: 700; }
+</style>
+
 <div class="sub-nav">
     <a href="/admin/members.php">Members List</a>
+    <a href="/admin/members.php?add=1">+ Add Member</a>
     <a href="/admin/members-import.php">Bulk Import</a>
     <a href="/admin/members-reports.php" class="active">Abstract Reports</a>
 </div>
-<main>
     <div class="panel">
         <form method="get" action="/admin/members-reports.php" id="reportForm">
             <div class="row">
@@ -336,7 +298,6 @@ function sortIndicator(string $col, string $currentSortBy, string $currentSortDi
             </table>
         </div>
     </div>
-</main>
 
 <script>
 var geo = {
@@ -356,5 +317,6 @@ if (reportDistrictSel && reportTalukSel) {
     });
 }
 </script>
-</body>
-</html>
+<?php
+require_once dirname(__DIR__) . '/includes/partials/admin-footer.php';
+
