@@ -173,11 +173,11 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
     </div>
     <div class="hero-visual-card">
         <div class="hero-visual-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
         </div>
         <div>
-            <div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.5px; opacity:0.85;">Authorized Scope</div>
-            <div style="font-size:1.1rem; font-weight:700;"><?= Sanitize::html($unitName) ?></div>
+            <div style="font-size:0.68rem; text-transform:uppercase; letter-spacing:0.5px; opacity:0.85;">Authorized Scope</div>
+            <div style="font-size:0.95rem; font-weight:700; line-height:1.2;"><?= Sanitize::html($unitName) ?></div>
         </div>
     </div>
 </section>
@@ -254,7 +254,7 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
             <div class="summary-bar-label">PAID • <?= number_format($paidMembers) ?> Members Verified (<?= Sanitize::html($fyLabel) ?>)</div>
         </div>
         <div class="summary-bar-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
         </div>
     </div>
 
@@ -264,7 +264,7 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
             <div class="summary-bar-label">UNPAID • <?= number_format($unpaidMembers) ?> Pending Annual Dues</div>
         </div>
         <div class="summary-bar-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
         </div>
     </div>
 
@@ -274,7 +274,7 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
             <div class="summary-bar-label">PENDING • <?= number_format($pendingGrievancesCount) ?> Grievances in Scope</div>
         </div>
         <div class="summary-bar-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
         </div>
     </div>
 </section>
