@@ -2,9 +2,10 @@
 /**
  * KSPDOWA — Admin: Members Import Template Download
  * ============================================================
- * Serves a downloadable CSV template with all registration fields.
+ * Serves a downloadable CSV template with all 19 registration fields.
+ * Column headers are clean (no parenthetical notes) so the file
+ * can be re-uploaded after filling without header-parsing errors.
  * Gated by RBAC 'members.manage'.
- * No real member data is included.
  * ============================================================
  */
 declare(strict_types=1);
@@ -15,52 +16,97 @@ Auth::requireLogin();
 $currentUserId = Auth::getCurrentUserId();
 RBAC::requirePermission($currentUserId, 'members', 'manage');
 
+// ── Column headers — EXACTLY 19, clean names, no parenthetical notes ─────────
+// These must match the column order expected by members-import.php
 $columns = [
-    'Full Name',
-    'Father / Husband Name',
-    'Gender (male/female)',
-    'Phone (10-digit, starts 6-9)',
-    'Email',
-    'KGID No.',
-    'Date of Birth (YYYY-MM-DD)',
-    'GP Working? (yes/no)',
-    'Organization Type (when GP=no: secretariat/rdpr/commissionerate/zilla_panchayat/taluk_panchayat/mp_mla_mlc_pa/other)',
-    'Organization Name (when GP=no)',
-    'Organization Address (optional)',
-    'Working District Name (when GP=yes OR org type is zilla_panchayat/taluk_panchayat)',
-    'Working Taluk Name (when GP=yes OR org type is zilla_panchayat/taluk_panchayat)',
-    'Working GP Name (optional, when GP Working=yes)',
-    'Membership District Name (when GP=no + non-ZP/TP org)',
-    'Membership Taluk Name (when GP=no + non-ZP/TP org)',
-    'Payment Mode (offline or leave blank)',
-    'Offline Reference / Receipt No. (when mode=offline)',
-    'Offline Remarks (optional)',
+    'Full Name',              // 1
+    'Father / Husband Name',  // 2
+    'Gender',                 // 3  values: male / female
+    'Phone',                  // 4  10-digit, starts 6-9
+    'Email',                  // 5
+    'KGID No.',               // 6
+    'Date of Birth',          // 7  format: YYYY-MM-DD
+    'GP Working?',            // 8  values: yes / no
+    'Organization Type',      // 9  when GP=no: secretariat|rdpr|commissionerate|zilla_panchayat|taluk_panchayat|mp_mla_mlc_pa|other
+    'Organization Name',      // 10 when GP=no
+    'Organization Address',   // 11 optional
+    'Working District',       // 12 when GP=yes OR org type is zilla_panchayat/taluk_panchayat
+    'Working Taluk',          // 13 when GP=yes OR org type is zilla_panchayat/taluk_panchayat
+    'Working GP',             // 14 optional (when GP Working=yes)
+    'Membership District',    // 15 when GP=no + other org type
+    'Membership Taluk',       // 16 when GP=no + other org type
+    'Payment Mode',           // 17 values: offline / (leave blank for unpaid)
+    'Offline Reference',      // 18 when Payment Mode=offline
+    'Offline Remarks',        // 19 optional
 ];
 
+// ── Example rows — 3 scenarios ────────────────────────────────────────────────
 $exampleRows = [
-    // GP Working = yes example
+    // Row 2: GP Working = yes
     [
-        'RAJESH KUMAR', 'RAMESH KUMAR', 'male', '9876543210', 'rajesh.kumar@example.com',
-        'KGD12345', '1985-06-15', 'yes',
-        '', '', '',
-        'BAGALKOTE', 'BAGALKOTE',  '', '', '',
-        '', '', ''
+        'RAJESH KUMAR',          // Full Name
+        'RAMESH KUMAR',          // Father / Husband Name
+        'male',                  // Gender
+        '9876543210',            // Phone
+        'rajesh.kumar@example.com', // Email
+        'KGD12345',              // KGID No.
+        '1985-06-15',            // Date of Birth
+        'yes',                   // GP Working?
+        '',                      // Organization Type (not needed)
+        '',                      // Organization Name (not needed)
+        '',                      // Organization Address
+        'BAGALKOTE',             // Working District
+        'BAGALKOTE',             // Working Taluk
+        '',                      // Working GP (optional)
+        '',                      // Membership District (auto from working)
+        '',                      // Membership Taluk (auto from working)
+        '',                      // Payment Mode (unpaid)
+        '',                      // Offline Reference
+        '',                      // Offline Remarks
     ],
-    // GP Working = no, ZP example
+    // Row 3: GP Working = no, Zilla Panchayat (locked org type) + offline paid
     [
-        'PRIYA S', 'SURESH S', 'female', '8765432109', 'priya.s@example.com',
-        'KGD67890', '1990-03-22', 'no',
-        'zilla_panchayat', 'Zilla Panchayat Office Bagalkote', 'Main Road Bagalkote',
-        'BAGALKOTE', 'BAGALKOTE', '', '', '',
-        'offline', 'RCPT-001', 'Cash received at office'
+        'PRIYA S',
+        'SURESH S',
+        'female',
+        '8765432109',
+        'priya.s@example.com',
+        'KGD67890',
+        '1990-03-22',
+        'no',
+        'zilla_panchayat',       // Organization Type
+        'Zilla Panchayat Office Bagalkote', // Organization Name
+        'Main Road Bagalkote',   // Organization Address
+        'BAGALKOTE',             // Working District (required for ZP)
+        'BAGALKOTE',             // Working Taluk (required for ZP)
+        '',                      // Working GP
+        '',                      // Membership District (auto from working)
+        '',                      // Membership Taluk (auto from working)
+        'offline',               // Payment Mode
+        'RCPT-001',              // Offline Reference
+        'Cash received at office', // Offline Remarks
     ],
-    // GP Working = no, other org example
+    // Row 4: GP Working = no, other org (manual membership location)
     [
-        'MEENA T', 'TEJA T', 'female', '7654321098', 'meena.t@example.com',
-        'KGD24680', '1988-11-10', 'no',
-        'secretariat', 'Karnataka Secretariat', '',
-        '', '', '',
-        'BENGALURU URBAN', 'BENGALURU NORTH', '', '', ''
+        'MEENA T',
+        'TEJA T',
+        'female',
+        '7654321098',
+        'meena.t@example.com',
+        'KGD24680',
+        '1988-11-10',
+        'no',
+        'secretariat',           // Organization Type
+        'Karnataka Secretariat', // Organization Name
+        '',                      // Organization Address
+        '',                      // Working District (not needed for non-ZP/TP)
+        '',                      // Working Taluk
+        '',                      // Working GP
+        'BENGALURU URBAN',       // Membership District
+        'BENGALURU NORTH',       // Membership Taluk
+        '',                      // Payment Mode
+        '',                      // Offline Reference
+        '',                      // Offline Remarks
     ],
 ];
 
@@ -71,18 +117,17 @@ header('Content-Disposition: attachment; filename="' . $filename . '"');
 header('Cache-Control: no-cache, no-store, must-revalidate');
 header('Pragma: no-cache');
 
-// BOM for Excel UTF-8 compatibility
+// UTF-8 BOM — required for Excel to open correctly without encoding issues
 echo "\xEF\xBB\xBF";
 
 $out = fopen('php://output', 'w');
 
-// Header row
+// Row 1: Column headers (clean — no notes)
 fputcsv($out, $columns);
 
-// Instructions row
-fputcsv($out, ['--- EXAMPLES BELOW — DELETE BEFORE IMPORTING ---']);
-
-// Example rows
+// Row 2-4: Example rows (user should delete before uploading)
+// Instruction row
+fputcsv($out, ['=== EXAMPLE ROWS BELOW — REPLACE WITH REAL DATA AND DELETE THIS LINE ===']);
 foreach ($exampleRows as $row) {
     fputcsv($out, $row);
 }
