@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Sidebar Accordion: only expand and hold until click on new main menu
+    // Sidebar Accordion: expand and hold until click on new main menu or toggle close
     var dropdownToggles = document.querySelectorAll('.nav-dropdown-toggle');
     dropdownToggles.forEach(function(toggle) {
         toggle.addEventListener('click', function(e) {
@@ -38,25 +38,24 @@ document.addEventListener('DOMContentLoaded', function() {
             var parentDropdown = this.closest('.nav-dropdown');
             if (!parentDropdown) return;
 
-            // If already open, keep it open (hold until click on new main menu)
-            if (parentDropdown.classList.contains('open')) {
-                return;
-            }
+            var isOpen = parentDropdown.classList.contains('open');
 
-            // Close all other open dropdowns
+            // Close all open dropdowns
             document.querySelectorAll('.nav-dropdown.open').forEach(function(other) {
-                if (other !== parentDropdown) {
-                    other.classList.remove('open');
-                    var otherToggle = other.querySelector('.nav-dropdown-toggle');
-                    if (otherToggle) {
-                        otherToggle.setAttribute('aria-expanded', 'false');
-                    }
+                other.classList.remove('open');
+                var otherToggle = other.querySelector('.nav-dropdown-toggle');
+                if (otherToggle) {
+                    otherToggle.setAttribute('aria-expanded', 'false');
                 }
             });
 
-            // Expand clicked dropdown
-            parentDropdown.classList.add('open');
-            this.setAttribute('aria-expanded', 'true');
+            // If it wasn't open, open it now; if it was open, it is now closed (toggle behavior)
+            if (!isOpen) {
+                parentDropdown.classList.add('open');
+                this.setAttribute('aria-expanded', 'true');
+            } else {
+                this.setAttribute('aria-expanded', 'false');
+            }
         });
     });
 });
