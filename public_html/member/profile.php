@@ -395,7 +395,7 @@ if (!empty($memberRow['photo_path']) && is_file(PUBLIC_HTML . '/' . ltrim($membe
 
     <!-- Quick Buttons -->
     <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-        <button type="button" class="btn btn-outline" onclick="openPhotoModal();" style="border-color:rgba(255,255,255,0.4); color:#ffffff; display:inline-flex; align-items:center; gap:6px;">
+        <button type="button" class="btn" onclick="openPhotoModal();" style="background:#ffffff; color:#1e40af; border:1px solid #ffffff; font-weight:700; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(0,0,0,0.15);">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
             <?= $photoUrl ? 'Change Photo' : 'Upload Photo' ?>
         </button>
