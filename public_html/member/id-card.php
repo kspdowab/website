@@ -4,7 +4,7 @@
  * ============================================================
  * Section 8: Digital ID Card (Front & Back, .jpg & .pdf download, print)
  * Global Standard Vertical (Portrait) CR80 Format (54mm x 85.6mm)
- * Exact 1024x559 pixel-matched specification matching reference image 8_555
+ * Exact 1-to-1 pixel-matched implementation of reference image 8_555
  * ============================================================
  */
 
@@ -41,7 +41,7 @@ $validityDisplay = 'Valid Till: ' . $validTillDate . ' (FY ' . $fy . ')';
 $siteName     = Settings::get('site_name', 'KARNATAKA STATE PANCHAYAT DEVELOPMENT OFFICER WELFARE ASSOCIATION (R)');
 $siteTagline  = Settings::get('site_tagline', 'Government-Recognized Service Association');
 $siteAddress  = Settings::get('site_address', '# 204, 2nd Floor, Karnataka Panchayat Raj Commissionerate, K. G. Road, Bengaluru – 560009');
-$sitePhone    = Settings::get('site_phone', '9964010162');
+$sitePhone    = Settings::get('site_phone', '9964010126');
 $siteEmail    = Settings::get('site_email', 'kspdowab@gmail.com');
 $siteWebsite  = Settings::get('site_website', 'https://kspdowa.in');
 
@@ -135,12 +135,13 @@ $mobileNumber = (string)($profile['personal_mobile'] ?? $portalMember['mobile'] 
 $nativeDistrict = (string)($profile['native_district'] ?? '—');
 ?>
 
-<!-- Load html2canvas for instant 300-DPI high-res JPG export -->
+<!-- Load html2canvas for instant high-res JPG export -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
 <style>
 /* ─────────────────────────────────────────────────────────────────────────────
-   EXACT 1024 x 559 MATCHING REFERENCE SPECIFICATION (Cards: 288px x 440px)
+   EXACT 1-TO-1 PIXEL MATCHING OF REFERENCE GRAPHIC (8_555)
+   Card Dimensions: 284px × 438px | Canvas: 1024px × 558px
    ───────────────────────────────────────────────────────────────────────────── */
 .id-preview-wrapper {
     background: #ffffff;
@@ -155,11 +156,11 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
 .id-export-container {
     display: flex;
     flex-direction: row;
-    gap: 190px;
+    gap: 210px;
     justify-content: center;
     align-items: flex-start;
     background: #ffffff;
-    padding: 35px 75px 25px;
+    padding: 35px 80px 25px;
     box-sizing: border-box;
     width: 1024px;
     margin: 0 auto;
@@ -169,7 +170,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     display: flex;
     flex-direction: column;
     align-items: center;
-    width: 288px;
+    width: 284px;
 }
 
 .id-card-top-label {
@@ -183,14 +184,13 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     text-align: center;
 }
 
-/* Vertical CR80 Card Box (288px width x 440px height) */
+/* Card Outer Box: 284px x 438px with clean slate border & drop shadow */
 .id-card-portrait {
-    width: 288px;
-    height: 440px;
-    background: #ffffff;
+    width: 284px;
+    height: 438px;
     border-radius: 14px;
-    border: 1.5px solid #64748b; /* Clean, dark slate/gray border matching reference */
-    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.12); /* Soft paper shadow */
+    border: 1.5px solid #334155;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.15);
     overflow: hidden;
     position: relative;
     user-select: none;
@@ -199,17 +199,33 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     justify-content: space-between;
     box-sizing: border-box;
     flex-shrink: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+/* Front Card Background: Soft warm peach/orange gradient on upper-right and bottom matching reference 8_555 */
+#idCardFront {
+    background: 
+        radial-gradient(ellipse at 92% 14%, #fedbcc 0%, #feede5 32%, rgba(255,255,255,0) 65%),
+        radial-gradient(ellipse at 88% 90%, #fee2d8 0%, #fff1eb 26%, rgba(255,255,255,0) 55%),
+        radial-gradient(ellipse at 12% 95%, #fee8e0 0%, #fff5f0 20%, rgba(255,255,255,0) 50%),
+        linear-gradient(180deg, #fee1d7 0%, #fff5f0 8%, rgba(255,255,255,0) 20%),
+        #ffffff;
+}
+
+/* Back Card Background: Clean crisp white */
+#idCardBack {
+    background: #ffffff;
 }
 
 /* Watermark */
 .id-portrait-watermark {
     position: absolute;
-    top: 50%;
+    top: 52%;
     left: 50%;
     transform: translate(-50%, -50%) rotate(-28deg);
-    font-size: 2.8rem;
+    font-size: 2.7rem;
     font-weight: 900;
-    color: rgba(30, 64, 175, 0.04);
+    color: rgba(30, 64, 175, 0.045);
     pointer-events: none;
     white-space: nowrap;
     letter-spacing: 3px;
@@ -218,95 +234,92 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
 
 /* ── FRONT CARD STYLES ─────────────────────────────────────────────────────── */
 .id-front-header {
-    background: linear-gradient(135deg, #183a7b 0%, #1e40af 50%, #2563eb 100%);
+    background: #14367e;
     color: #ffffff;
-    padding: 5px 8px;
-    border-bottom: 2px solid #f59e0b; /* Yellow stripe */
+    padding: 5px 6px 4px;
+    border-bottom: 2.5px solid #f59e0b; /* Yellow accent line */
     position: relative;
     z-index: 1;
     box-sizing: border-box;
-    height: 58px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
 }
 
 .id-gov-recon-line {
-    font-size: 6.2px;
+    font-size: 6.8px;
     font-weight: 600;
-    color: #f1f5f9;
+    color: #ffffff;
     text-align: center;
-    letter-spacing: 0.2px;
-    line-height: 1;
+    letter-spacing: 0.25px;
+    line-height: 1.1;
     margin-bottom: 2px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 .id-front-header-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 4px;
+    gap: 5px;
 }
 
+/* White rounded rectangular emblem boxes */
 .id-front-logo-box {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
+    width: 36px;
+    height: 42px;
+    border-radius: 6px;
     background: #ffffff;
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.18);
     flex-shrink: 0;
+    padding: 2px;
+    box-sizing: border-box;
 }
 .id-front-logo-box img {
-    width: 24px;
-    height: 24px;
+    max-width: 100%;
+    max-height: 100%;
     object-fit: contain;
 }
 
 .id-front-header-center {
     flex: 1;
     text-align: center;
-    line-height: 1.1;
-    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
 }
 
 .id-front-title-kannada {
-    font-size: 8px;
+    font-family: "Nirmala UI", "Tunga", "Segoe UI", sans-serif;
+    font-size: 8.2px;
     font-weight: 800;
     color: #ffffff;
-    line-height: 1.15;
+    line-height: 1.18;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 .id-front-title-english {
-    font-size: 6.5px;
+    font-family: 'Arial Narrow', 'Franklin Gothic Medium', 'Roboto Condensed', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 7.2px;
     font-weight: 800;
-    color: #fde047;
-    letter-spacing: 0.2px;
+    color: #facc15; /* Warm yellow */
+    letter-spacing: 0.1px;
     margin-top: 1px;
-    line-height: 1.1;
+    line-height: 1.15;
     text-transform: uppercase;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
-/* Front Card Body (Evenly spaced, 0 dead gaps) */
+/* Front Card Body (Flex evenly to fill space with 0 dead gaps) */
 .id-front-body {
     flex: 1;
     display: flex;
     flex-direction: column;
     justify-content: space-evenly;
     align-items: center;
-    padding: 4px 8px;
+    padding: 4px 10px;
     position: relative;
     z-index: 1;
     box-sizing: border-box;
@@ -320,20 +333,20 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
 .id-assoc-subtitle {
     font-size: 7px;
     font-weight: 800;
-    color: #475569;
+    color: #334155;
     text-transform: uppercase;
-    letter-spacing: 0.4px;
+    letter-spacing: 0.3px;
     margin-bottom: 2px;
 }
 .id-assoc-box {
     display: inline-block;
     background: #ffffff;
-    border: 1.5px solid #16a34a;
-    color: #166534;
-    font-size: 9.5px;
+    border: 1.5px solid #15803d;
+    color: #15803d;
+    font-size: 10.5px;
     font-weight: 800;
-    padding: 2px 10px;
-    border-radius: 5px;
+    padding: 2px 14px;
+    border-radius: 6px;
     line-height: 1.2;
 }
 .id-assoc-box.is-rep {
@@ -342,7 +355,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     color: #92400e;
 }
 .id-assoc-rep-sub {
-    font-size: 6.8px;
+    font-size: 7px;
     font-weight: 700;
     color: #b45309;
     margin-top: 1px;
@@ -355,8 +368,8 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
 .id-portrait-photo {
     width: 98px;
     height: 118px;
-    border: 1.5px solid #cbd5e1;
-    border-radius: 6px;
+    border: 1.5px solid #94a3b8;
+    border-radius: 8px;
     background: #f8fafc;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
     display: inline-flex;
@@ -376,7 +389,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     width: 100%;
 }
 .id-name-text {
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 900;
     color: #0f172a;
     letter-spacing: 0.3px;
@@ -392,47 +405,47 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
 }
 .id-badge-memberno {
     background: #eff6ff;
-    border: 1px solid #bfdbfe;
-    color: #1e40af;
+    border: 1.2px solid #93c5fd;
+    color: #1d4ed8;
     font-family: ui-monospace, monospace;
     font-weight: 800;
     font-size: 9px;
-    padding: 1.5px 7px;
-    border-radius: 4px;
+    padding: 1.5px 8px;
+    border-radius: 5px;
 }
 .id-badge-verified {
     background: #dcfce7;
-    border: 1px solid #bbf7d0;
+    border: 1.2px solid #86efac;
     color: #15803d;
     font-weight: 800;
-    font-size: 8.5px;
-    padding: 1.5px 6px;
-    border-radius: 4px;
+    font-size: 9px;
+    padding: 1.5px 7px;
+    border-radius: 5px;
 }
 
 /* Info Section Block */
 .id-info-block {
     width: 100%;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    padding: 5px 10px;
+    background: rgba(248, 250, 252, 0.88);
+    border: 1.2px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 6px 10px;
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 2px 6px;
-    font-size: 8.5px;
+    gap: 3px 8px;
     box-sizing: border-box;
 }
 .id-info-cell-label {
-    font-size: 7px;
+    font-size: 7.2px;
+    font-weight: 600;
     color: #64748b;
     display: block;
     line-height: 1.1;
 }
 .id-info-cell-val {
     color: #0f172a;
-    font-weight: 800;
-    font-size: 9.5px;
+    font-weight: 900;
+    font-size: 10.5px;
     line-height: 1.15;
     white-space: nowrap;
     overflow: hidden;
@@ -444,37 +457,37 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     width: 100%;
 }
 .id-badge-blood {
     background: #fee2e2;
-    border: 1px solid #fecaca;
+    border: 1.2px solid #fca5a5;
     color: #b91c1c;
     font-weight: 800;
     font-size: 9.5px;
-    padding: 2.5px 12px;
-    border-radius: 4px;
+    padding: 2.5px 14px;
+    border-radius: 6px;
 }
 .id-badge-validtill {
     background: #dcfce7;
-    border: 1px solid #bbf7d0;
+    border: 1.2px solid #86efac;
     color: #15803d;
     font-weight: 800;
     font-size: 9.5px;
-    padding: 2.5px 12px;
-    border-radius: 4px;
+    padding: 2.5px 14px;
+    border-radius: 6px;
 }
 
 /* Front Footer */
 .id-front-footer {
-    height: 24px;
-    background: #1e3a8a;
+    height: 25px;
+    background: #14367e;
     color: #ffffff;
     text-align: center;
     font-weight: 800;
-    font-size: 8px;
-    letter-spacing: 0.8px;
+    font-size: 8.2px;
+    letter-spacing: 0.6px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -482,7 +495,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     box-sizing: border-box;
 }
 .id-under-card-label {
-    font-size: 8px;
+    font-size: 8.5px;
     color: #64748b;
     text-align: center;
     margin-top: 6px;
@@ -491,37 +504,40 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
 
 /* ── BACK CARD STYLES ──────────────────────────────────────────────────────── */
 .id-back-header {
-    background: #0f172a;
+    background: #0d1627;
     color: #ffffff;
-    padding: 4px 8px;
+    padding: 5px 8px 4px;
     text-align: center;
-    border-bottom: 2px solid #f59e0b; /* Yellow stripe */
-    height: 46px;
+    border-bottom: 2.5px solid #f59e0b;
     display: flex;
     flex-direction: column;
     justify-content: center;
     box-sizing: border-box;
+    gap: 1px;
 }
 .id-back-recon-line {
-    font-size: 6.2px;
+    font-size: 6.5px;
     font-weight: 600;
-    color: #cbd5e1;
-    letter-spacing: 0.8px;
+    color: #ffffff;
+    letter-spacing: 0.35px;
     text-transform: uppercase;
 }
 .id-back-header-title {
-    font-size: 8px;
+    font-size: 8.2px;
     font-weight: 800;
     color: #ffffff;
-    letter-spacing: 0.4px;
+    letter-spacing: 0.3px;
     text-transform: uppercase;
-    margin-top: 1px;
 }
 .id-back-header-assoc {
-    font-size: 6.5px;
-    color: #cbd5e1;
-    font-weight: 700;
-    margin-top: 1px;
+    font-family: 'Arial Narrow', 'Franklin Gothic Medium', 'Roboto Condensed', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 7px;
+    font-weight: 800;
+    color: #facc15; /* Yellow */
+    letter-spacing: 0.1px;
+    line-height: 1.15;
+    text-transform: uppercase;
+    white-space: nowrap;
 }
 
 /* Back Card Body (Evenly spaced to match front) */
@@ -530,7 +546,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     display: flex;
     flex-direction: column;
     justify-content: space-evenly;
-    padding: 4px 8px;
+    padding: 5px 10px;
     box-sizing: border-box;
 }
 
@@ -543,45 +559,52 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     font-weight: 800;
     color: #1e40af;
     text-transform: uppercase;
-    letter-spacing: 0.4px;
+    letter-spacing: 0.3px;
     margin-bottom: 2px;
 }
 .id-back-emergency-box {
     background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
+    border: 1.2px solid #cbd5e1;
+    border-radius: 8px;
     padding: 5px 8px;
     display: grid;
     grid-template-columns: 1.15fr 0.85fr;
     gap: 3px 6px;
-    font-size: 7.5px;
     box-sizing: border-box;
+}
+.id-back-em-val {
+    font-size: 9.5px;
+    font-weight: 900;
+    line-height: 1.2;
 }
 
 /* Association Office Box */
 .id-back-assoc-box {
     width: 100%;
     background: #f8fafc;
-    border: 1.5px solid #cbd5e1;
-    border-radius: 6px;
-    padding: 6px 8px;
-    line-height: 1.35;
+    border: 1.2px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 5px 8px;
+    line-height: 1.32;
     font-size: 7px;
     color: #334155;
     box-sizing: border-box;
 }
 .id-back-assoc-title {
+    font-family: 'Arial Narrow', 'Franklin Gothic Medium', 'Roboto Condensed', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     font-weight: 800;
-    font-size: 7.5px;
+    font-size: 7.6px;
     color: #0f172a;
     margin-bottom: 2px;
+    line-height: 1.15;
+    text-transform: uppercase;
 }
 
 /* Fine Print & Signatory */
 .id-back-sign-sec {
     width: 100%;
-    border-top: 1.5px dashed #cbd5e1;
-    padding-top: 5px;
+    border-top: 1.2px dashed #cbd5e1;
+    padding-top: 4px;
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
@@ -590,8 +613,8 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
 .id-back-fineprint {
     font-size: 6px;
     color: #64748b;
-    line-height: 1.3;
-    max-width: 175px;
+    line-height: 1.35;
+    max-width: 172px;
 }
 .id-back-sign-box {
     text-align: center;
@@ -599,27 +622,27 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     flex-shrink: 0;
 }
 .id-back-sign-sd {
-    font-size: 7.8px;
+    font-size: 8.5px;
     font-weight: 900;
     color: #0f172a;
 }
 .id-back-sign-role {
-    font-size: 7.2px;
+    font-size: 7.5px;
     font-weight: 800;
     color: #1e40af;
 }
 .id-back-sign-comm {
-    font-size: 6px;
+    font-size: 6.2px;
     color: #64748b;
 }
 
 /* Back Footer */
 .id-back-footer {
-    height: 22px;
+    height: 25px;
     background: #e2e8f0;
     color: #334155;
     padding: 0 10px;
-    font-size: 6.5px;
+    font-size: 7px;
     font-weight: 700;
     display: flex;
     justify-content: space-between;
@@ -649,7 +672,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
         width: 100%;
         display: flex !important;
         flex-direction: row !important;
-        gap: 190px !important;
+        gap: 210px !important;
         justify-content: center !important;
         background: none !important;
         box-shadow: none !important;
@@ -691,7 +714,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
 <!-- Guidance notice -->
 <div class="no-print" style="background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; padding:12px 18px; border-radius:10px; margin-bottom:24px; font-size:0.86rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
     <div>
-        💡 <strong>Print-Ready Format:</strong> Standard 1024×559 portrait membership card specification. Clicking <strong>Download Image (.JPG)</strong> exports both FRONT and BACK side-by-side at 300 DPI on a seamless white background.
+        💡 <strong>Print-Ready Format:</strong> Standard 1024×558 portrait membership card specification. Clicking <strong>Download Image (.JPG)</strong> exports both FRONT and BACK side-by-side at 300 DPI on a seamless white background.
     </div>
     <a href="/member/profile.php" class="btn btn-outline btn-sm" style="background:#ffffff; color:#1e40af; font-weight:700;">Update Profile &rarr;</a>
 </div>
@@ -714,11 +737,11 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
                 <!-- Top Header: Royal Blue Band -->
                 <div class="id-front-header">
                     <div class="id-gov-recon-line">
-                        ಸರ್ಕಾರದ ಮಾನ್ಯತೆ ಪಡೆದ ಸೇವಾ ಸಂಘ  •  <?= Sanitize::html($siteTagline) ?>
+                        Government-Recognized Service Association
                     </div>
 
                     <div class="id-front-header-row">
-                        <!-- Left Emblem: Blue-white circular crest -->
+                        <!-- Left Emblem: Blue-white circular crest in rounded white card -->
                         <div class="id-front-logo-box">
                             <?php if ($logoLeftDataUri): ?>
                                 <img src="<?= $logoLeftDataUri ?>" alt="Left Emblem">
@@ -727,13 +750,19 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
                             <?php endif; ?>
                         </div>
 
-                        <!-- Center Titles -->
+                        <!-- Center Titles: 4 cleanly wrapped lines so text NEVER cuts -->
                         <div class="id-front-header-center">
-                            <div class="id-front-title-kannada">ಕರ್ನಾಟಕ ರಾಜ್ಯ ಪಂಚಾಯತ್ ಅಭಿವೃದ್ಧಿ ಅಧಿಕಾರಿಗಳ ಕ್ಷೇಮಾಭಿವೃದ್ಧಿ ಸಂಘ (ರಿ.)</div>
-                            <div class="id-front-title-english"><?= Sanitize::html($siteName) ?></div>
+                            <div class="id-front-title-kannada">
+                                <div>ಕರ್ನಾಟಕ ರಾಜ್ಯ ಪಂಚಾಯತ್ ಅಭಿವೃದ್ಧಿ</div>
+                                <div>ಅಧಿಕಾರಿಗಳ ಕ್ಷೇಮಾಭಿವೃದ್ಧಿ ಸಂಘ (ರಿ.)</div>
+                            </div>
+                            <div class="id-front-title-english">
+                                <div>KARNATAKA STATE PANCHAYAT DEVELOPMENT</div>
+                                <div>OFFICER WELFARE ASSOCIATION (R)</div>
+                            </div>
                         </div>
 
-                        <!-- Right Emblem: Colorful crest -->
+                        <!-- Right Emblem: Colorful crest in rounded white card -->
                         <div class="id-front-logo-box">
                             <?php if ($logoRightDataUri): ?>
                                 <img src="<?= $logoRightDataUri ?>" alt="Right Emblem">
@@ -799,7 +828,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
 
                         <div>
                             <span class="id-info-cell-label">Taluk / District:</span>
-                            <span class="id-info-cell-val" style="font-size:8.5px;"><?= Sanitize::html($locationStr) ?></span>
+                            <span class="id-info-cell-val" style="font-size:9.5px;"><?= Sanitize::html($locationStr) ?></span>
                         </div>
                     </div>
 
@@ -831,7 +860,10 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
                 <div class="id-back-header">
                     <div class="id-back-recon-line">GOVERNMENT-RECOGNIZED SERVICE ASSOCIATION</div>
                     <div class="id-back-header-title">MEMBERSHIP IDENTITY &amp; CONTACT INFORMATION</div>
-                    <div class="id-back-header-assoc"><?= Sanitize::html($siteName) ?></div>
+                    <div class="id-back-header-assoc">
+                        <div>KARNATAKA STATE PANCHAYAT DEVELOPMENT</div>
+                        <div>OFFICER WELFARE ASSOCIATION (R)</div>
+                    </div>
                 </div>
 
                 <!-- Back Card Body (Evenly spaced to match front) -->
@@ -841,27 +873,30 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
                         <div class="id-back-emergency-title">EMERGENCY &amp; PERSONAL INFORMATION</div>
                         <div class="id-back-emergency-box">
                             <div>
-                                <span style="color:#64748b; font-size:6.5px; display:block;">Registered Mobile:</span>
-                                <strong style="color:#0f172a; font-size:8px;"><?= Sanitize::html($mobileNumber) ?></strong>
+                                <span style="color:#64748b; font-size:7px; display:block;">Registered Mobile:</span>
+                                <strong class="id-back-em-val" style="color:#0f172a;"><?= Sanitize::html($mobileNumber) ?></strong>
                             </div>
                             <div>
-                                <span style="color:#64748b; font-size:6.5px; display:block;">Native District:</span>
-                                <strong style="color:#0f172a; font-size:8px;"><?= Sanitize::html($nativeDistrict) ?></strong>
+                                <span style="color:#64748b; font-size:7px; display:block;">Native District:</span>
+                                <strong class="id-back-em-val" style="color:#0f172a;"><?= Sanitize::html($nativeDistrict) ?></strong>
                             </div>
                             <div>
-                                <span style="color:#64748b; font-size:6.5px; display:block;">Blood Group:</span>
-                                <strong style="color:#dc2626; font-size:8px;"><?= Sanitize::html($bloodGroup) ?></strong>
+                                <span style="color:#64748b; font-size:7px; display:block;">Blood Group:</span>
+                                <strong class="id-back-em-val" style="color:#dc2626;"><?= Sanitize::html($bloodGroup) ?></strong>
                             </div>
                             <div>
-                                <span style="color:#64748b; font-size:6.5px; display:block;">Financial Year:</span>
-                                <strong style="color:#15803d; font-size:8px;"><?= Sanitize::html($fy) ?></strong>
+                                <span style="color:#64748b; font-size:7px; display:block;">Financial Year:</span>
+                                <strong class="id-back-em-val" style="color:#0f172a;"><?= Sanitize::html($fy) ?></strong>
                             </div>
                         </div>
                     </div>
 
                     <!-- 2. Association Central Office Box -->
                     <div class="id-back-assoc-box">
-                        <div class="id-back-assoc-title"><?= Sanitize::html($siteName) ?></div>
+                        <div class="id-back-assoc-title">
+                            <div>KARNATAKA STATE PANCHAYAT DEVELOPMENT</div>
+                            <div>OFFICER WELFARE ASSOCIATION (R)</div>
+                        </div>
                         <div><?= Sanitize::html($siteAddress) ?></div>
                         <div style="margin-top:2px;">
                             Helpline: <strong><?= Sanitize::html($sitePhone) ?></strong> • Email: <strong><?= Sanitize::html($siteEmail) ?></strong>
@@ -897,7 +932,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
 </div>
 
 <script>
-// High-resolution JPG Image Download (Exact 1024x559 canvas ratio)
+// High-resolution JPG Image Download (Exact 1024x558 canvas ratio)
 async function downloadCardAsJpg() {
     const exportEl = document.getElementById('idCardExportContainer');
     const btn = document.getElementById('btnDownloadJpg');
@@ -909,14 +944,14 @@ async function downloadCardAsJpg() {
     // Store original inline style
     const origStyle = exportEl.getAttribute('style') || '';
 
-    // Enforce exact reference dimensions during capture: 1024px width, 559px height
+    // Enforce exact reference dimensions during capture: 1024px width, 558px height
     exportEl.style.display = 'flex';
     exportEl.style.flexDirection = 'row';
     exportEl.style.width = '1024px';
-    exportEl.style.height = '559px';
+    exportEl.style.height = '558px';
     exportEl.style.maxWidth = 'none';
-    exportEl.style.gap = '190px';
-    exportEl.style.padding = '35px 75px 25px';
+    exportEl.style.gap = '210px';
+    exportEl.style.padding = '35px 80px 25px';
     exportEl.style.background = '#ffffff';
     exportEl.style.justifyContent = 'center';
     exportEl.style.alignItems = 'flex-start';
@@ -924,7 +959,7 @@ async function downloadCardAsJpg() {
 
     try {
         const canvas = await html2canvas(exportEl, {
-            scale: 1, // Output exact 1024 x 559 canvas matching reference
+            scale: 1, // Output exact 1024 x 558 canvas matching reference
             useCORS: true,
             allowTaint: true,
             backgroundColor: '#ffffff'
