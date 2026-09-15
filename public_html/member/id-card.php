@@ -4,8 +4,7 @@
  * ============================================================
  * Section 8: Digital ID Card (Front & Back, .jpg & .pdf download, print)
  * Global Standard Vertical (Portrait) CR80 Format (54mm x 85.6mm)
- * Pixel-perfect flat 2D graphic design matching official reference specification
- * Side-by-side combined JPG & PDF export with dynamic settings & logos
+ * Exact 1024x559 pixel-matched specification matching reference image 8_555
  * ============================================================
  */
 
@@ -141,12 +140,11 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
 
 <style>
 /* ─────────────────────────────────────────────────────────────────────────────
-   PIXEL-PERFECT VERTICAL CR80 SPECIFICATION (340px x 520px — 1:1.53 Proportion)
-   Matching official reference image 8_555 exactly
+   EXACT 1024 x 559 MATCHING REFERENCE SPECIFICATION (Cards: 288px x 440px)
    ───────────────────────────────────────────────────────────────────────────── */
 .id-preview-wrapper {
     background: #ffffff;
-    padding: 24px 20px 48px;
+    padding: 30px 20px 48px;
     border-radius: 12px;
     width: 100%;
     box-sizing: border-box;
@@ -157,13 +155,13 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
 .id-export-container {
     display: flex;
     flex-direction: row;
-    gap: 48px;
+    gap: 190px;
     justify-content: center;
     align-items: flex-start;
     background: #ffffff;
-    padding: 24px;
+    padding: 35px 75px 25px;
     box-sizing: border-box;
-    width: fit-content;
+    width: 1024px;
     margin: 0 auto;
 }
 
@@ -171,25 +169,28 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     display: flex;
     flex-direction: column;
     align-items: center;
+    width: 288px;
 }
 
 .id-card-top-label {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
     font-size: 15px;
     font-weight: 700;
     color: #475569;
     letter-spacing: 1.5px;
     text-transform: uppercase;
     margin-bottom: 12px;
-    font-family: inherit;
     text-align: center;
 }
 
+/* Vertical CR80 Card Box (288px width x 440px height) */
 .id-card-portrait {
-    width: 340px;
-    height: 520px;
+    width: 288px;
+    height: 440px;
     background: #ffffff;
-    border-radius: 16px;
-    box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.12), 0 0 0 1.5px rgba(203, 213, 225, 0.9);
+    border-radius: 14px;
+    border: 1.5px solid #64748b; /* Clean, dark slate/gray border matching reference */
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.12); /* Soft paper shadow */
     overflow: hidden;
     position: relative;
     user-select: none;
@@ -206,34 +207,38 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%) rotate(-28deg);
-    font-size: 3.2rem;
+    font-size: 2.8rem;
     font-weight: 900;
     color: rgba(30, 64, 175, 0.04);
     pointer-events: none;
     white-space: nowrap;
-    letter-spacing: 4px;
+    letter-spacing: 3px;
     z-index: 0;
 }
 
 /* ── FRONT CARD STYLES ─────────────────────────────────────────────────────── */
 .id-front-header {
-    background: linear-gradient(135deg, #1b3a7b 0%, #1e40af 50%, #2563eb 100%);
+    background: linear-gradient(135deg, #183a7b 0%, #1e40af 50%, #2563eb 100%);
     color: #ffffff;
-    padding: 6px 10px 6px;
-    border-bottom: 2.5px solid #f59e0b; /* Yellow stripe */
+    padding: 5px 8px;
+    border-bottom: 2px solid #f59e0b; /* Yellow stripe */
     position: relative;
     z-index: 1;
     box-sizing: border-box;
+    height: 58px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 .id-gov-recon-line {
-    font-size: 7px;
+    font-size: 6.2px;
     font-weight: 600;
     color: #f1f5f9;
     text-align: center;
-    letter-spacing: 0.3px;
-    line-height: 1.1;
-    margin-bottom: 3px;
+    letter-spacing: 0.2px;
+    line-height: 1;
+    margin-bottom: 2px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -243,65 +248,65 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 6px;
+    gap: 4px;
 }
 
 .id-front-logo-box {
-    width: 34px;
-    height: 34px;
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
     background: #ffffff;
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
     flex-shrink: 0;
 }
 .id-front-logo-box img {
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
     object-fit: contain;
 }
 
 .id-front-header-center {
     flex: 1;
     text-align: center;
-    line-height: 1.15;
+    line-height: 1.1;
     overflow: hidden;
 }
 
 .id-front-title-kannada {
-    font-size: 9px;
+    font-size: 8px;
     font-weight: 800;
     color: #ffffff;
-    line-height: 1.2;
+    line-height: 1.15;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 .id-front-title-english {
-    font-size: 7.5px;
+    font-size: 6.5px;
     font-weight: 800;
     color: #fde047;
     letter-spacing: 0.2px;
     margin-top: 1px;
-    line-height: 1.15;
+    line-height: 1.1;
     text-transform: uppercase;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-/* Front Card Body (Flex evenly to fill space with 0 dead gaps) */
+/* Front Card Body (Evenly spaced, 0 dead gaps) */
 .id-front-body {
     flex: 1;
     display: flex;
     flex-direction: column;
     justify-content: space-evenly;
     align-items: center;
-    padding: 6px 12px 6px;
+    padding: 4px 8px;
     position: relative;
     z-index: 1;
     box-sizing: border-box;
@@ -313,11 +318,11 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     width: 100%;
 }
 .id-assoc-subtitle {
-    font-size: 7.8px;
+    font-size: 7px;
     font-weight: 800;
     color: #475569;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.4px;
     margin-bottom: 2px;
 }
 .id-assoc-box {
@@ -325,10 +330,10 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     background: #ffffff;
     border: 1.5px solid #16a34a;
     color: #166534;
-    font-size: 11px;
+    font-size: 9.5px;
     font-weight: 800;
-    padding: 3px 14px;
-    border-radius: 6px;
+    padding: 2px 10px;
+    border-radius: 5px;
     line-height: 1.2;
 }
 .id-assoc-box.is-rep {
@@ -337,7 +342,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     color: #92400e;
 }
 .id-assoc-rep-sub {
-    font-size: 7.5px;
+    font-size: 6.8px;
     font-weight: 700;
     color: #b45309;
     margin-top: 1px;
@@ -348,12 +353,12 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     text-align: center;
 }
 .id-portrait-photo {
-    width: 114px;
-    height: 134px;
+    width: 98px;
+    height: 118px;
     border: 1.5px solid #cbd5e1;
-    border-radius: 8px;
+    border-radius: 6px;
     background: #f8fafc;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -371,10 +376,10 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     width: 100%;
 }
 .id-name-text {
-    font-size: 14.5px;
+    font-size: 13px;
     font-weight: 900;
     color: #0f172a;
-    letter-spacing: 0.4px;
+    letter-spacing: 0.3px;
     text-transform: uppercase;
     line-height: 1.2;
 }
@@ -382,17 +387,17 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 8px;
-    margin-top: 3px;
+    gap: 6px;
+    margin-top: 2px;
 }
 .id-badge-memberno {
     background: #eff6ff;
     border: 1px solid #bfdbfe;
     color: #1e40af;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-family: ui-monospace, monospace;
     font-weight: 800;
-    font-size: 10px;
-    padding: 2px 8px;
+    font-size: 9px;
+    padding: 1.5px 7px;
     border-radius: 4px;
 }
 .id-badge-verified {
@@ -400,8 +405,8 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     border: 1px solid #bbf7d0;
     color: #15803d;
     font-weight: 800;
-    font-size: 9.5px;
-    padding: 2px 7px;
+    font-size: 8.5px;
+    padding: 1.5px 6px;
     border-radius: 4px;
 }
 
@@ -410,16 +415,16 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     width: 100%;
     background: #f8fafc;
     border: 1px solid #e2e8f0;
-    border-radius: 7px;
-    padding: 6px 12px;
+    border-radius: 6px;
+    padding: 5px 10px;
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 3px 8px;
-    font-size: 9px;
+    gap: 2px 6px;
+    font-size: 8.5px;
     box-sizing: border-box;
 }
 .id-info-cell-label {
-    font-size: 7.8px;
+    font-size: 7px;
     color: #64748b;
     display: block;
     line-height: 1.1;
@@ -427,8 +432,8 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
 .id-info-cell-val {
     color: #0f172a;
     font-weight: 800;
-    font-size: 10.5px;
-    line-height: 1.2;
+    font-size: 9.5px;
+    line-height: 1.15;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -439,7 +444,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     width: 100%;
 }
 .id-badge-blood {
@@ -447,28 +452,28 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     border: 1px solid #fecaca;
     color: #b91c1c;
     font-weight: 800;
-    font-size: 10.5px;
-    padding: 3px 14px;
-    border-radius: 5px;
+    font-size: 9.5px;
+    padding: 2.5px 12px;
+    border-radius: 4px;
 }
 .id-badge-validtill {
     background: #dcfce7;
     border: 1px solid #bbf7d0;
     color: #15803d;
     font-weight: 800;
-    font-size: 10.5px;
-    padding: 3px 14px;
-    border-radius: 5px;
+    font-size: 9.5px;
+    padding: 2.5px 12px;
+    border-radius: 4px;
 }
 
 /* Front Footer */
 .id-front-footer {
-    height: 28px;
+    height: 24px;
     background: #1e3a8a;
     color: #ffffff;
     text-align: center;
     font-weight: 800;
-    font-size: 9px;
+    font-size: 8px;
     letter-spacing: 0.8px;
     display: flex;
     align-items: center;
@@ -477,7 +482,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     box-sizing: border-box;
 }
 .id-under-card-label {
-    font-size: 8.5px;
+    font-size: 8px;
     color: #64748b;
     text-align: center;
     margin-top: 6px;
@@ -488,24 +493,24 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
 .id-back-header {
     background: #0f172a;
     color: #ffffff;
-    padding: 6px 10px;
+    padding: 4px 8px;
     text-align: center;
-    border-bottom: 2.5px solid #f59e0b; /* Yellow stripe */
-    height: 52px;
+    border-bottom: 2px solid #f59e0b; /* Yellow stripe */
+    height: 46px;
     display: flex;
     flex-direction: column;
     justify-content: center;
     box-sizing: border-box;
 }
 .id-back-recon-line {
-    font-size: 7px;
+    font-size: 6.2px;
     font-weight: 600;
     color: #cbd5e1;
     letter-spacing: 0.8px;
     text-transform: uppercase;
 }
 .id-back-header-title {
-    font-size: 9px;
+    font-size: 8px;
     font-weight: 800;
     color: #ffffff;
     letter-spacing: 0.4px;
@@ -513,19 +518,19 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     margin-top: 1px;
 }
 .id-back-header-assoc {
-    font-size: 7.2px;
+    font-size: 6.5px;
     color: #cbd5e1;
     font-weight: 700;
     margin-top: 1px;
 }
 
-/* Back Card Body (Flex evenly to match front card perfectly) */
+/* Back Card Body (Evenly spaced to match front) */
 .id-back-body {
     flex: 1;
     display: flex;
     flex-direction: column;
     justify-content: space-evenly;
-    padding: 6px 12px 6px;
+    padding: 4px 8px;
     box-sizing: border-box;
 }
 
@@ -534,22 +539,22 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     width: 100%;
 }
 .id-back-emergency-title {
-    font-size: 8.5px;
+    font-size: 7.8px;
     font-weight: 800;
     color: #1e40af;
     text-transform: uppercase;
     letter-spacing: 0.4px;
-    margin-bottom: 3px;
+    margin-bottom: 2px;
 }
 .id-back-emergency-box {
     background: #f8fafc;
     border: 1px solid #e2e8f0;
-    border-radius: 7px;
-    padding: 6px 10px;
+    border-radius: 6px;
+    padding: 5px 8px;
     display: grid;
     grid-template-columns: 1.15fr 0.85fr;
     gap: 3px 6px;
-    font-size: 8px;
+    font-size: 7.5px;
     box-sizing: border-box;
 }
 
@@ -558,16 +563,16 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     width: 100%;
     background: #f8fafc;
     border: 1.5px solid #cbd5e1;
-    border-radius: 7px;
-    padding: 7px 10px;
+    border-radius: 6px;
+    padding: 6px 8px;
     line-height: 1.35;
-    font-size: 7.8px;
+    font-size: 7px;
     color: #334155;
     box-sizing: border-box;
 }
 .id-back-assoc-title {
     font-weight: 800;
-    font-size: 8.2px;
+    font-size: 7.5px;
     color: #0f172a;
     margin-bottom: 2px;
 }
@@ -576,45 +581,45 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
 .id-back-sign-sec {
     width: 100%;
     border-top: 1.5px dashed #cbd5e1;
-    padding-top: 6px;
+    padding-top: 5px;
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
     box-sizing: border-box;
 }
 .id-back-fineprint {
-    font-size: 6.8px;
+    font-size: 6px;
     color: #64748b;
     line-height: 1.3;
-    max-width: 195px;
+    max-width: 175px;
 }
 .id-back-sign-box {
     text-align: center;
-    width: 105px;
+    width: 95px;
     flex-shrink: 0;
 }
 .id-back-sign-sd {
-    font-size: 8.5px;
+    font-size: 7.8px;
     font-weight: 900;
     color: #0f172a;
 }
 .id-back-sign-role {
-    font-size: 7.8px;
+    font-size: 7.2px;
     font-weight: 800;
     color: #1e40af;
 }
 .id-back-sign-comm {
-    font-size: 6.5px;
+    font-size: 6px;
     color: #64748b;
 }
 
 /* Back Footer */
 .id-back-footer {
-    height: 26px;
+    height: 22px;
     background: #e2e8f0;
     color: #334155;
-    padding: 0 12px;
-    font-size: 7.2px;
+    padding: 0 10px;
+    font-size: 6.5px;
     font-weight: 700;
     display: flex;
     justify-content: space-between;
@@ -623,8 +628,9 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     box-sizing: border-box;
 }
 
-@media (max-width: 820px) {
+@media (max-width: 1040px) {
     .id-export-container {
+        width: 100%;
         flex-direction: column;
         align-items: center;
         gap: 32px;
@@ -643,11 +649,11 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
         width: 100%;
         display: flex !important;
         flex-direction: row !important;
-        gap: 30px !important;
+        gap: 190px !important;
         justify-content: center !important;
         background: none !important;
         box-shadow: none !important;
-        padding: 0 !important;
+        padding: 20px !important;
     }
     .no-print { display: none !important; }
 }
@@ -685,7 +691,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
 <!-- Guidance notice -->
 <div class="no-print" style="background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; padding:12px 18px; border-radius:10px; margin-bottom:24px; font-size:0.86rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
     <div>
-        💡 <strong>Print-Ready Format:</strong> Standard portrait membership card matching official association specifications. Clicking <strong>Download Image (.JPG)</strong> exports both FRONT and BACK side-by-side at 300 DPI on a seamless white background.
+        💡 <strong>Print-Ready Format:</strong> Standard 1024×559 portrait membership card specification. Clicking <strong>Download Image (.JPG)</strong> exports both FRONT and BACK side-by-side at 300 DPI on a seamless white background.
     </div>
     <a href="/member/profile.php" class="btn btn-outline btn-sm" style="background:#ffffff; color:#1e40af; font-weight:700;">Update Profile &rarr;</a>
 </div>
@@ -758,7 +764,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
                                 <img src="<?= $photoDataUri ?>" alt="Member Photo">
                             <?php else: ?>
                                 <div style="display:flex; flex-direction:column; align-items:center; color:#94a3b8;">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
                                     <span style="font-size:7px; font-weight:700; text-transform:uppercase; margin-top:2px;">No Photo</span>
                                 </div>
                             <?php endif; ?>
@@ -793,7 +799,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
 
                         <div>
                             <span class="id-info-cell-label">Taluk / District:</span>
-                            <span class="id-info-cell-val" style="font-size:9.5px;"><?= Sanitize::html($locationStr) ?></span>
+                            <span class="id-info-cell-val" style="font-size:8.5px;"><?= Sanitize::html($locationStr) ?></span>
                         </div>
                     </div>
 
@@ -835,20 +841,20 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
                         <div class="id-back-emergency-title">EMERGENCY &amp; PERSONAL INFORMATION</div>
                         <div class="id-back-emergency-box">
                             <div>
-                                <span style="color:#64748b; font-size:7px; display:block;">Registered Mobile:</span>
-                                <strong style="color:#0f172a; font-size:8.8px;"><?= Sanitize::html($mobileNumber) ?></strong>
+                                <span style="color:#64748b; font-size:6.5px; display:block;">Registered Mobile:</span>
+                                <strong style="color:#0f172a; font-size:8px;"><?= Sanitize::html($mobileNumber) ?></strong>
                             </div>
                             <div>
-                                <span style="color:#64748b; font-size:7px; display:block;">Native District:</span>
-                                <strong style="color:#0f172a; font-size:8.8px;"><?= Sanitize::html($nativeDistrict) ?></strong>
+                                <span style="color:#64748b; font-size:6.5px; display:block;">Native District:</span>
+                                <strong style="color:#0f172a; font-size:8px;"><?= Sanitize::html($nativeDistrict) ?></strong>
                             </div>
                             <div>
-                                <span style="color:#64748b; font-size:7px; display:block;">Blood Group:</span>
-                                <strong style="color:#dc2626; font-size:8.8px;"><?= Sanitize::html($bloodGroup) ?></strong>
+                                <span style="color:#64748b; font-size:6.5px; display:block;">Blood Group:</span>
+                                <strong style="color:#dc2626; font-size:8px;"><?= Sanitize::html($bloodGroup) ?></strong>
                             </div>
                             <div>
-                                <span style="color:#64748b; font-size:7px; display:block;">Financial Year:</span>
-                                <strong style="color:#15803d; font-size:8.8px;"><?= Sanitize::html($fy) ?></strong>
+                                <span style="color:#64748b; font-size:6.5px; display:block;">Financial Year:</span>
+                                <strong style="color:#15803d; font-size:8px;"><?= Sanitize::html($fy) ?></strong>
                             </div>
                         </div>
                     </div>
@@ -891,7 +897,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
 </div>
 
 <script>
-// High-resolution 300-DPI JPG Image Download (Side-by-Side Combined Front & Back)
+// High-resolution JPG Image Download (Exact 1024x559 canvas ratio)
 async function downloadCardAsJpg() {
     const exportEl = document.getElementById('idCardExportContainer');
     const btn = document.getElementById('btnDownloadJpg');
@@ -903,20 +909,22 @@ async function downloadCardAsJpg() {
     // Store original inline style
     const origStyle = exportEl.getAttribute('style') || '';
 
-    // Enforce desktop side-by-side flex layout during capture
+    // Enforce exact reference dimensions during capture: 1024px width, 559px height
     exportEl.style.display = 'flex';
     exportEl.style.flexDirection = 'row';
-    exportEl.style.width = '800px';
+    exportEl.style.width = '1024px';
+    exportEl.style.height = '559px';
     exportEl.style.maxWidth = 'none';
-    exportEl.style.gap = '48px';
-    exportEl.style.padding = '24px';
+    exportEl.style.gap = '190px';
+    exportEl.style.padding = '35px 75px 25px';
     exportEl.style.background = '#ffffff';
     exportEl.style.justifyContent = 'center';
     exportEl.style.alignItems = 'flex-start';
+    exportEl.style.boxSizing = 'border-box';
 
     try {
         const canvas = await html2canvas(exportEl, {
-            scale: 2.5, // Crisp 300 DPI high resolution
+            scale: 1, // Output exact 1024 x 559 canvas matching reference
             useCORS: true,
             allowTaint: true,
             backgroundColor: '#ffffff'
@@ -924,7 +932,7 @@ async function downloadCardAsJpg() {
 
         const link = document.createElement('a');
         link.download = 'KSPDOWA-ID-CARD-<?= Sanitize::attr($portalMember['member_no'] ?? 'MEMBER') ?>-FRONT-BACK.jpg';
-        link.href = canvas.toDataURL('image/jpeg', 0.95);
+        link.href = canvas.toDataURL('image/jpeg', 0.98);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
