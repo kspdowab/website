@@ -505,7 +505,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     gap: 1px;
 }
 .id-back-recon-line {
-    font-size: 7.5px;
+    font-size: 6.5px;
     font-weight: 600;
     color: #ffffff;
     letter-spacing: 0.35px;
@@ -544,12 +544,17 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     width: 100%;
 }
 .id-back-emergency-title {
-    font-size: 8.8px;
+    background: #1e40af;
+    color: #ffffff;
+    border-radius: 5px;
+    padding: 2.5px 8px;
+    font-size: 8.2px;
     font-weight: 800;
-    color: #1e40af;
     text-transform: uppercase;
-    letter-spacing: 0.3px;
-    margin-bottom: 2px;
+    letter-spacing: 0.5px;
+    text-align: center;
+    margin-bottom: 3px;
+    box-sizing: border-box;
 }
 .id-back-emergency-box {
     background: #f8fafc;
@@ -628,13 +633,14 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
 /* Back Footer */
 .id-back-footer {
     height: 25px;
-    background: #e2e8f0;
-    color: #334155;
+    background: #14367e;
+    color: #fffff5;
     padding: 0 10px;
-    font-size: 8.2px;
-    font-weight: 700;
+    font-size: 9px;
+    font-weight: 800;
     display: flex;
-    justify-content: space-between;
+    /* Changed from space-between to center */
+    justify-content: center; 
     align-items: center;
     border-top: 1px solid #cbd5e1;
     box-sizing: border-box;
@@ -818,7 +824,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
                         <!-- Center Titles: 4 cleanly wrapped lines so text NEVER cuts -->
                         <div class="id-front-header-center">
                             <div class="id-front-title-kannada">
-                                <div>ಕರ್ನಾಟಕ ರಾಜ್ಯ ಪಂಚಾಯತ್ ಅಭಿವೃದ್ಧಿ</div>
+                                <div>ಕರ್ನಾಟಕ ರಾಜ್ಯ ಪಂಚಾಯತ ಅಭಿವೃದ್ಧಿ</div>
                                 <div>ಅಧಿಕಾರಿಗಳ ಕ್ಷೇಮಾಭಿವೃದ್ಧಿ ಸಂಘ (ರಿ.)</div>
                             </div>
                             <div class="id-front-title-english">
@@ -842,7 +848,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
                 <div class="id-front-body">
                     <!-- 1. Upper-Middle: Association Designation -->
                     <div class="id-assoc-sec">
-                        <div class="id-assoc-subtitle">ASSOCIATION DESIGNATION (ಸಂಘದ ಹುದ್ದೆ)</div>
+                        <div class="id-assoc-subtitle">ASSOCIATION DESIGNATION</div>
                         <div class="id-assoc-box <?= $isRepresentative ? 'is-rep' : '' ?>">
                             <?= Sanitize::html($assocDesignation) ?>
                         </div>
@@ -922,11 +928,11 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
                 <!-- Top Header: Dark Charcoal/Black Band -->
                 <div class="id-back-header">
                     <div class="id-back-recon-line">GOVERNMENT-RECOGNIZED SERVICE ASSOCIATION</div>
-                    <div class="id-back-header-title">MEMBERSHIP IDENTITY &amp; CONTACT INFORMATION</div>
                     <div class="id-back-header-assoc">
                         <div>KARNATAKA STATE PANCHAYAT DEVELOPMENT</div>
                         <div>OFFICER WELFARE ASSOCIATION (R)</div>
                     </div>
+                    <div class="id-back-header-title">MEMBERSHIP IDENTITY &amp; CONTACT INFORMATION</div>
                 </div>
 
                 <!-- Back Card Body (Evenly spaced to match front) -->
@@ -970,7 +976,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
                     <!-- 3. Sub-footer: Fine Print & Signatory -->
                     <div class="id-back-sign-sec">
                         <div class="id-back-fineprint">
-                            1. This identity card is the official property of KSPDOWA and non-transferable.<br>
+                            1. This identity card is the official property of KSPDOWA BENGALURU and non-transferable.<br>
                             2. If found, return to nearest Taluk/District Association office or call helpline.<br>
                             3. Card validity: Valid Till: <?= Sanitize::html($validTillDate) ?> (FY <?= Sanitize::html($fy) ?>).
                         </div>
@@ -978,15 +984,16 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
                         <div class="id-back-sign-box">
                             <div class="id-back-sign-sd">Sd/-</div>
                             <div class="id-back-sign-role">General Secretary</div>
-                            <div class="id-back-sign-comm">KSPDOWA State Committee</div>
+                            <div class="id-back-sign-comm">KSPDOWA BENGALURU.</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Footer: Pale Gray Bar -->
                 <div class="id-back-footer">
-                    <div><?= Sanitize::html($siteTagline) ?></div>
-                    <div>BENGALURU • KARNATAKA</div>
+                 
+                <div style="text-align: center;">BENGALURU • KARNATAKA</div>
+
                 </div>
             </div>
         </div>
