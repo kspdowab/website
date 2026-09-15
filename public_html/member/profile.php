@@ -18,6 +18,42 @@ if ($currentMemberId === null) {
     exit;
 }
 
+$allowedBloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+
+// Handle Blood Group Update
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    CSRF::requireValid();
+    $action = Sanitize::string($_POST['action'] ?? '', 30);
+
+    if ($action === 'update_blood_group') {
+        $bloodGroup = trim(Sanitize::string($_POST['blood_group'] ?? '', 10));
+
+        if ($bloodGroup !== '' && !in_array($bloodGroup, $allowedBloodGroups, true)) {
+            Session::flash('error', 'Please select a valid blood group from the list.');
+            header('Location: /member/profile.php');
+            exit;
+        }
+
+        $existingProfile = Database::fetchOne('SELECT id FROM member_profiles WHERE member_id = ?', [$currentMemberId]);
+
+        if ($existingProfile) {
+            Database::execute(
+                'UPDATE member_profiles SET blood_group = ?, updated_at = NOW() WHERE member_id = ?',
+                [$bloodGroup !== '' ? $bloodGroup : null, $currentMemberId]
+            );
+        } else {
+            Database::execute(
+                'INSERT INTO member_profiles (member_id, blood_group, created_at, updated_at) VALUES (?, ?, NOW(), NOW())',
+                [$currentMemberId, $bloodGroup !== '' ? $bloodGroup : null]
+            );
+        }
+
+        Session::flash('success', 'Blood group updated successfully!');
+        header('Location: /member/profile.php');
+        exit;
+    }
+}
+
 $pageTitle  = 'My Profile';
 $activeMenu = 'profile';
 $breadcrumbs = [
@@ -27,7 +63,9 @@ $breadcrumbs = [
 
 require_once dirname(__DIR__) . '/includes/partials/member-header.php';
 
-$profile = Database::fetchOne('SELECT * FROM member_profiles WHERE member_id = ?', [$currentMemberId]);
+$profile    = Database::fetchOne('SELECT * FROM member_profiles WHERE member_id = ?', [$currentMemberId]);
+$successMsg = Session::getFlash('success');
+$errorMsg   = Session::getFlash('error');
 ?>
 
 <div class="page-header-row">
@@ -42,6 +80,20 @@ $profile = Database::fetchOne('SELECT * FROM member_profiles WHERE member_id = ?
         </a>
     </div>
 </div>
+
+<?php if ($successMsg): ?>
+    <div style="background:#ecfdf5; border:1px solid #a7f3d0; color:#065f46; padding:12px 16px; border-radius:8px; margin-bottom:20px; font-weight:500; font-size:0.9rem; display:flex; align-items:center; gap:8px;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+        <?= Sanitize::html($successMsg) ?>
+    </div>
+<?php endif; ?>
+
+<?php if ($errorMsg): ?>
+    <div style="background:#fef2f2; border:1px solid #fecaca; color:#991b1b; padding:12px 16px; border-radius:8px; margin-bottom:20px; font-weight:500; font-size:0.9rem; display:flex; align-items:center; gap:8px;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        <?= Sanitize::html($errorMsg) ?>
+    </div>
+<?php endif; ?>
 
 <div class="table-card" style="margin-bottom:24px;">
     <div class="table-card-header">
@@ -100,8 +152,14 @@ $profile = Database::fetchOne('SELECT * FROM member_profiles WHERE member_id = ?
 
             <div>
                 <label class="form-label" style="color:var(--text-muted);">Blood Group</label>
-                <div style="font-size:1rem; font-weight:600; color:var(--text-main);">
-                    <?= Sanitize::html($profile['blood_group'] ?? '—') ?>
+                <div style="display:flex; align-items:center; gap:10px; margin-top:2px;">
+                    <div style="font-size:1.05rem; font-weight:700; color:var(--text-main);">
+                        <?= !empty($profile['blood_group']) ? Sanitize::html($profile['blood_group']) : '<span style="color:var(--text-muted); font-size:0.95rem; font-weight:500;">—</span>' ?>
+                    </div>
+                    <button type="button" class="btn btn-outline btn-sm" onclick="openBloodGroupModal();" style="padding:2px 10px; font-size:0.75rem; border-radius:4px; display:inline-flex; align-items:center; gap:4px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                        <?= !empty($profile['blood_group']) ? 'Change' : 'Update' ?>
+                    </button>
                 </div>
             </div>
 
@@ -158,6 +216,58 @@ $profile = Database::fetchOne('SELECT * FROM member_profiles WHERE member_id = ?
         </div>
     </div>
 </div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     UPDATE BLOOD GROUP MODAL
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="modal-backdrop" id="bloodGroupModal" onclick="if(event.target===this) closeBloodGroupModal();">
+    <div class="modal-dialog" style="max-width:440px;">
+        <div class="modal-header">
+            <h3 class="modal-title">Update Blood Group (ರಕ್ತದ ಗುಂಪು)</h3>
+            <button type="button" class="modal-close-btn" onclick="closeBloodGroupModal();">&times;</button>
+        </div>
+        <form method="post" action="/member/profile.php">
+            <?= CSRF::htmlField() ?>
+            <input type="hidden" name="action" value="update_blood_group">
+
+            <div class="modal-body">
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label class="form-label" for="blood_group">Select Blood Group *</label>
+                    <select name="blood_group" id="blood_group" class="form-select" required style="font-size:1rem; font-weight:600;">
+                        <option value="">— Select Blood Group —</option>
+                        <?php foreach ($allowedBloodGroups as $bg): ?>
+                            <option value="<?= $bg ?>" <?= (($profile['blood_group'] ?? '') === $bg) ? 'selected' : '' ?>>
+                                <?= $bg ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div style="font-size:0.8rem; color:var(--text-muted); line-height:1.4;">
+                    Your blood group will be displayed on your digital membership ID card and emergency records.
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="closeBloodGroupModal();">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Blood Group</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openBloodGroupModal() {
+    document.getElementById('bloodGroupModal').classList.add('open');
+}
+function closeBloodGroupModal() {
+    document.getElementById('bloodGroupModal').classList.remove('open');
+}
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeBloodGroupModal();
+    }
+});
+</script>
 
 <?php
 require_once dirname(__DIR__) . '/includes/partials/member-footer.php';

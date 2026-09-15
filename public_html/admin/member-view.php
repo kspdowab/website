@@ -207,6 +207,7 @@ $lifecycleEvents = Database::fetchAll(
             <div><label>Personal Mobile</label><div class="val"><?= Sanitize::html($member['personal_mobile'] ?? '—') ?></div></div>
             <div><label>Personal Email</label><div class="val"><?= Sanitize::html($member['personal_email'] ?? '—') ?></div></div>
             <div><label>Date of Birth</label><div class="val"><?= Sanitize::html($member['date_of_birth'] ?? '—') ?></div></div>
+            <div><label>Blood Group</label><div class="val"><?= Sanitize::html($member['blood_group'] ?? '—') ?></div></div>
         </div>
         <div class="row">
             <div><label>District</label><div class="val"><?= Sanitize::html($member['district_name'] ?? '—') ?></div></div>
