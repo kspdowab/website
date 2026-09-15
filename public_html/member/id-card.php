@@ -948,7 +948,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
                                 <strong class="id-back-em-val" style="color:#dc2626;"><?= Sanitize::html($bloodGroup) ?></strong>
                             </div>
                             <div>
-                                <span style="color:#64748b; font-size:7px; display:block;">Financial Year:</span>
+                                <span style="color:#64748b; font-size:7px; display:block;">Membership Year:</span>
                                 <strong class="id-back-em-val" style="color:#0f172a;"><?= Sanitize::html($fy) ?></strong>
                             </div>
                         </div>
