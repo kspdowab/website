@@ -650,11 +650,11 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     }
 }
 
-/* Print CSS: Enforce exact color graphics, no side cutting, and centered layout on A4 */
+/* Print CSS: Enforce exact color graphics, both cards fit on A4 without cutting */
 @media print {
     @page {
         size: A4 portrait;
-        margin: 12mm 8mm;
+        margin: 10mm 8mm;
     }
     *, *::before, *::after {
         -webkit-print-color-adjust: exact !important;
@@ -665,23 +665,57 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
         background: #ffffff !important;
         margin: 0 !important;
         padding: 0 !important;
-        width: 100% !important;
+        height: auto !important;
+        overflow: visible !important;
     }
-    body * {
-        visibility: hidden;
+
+    /* ── Hide EVERYTHING with visibility (not display) so the DOM tree stays intact ── */
+    body > * {
+        visibility: hidden !important;
     }
-    .app-layout, .app-sidebar, .app-header, .page-header-row, .no-print {
+
+    /* ── Keep the layout wrapper rendered (not display:none) but invisible ── */
+    .app-layout {
+        display: block !important; /* must stay in render tree */
+        visibility: hidden !important;
+        background: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    .app-sidebar,
+    .app-topbar,
+    .app-header,
+    .page-header-row,
+    .no-print {
         display: none !important;
     }
+    .app-main {
+        display: block !important;
+        visibility: hidden !important;
+        background: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+    }
+    .app-content {
+        display: block !important;
+        visibility: hidden !important;
+        background: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
     .id-preview-wrapper {
+        display: block !important;
+        visibility: hidden !important;
         padding: 0 !important;
         margin: 0 !important;
         background: none !important;
         box-shadow: none !important;
-        display: block !important;
-        visibility: visible !important;
     }
-    #idCardExportContainer, #idCardExportContainer * {
+
+    /* ── Make only the export container and its children visible ── */
+    #idCardExportContainer,
+    #idCardExportContainer * {
         visibility: visible !important;
     }
     #idCardExportContainer {
@@ -690,13 +724,13 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
         top: auto !important;
         width: 100% !important;
         max-width: 100% !important;
-        margin: 15mm auto 0 !important;
-        padding: 0 !important;
-        background: none !important;
+        margin: 0 auto !important;
+        padding: 8mm 0 !important;
+        background: #ffffff !important;
         box-shadow: none !important;
         display: flex !important;
         flex-direction: row !important;
-        gap: 30px !important; /* Reduced from 210px so cards fit cleanly on A4 without cutting */
+        gap: 20px !important;
         justify-content: center !important;
         align-items: flex-start !important;
     }
@@ -705,6 +739,10 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
         border: 1.5px solid #334155 !important;
         page-break-inside: avoid !important;
         break-inside: avoid !important;
+    }
+    /* Hide the FRONT/BACK labels above cards on print */
+    .id-card-top-label {
+        display: none !important;
     }
 }
 </style>
