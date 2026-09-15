@@ -96,9 +96,15 @@ $breadcrumbs = $breadcrumbs ?? [
         </div>
 
         <div class="sidebar-user-pill">
-            <div class="user-avatar-circle" style="background: linear-gradient(135deg, #10b981, #0284c7);">
-                <?= strtoupper(substr($portalMember['name'] ?? 'M', 0, 1)) ?>
-            </div>
+            <?php if (!empty($portalMember['photo_path']) && is_file(PUBLIC_HTML . '/' . ltrim($portalMember['photo_path'], '/'))): ?>
+                <div class="user-avatar-circle" style="background: none; overflow:hidden; padding:0; border:1.5px solid rgba(255,255,255,0.4);">
+                    <img src="/<?= ltrim($portalMember['photo_path'], '/') ?>" alt="Photo" style="width:100%; height:100%; object-fit:cover;">
+                </div>
+            <?php else: ?>
+                <div class="user-avatar-circle" style="background: linear-gradient(135deg, #10b981, #0284c7);">
+                    <?= strtoupper(substr($portalMember['name'] ?? 'M', 0, 1)) ?>
+                </div>
+            <?php endif; ?>
             <div class="user-info-text">
                 <div class="user-info-name"><?= Sanitize::html($portalMember['name'] ?? 'Member') ?></div>
                 <div class="user-info-role"><?= Sanitize::html($portalMember['member_no'] ?? 'PDO Member') ?></div>
@@ -214,9 +220,15 @@ $breadcrumbs = $breadcrumbs ?? [
                 </span>
 
                 <div class="topbar-profile-chip">
-                    <div class="topbar-avatar" style="background: linear-gradient(135deg, #10b981, #2563eb);">
-                        <?= strtoupper(substr($portalMember['name'] ?? 'M', 0, 1)) ?>
-                    </div>
+                    <?php if (!empty($portalMember['photo_path']) && is_file(PUBLIC_HTML . '/' . ltrim($portalMember['photo_path'], '/'))): ?>
+                        <div class="topbar-avatar" style="background: none; overflow:hidden; padding:0; border:1px solid #cbd5e1;">
+                            <img src="/<?= ltrim($portalMember['photo_path'], '/') ?>" alt="Photo" style="width:100%; height:100%; object-fit:cover;">
+                        </div>
+                    <?php else: ?>
+                        <div class="topbar-avatar" style="background: linear-gradient(135deg, #10b981, #2563eb);">
+                            <?= strtoupper(substr($portalMember['name'] ?? 'M', 0, 1)) ?>
+                        </div>
+                    <?php endif; ?>
                     <span style="font-size:0.84rem; font-weight:600; padding-right:6px;">
                         <?= Sanitize::html($portalMember['name'] ?? 'Member') ?>
                     </span>

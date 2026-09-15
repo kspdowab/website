@@ -196,7 +196,17 @@ $lifecycleEvents = Database::fetchAll(
     <?php if ($errorMsg): ?><div class="msg error"><?= Sanitize::html($errorMsg) ?></div><?php endif; ?>
 
     <div class="panel">
-        <h2><?= Sanitize::html($member['name']) ?> <span style="font-size: 0.9rem; color: #666; font-weight:normal;">(#<?= Sanitize::html($member['member_no']) ?>)</span></h2>
+        <div style="display:flex; align-items:center; gap:16px; margin-bottom:16px; border-bottom:2px solid #eef1f5; padding-bottom:12px;">
+            <?php if (!empty($member['photo_path']) && is_file(PUBLIC_HTML . '/' . ltrim($member['photo_path'], '/'))): ?>
+                <img src="/<?= ltrim($member['photo_path'], '/') ?>" alt="Photo" style="width:65px; height:80px; object-fit:cover; border-radius:6px; border:1px solid #cbd5e1;">
+            <?php endif; ?>
+            <div>
+                <h2 style="margin:0; border:none; padding:0;"><?= Sanitize::html($member['name']) ?> <span style="font-size: 0.9rem; color: #666; font-weight:normal;">(#<?= Sanitize::html($member['member_no']) ?>)</span></h2>
+                <div style="font-size:0.82rem; color:#555; margin-top:4px;">
+                    Native District: <strong><?= Sanitize::html($member['native_district'] ?? '—') ?></strong> • Recruitment: <strong><?= Sanitize::html($member['recruitment_type'] ?? '—') ?></strong> <?= !empty($member['recruitment_batch']) ? '('.Sanitize::html($member['recruitment_batch']).')' : '' ?>
+                </div>
+            </div>
+        </div>
         
         <div class="row">
             <div><label>Membership Status</label><div class="val"><span class="badge <?= Sanitize::html($member['membership_status']) ?>"><?= Sanitize::html(strtoupper($member['membership_status'])) ?></span></div></div>
@@ -216,6 +226,49 @@ $lifecycleEvents = Database::fetchAll(
         </div>
         <div style="margin-top: 16px;">
             <a href="/admin/members.php?edit=<?= $id ?>" class="btn" style="background:#556;">Edit Profile</a>
+        </div>
+    </div>
+
+    <div class="panel">
+        <h3>Qualifications &amp; Personal Talents</h3>
+        <div class="row">
+            <div><label>Highest Qualification</label><div class="val"><?= Sanitize::html($member['highest_qualification'] ?? '—') ?></div></div>
+            <div><label>Degree Details</label><div class="val"><?= Sanitize::html($member['qualification_details'] ?? '—') ?></div></div>
+            <div><label>Certifications</label><div class="val"><?= Sanitize::html($member['additional_certifications'] ?? '—') ?></div></div>
+        </div>
+        <div style="margin-top:12px;">
+            <label style="font-size:0.8rem; color:#555; display:block; margin-bottom:4px;">Hobbies, Sports &amp; Cultural Talents</label>
+            <div class="val" style="background:#f8fafc; padding:10px 12px; border-radius:6px; border:1px solid #eef1f5; font-size:0.88rem; line-height:1.4;">
+                <?= !empty($member['hobbies_talents']) ? nl2br(Sanitize::html($member['hobbies_talents'])) : '—' ?>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <h3>Association Welfare Initiatives (Survey Preferences)</h3>
+        <div class="row">
+            <div>
+                <label>Housing Society Interest</label>
+                <div class="val">
+                    <strong><?= ucfirst(Sanitize::html($member['interest_housing_society'] ?? 'considering')) ?></strong>
+                    <?php if (!empty($member['housing_preferred_location']) || !empty($member['housing_preferred_type'])): ?>
+                        <div style="font-size:0.8rem; color:#666; margin-top:3px;">
+                            <?= Sanitize::html($member['housing_preferred_location'] ?? '') ?> • <?= Sanitize::html($member['housing_preferred_type'] ?? '') ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <div>
+                <label>Co-Operative Bank Interest</label>
+                <div class="val">
+                    <strong><?= ucfirst(Sanitize::html($member['interest_coop_bank'] ?? 'considering')) ?></strong>
+                    <?php if (!empty($member['coop_bank_services'])): ?>
+                        <div style="font-size:0.8rem; color:#666; margin-top:3px;">
+                            <?= Sanitize::html($member['coop_bank_services']) ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
         </div>
     </div>
 
