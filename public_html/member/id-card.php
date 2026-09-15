@@ -239,12 +239,12 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
 }
 
 .id-gov-recon-line {
-    font-size: 6.8px;
+    font-size: 7.6px;
     font-weight: 600;
     color: #ffffff;
     text-align: center;
-    letter-spacing: 0.25px;
-    line-height: 1.1;
+    letter-spacing: 0.3px;
+    line-height: 1.15;
     margin-bottom: 2px;
 }
 
@@ -257,8 +257,8 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
 
 /* White rounded rectangular emblem boxes */
 .id-front-logo-box {
-    width: 36px;
-    height: 42px;
+    width: 38px;
+    height: 44px;
     border-radius: 6px;
     background: #ffffff;
     display: flex;
@@ -288,19 +288,19 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
 
 .id-front-title-kannada {
     font-family: "Nirmala UI", "Tunga", "Segoe UI", sans-serif;
-    font-size: 8.2px;
+    font-size: 9.2px;
     font-weight: 800;
     color: #ffffff;
-    line-height: 1.18;
+    line-height: 1.2;
     white-space: nowrap;
 }
 
 .id-front-title-english {
     font-family: 'Arial Narrow', 'Franklin Gothic Medium', 'Roboto Condensed', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    font-size: 7.2px;
+    font-size: 8.2px;
     font-weight: 800;
     color: #facc15; /* Warm yellow */
-    letter-spacing: 0.1px;
+    letter-spacing: 0.15px;
     margin-top: 1px;
     line-height: 1.15;
     text-transform: uppercase;
@@ -326,11 +326,11 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     width: 100%;
 }
 .id-assoc-subtitle {
-    font-size: 7px;
+    font-size: 7.8px;
     font-weight: 800;
     color: #334155;
     text-transform: uppercase;
-    letter-spacing: 0.3px;
+    letter-spacing: 0.35px;
     margin-bottom: 2px;
 }
 .id-assoc-box {
@@ -338,9 +338,9 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     background: #ffffff;
     border: 1.5px solid #15803d;
     color: #15803d;
-    font-size: 10.5px;
+    font-size: 11.5px;
     font-weight: 800;
-    padding: 2px 14px;
+    padding: 2.5px 14px;
     border-radius: 6px;
     line-height: 1.2;
 }
@@ -350,7 +350,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     color: #92400e;
 }
 .id-assoc-rep-sub {
-    font-size: 7px;
+    font-size: 7.8px;
     font-weight: 700;
     color: #b45309;
     margin-top: 1px;
@@ -361,8 +361,8 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     text-align: center;
 }
 .id-portrait-photo {
-    width: 98px;
-    height: 118px;
+    width: 100px;
+    height: 120px;
     border: 1.5px solid #94a3b8;
     border-radius: 8px;
     background: #f8fafc;
@@ -384,10 +384,10 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     width: 100%;
 }
 .id-name-text {
-    font-size: 14px;
+    font-size: 15.5px;
     font-weight: 900;
     color: #0f172a;
-    letter-spacing: 0.3px;
+    letter-spacing: 0.35px;
     text-transform: uppercase;
     line-height: 1.2;
 }
@@ -404,8 +404,8 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     color: #1d4ed8;
     font-family: ui-monospace, monospace;
     font-weight: 800;
-    font-size: 9px;
-    padding: 1.5px 8px;
+    font-size: 10px;
+    padding: 2px 8px;
     border-radius: 5px;
 }
 .id-badge-verified {
@@ -413,8 +413,8 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     border: 1.2px solid #86efac;
     color: #15803d;
     font-weight: 800;
-    font-size: 9px;
-    padding: 1.5px 7px;
+    font-size: 10px;
+    padding: 2px 7px;
     border-radius: 5px;
 }
 
@@ -431,7 +431,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     box-sizing: border-box;
 }
 .id-info-cell-label {
-    font-size: 7.2px;
+    font-size: 8px;
     font-weight: 600;
     color: #64748b;
     display: block;
@@ -440,7 +440,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
 .id-info-cell-val {
     color: #0f172a;
     font-weight: 900;
-    font-size: 10.5px;
+    font-size: 11.5px;
     line-height: 1.15;
     white-space: nowrap;
     overflow: hidden;
@@ -460,7 +460,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     border: 1.2px solid #fca5a5;
     color: #b91c1c;
     font-weight: 800;
-    font-size: 9.5px;
+    font-size: 10.5px;
     padding: 2.5px 14px;
     border-radius: 6px;
 }
@@ -469,7 +469,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     border: 1.2px solid #86efac;
     color: #15803d;
     font-weight: 800;
-    font-size: 9.5px;
+    font-size: 10.5px;
     padding: 2.5px 14px;
     border-radius: 6px;
 }
@@ -481,7 +481,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     color: #ffffff;
     text-align: center;
     font-weight: 800;
-    font-size: 8.2px;
+    font-size: 9px;
     letter-spacing: 0.6px;
     display: flex;
     align-items: center;
@@ -505,14 +505,14 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     gap: 1px;
 }
 .id-back-recon-line {
-    font-size: 6.5px;
+    font-size: 7.5px;
     font-weight: 600;
     color: #ffffff;
     letter-spacing: 0.35px;
     text-transform: uppercase;
 }
 .id-back-header-title {
-    font-size: 8.2px;
+    font-size: 9.2px;
     font-weight: 800;
     color: #ffffff;
     letter-spacing: 0.3px;
@@ -520,7 +520,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
 }
 .id-back-header-assoc {
     font-family: 'Arial Narrow', 'Franklin Gothic Medium', 'Roboto Condensed', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    font-size: 7px;
+    font-size: 8px;
     font-weight: 800;
     color: #facc15; /* Yellow */
     letter-spacing: 0.1px;
@@ -544,7 +544,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     width: 100%;
 }
 .id-back-emergency-title {
-    font-size: 7.8px;
+    font-size: 8.8px;
     font-weight: 800;
     color: #1e40af;
     text-transform: uppercase;
@@ -562,7 +562,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     box-sizing: border-box;
 }
 .id-back-em-val {
-    font-size: 9.5px;
+    font-size: 11px;
     font-weight: 900;
     line-height: 1.2;
 }
@@ -575,14 +575,14 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     border-radius: 8px;
     padding: 5px 8px;
     line-height: 1.32;
-    font-size: 7px;
+    font-size: 8px;
     color: #334155;
     box-sizing: border-box;
 }
 .id-back-assoc-title {
     font-family: 'Arial Narrow', 'Franklin Gothic Medium', 'Roboto Condensed', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     font-weight: 800;
-    font-size: 7.6px;
+    font-size: 8.8px;
     color: #0f172a;
     margin-bottom: 2px;
     line-height: 1.15;
@@ -600,7 +600,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     box-sizing: border-box;
 }
 .id-back-fineprint {
-    font-size: 6px;
+    font-size: 6.8px;
     color: #64748b;
     line-height: 1.35;
     max-width: 172px;
@@ -611,17 +611,17 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     flex-shrink: 0;
 }
 .id-back-sign-sd {
-    font-size: 8.5px;
+    font-size: 10px;
     font-weight: 900;
     color: #0f172a;
 }
 .id-back-sign-role {
-    font-size: 7.5px;
+    font-size: 8.8px;
     font-weight: 800;
     color: #1e40af;
 }
 .id-back-sign-comm {
-    font-size: 6.2px;
+    font-size: 7.2px;
     color: #64748b;
 }
 
@@ -631,7 +631,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     background: #e2e8f0;
     color: #334155;
     padding: 0 10px;
-    font-size: 7px;
+    font-size: 8.2px;
     font-weight: 700;
     display: flex;
     justify-content: space-between;
@@ -650,24 +650,62 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     }
 }
 
-/* Print CSS */
+/* Print CSS: Enforce exact color graphics, no side cutting, and centered layout on A4 */
 @media print {
-    body * { visibility: hidden; }
-    #idCardExportContainer, #idCardExportContainer * { visibility: visible; }
-    #idCardExportContainer {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        display: flex !important;
-        flex-direction: row !important;
-        gap: 210px !important;
-        justify-content: center !important;
+    @page {
+        size: A4 portrait;
+        margin: 12mm 8mm;
+    }
+    *, *::before, *::after {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+    }
+    html, body {
+        background: #ffffff !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+    }
+    body * {
+        visibility: hidden;
+    }
+    .app-layout, .app-sidebar, .app-header, .page-header-row, .no-print {
+        display: none !important;
+    }
+    .id-preview-wrapper {
+        padding: 0 !important;
+        margin: 0 !important;
         background: none !important;
         box-shadow: none !important;
-        padding: 20px !important;
+        display: block !important;
+        visibility: visible !important;
     }
-    .no-print { display: none !important; }
+    #idCardExportContainer, #idCardExportContainer * {
+        visibility: visible !important;
+    }
+    #idCardExportContainer {
+        position: relative !important;
+        left: auto !important;
+        top: auto !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 15mm auto 0 !important;
+        padding: 0 !important;
+        background: none !important;
+        box-shadow: none !important;
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 30px !important; /* Reduced from 210px so cards fit cleanly on A4 without cutting */
+        justify-content: center !important;
+        align-items: flex-start !important;
+    }
+    .id-card-portrait {
+        box-shadow: none !important;
+        border: 1.5px solid #334155 !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
 }
 </style>
 
