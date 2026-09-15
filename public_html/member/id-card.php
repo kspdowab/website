@@ -202,14 +202,9 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
 }
 
-/* Front Card Background: Soft warm peach/orange gradient on upper-right and bottom matching reference 8_555 */
+/* Front Card Background: Soft warm peach/orange gradient matching reference 8_555 (html2canvas-compatible linear gradient) */
 #idCardFront {
-    background: 
-        radial-gradient(ellipse at 92% 14%, #fedbcc 0%, #feede5 32%, rgba(255,255,255,0) 65%),
-        radial-gradient(ellipse at 88% 90%, #fee2d8 0%, #fff1eb 26%, rgba(255,255,255,0) 55%),
-        radial-gradient(ellipse at 12% 95%, #fee8e0 0%, #fff5f0 20%, rgba(255,255,255,0) 50%),
-        linear-gradient(180deg, #fee1d7 0%, #fff5f0 8%, rgba(255,255,255,0) 20%),
-        #ffffff;
+    background: linear-gradient(145deg, #fef4ee 0%, #ffffff 32%, #ffffff 72%, #fee6dc 100%);
 }
 
 /* Back Card Background: Clean crisp white */
@@ -372,14 +367,14 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     border-radius: 8px;
     background: #f8fafc;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    display: block;
+    margin: 0 auto;
     overflow: hidden;
 }
 .id-portrait-photo img {
     width: 100%;
     height: 100%;
+    display: block;
     object-fit: cover;
 }
 
@@ -494,13 +489,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     text-transform: uppercase;
     box-sizing: border-box;
 }
-.id-under-card-label {
-    font-size: 8.5px;
-    color: #64748b;
-    text-align: center;
-    margin-top: 6px;
-    font-weight: 600;
-}
+
 
 /* ── BACK CARD STYLES ──────────────────────────────────────────────────────── */
 .id-back-header {
@@ -845,8 +834,6 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
                 </div>
             </div>
 
-            <!-- Under-card label -->
-            <div class="id-under-card-label">• Official Welfare Association Member Card</div>
         </div>
 
         <!-- ───────────────────────────────────────────────────────────────────
@@ -958,6 +945,10 @@ async function downloadCardAsJpg() {
     exportEl.style.boxSizing = 'border-box';
 
     try {
+        // Ensure all images are fully decoded before canvas rasterization
+        const imgs = exportEl.querySelectorAll('img');
+        await Promise.all(Array.from(imgs).map(img => img.decode ? img.decode().catch(() => {}) : Promise.resolve()));
+
         const canvas = await html2canvas(exportEl, {
             scale: 1, // Output exact 1024 x 558 canvas matching reference
             useCORS: true,
