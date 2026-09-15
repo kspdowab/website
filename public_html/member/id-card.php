@@ -995,55 +995,84 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
 </div>
 
 <script>
-// High-resolution JPG Image Download (Exact 1024x558 canvas ratio)
+// High-resolution JPG Image Download — clones the container off-screen so live layout is never disturbed
 async function downloadCardAsJpg() {
     const exportEl = document.getElementById('idCardExportContainer');
-    const btn = document.getElementById('btnDownloadJpg');
-    const originalText = btn.innerHTML;
+    const btn      = document.getElementById('btnDownloadJpg');
+    const origText = btn.innerHTML;
 
-    btn.disabled = true;
-    btn.innerHTML = '<span style="display:inline-block; animation:spin 1s infinite linear;">↻</span> Generating High-Res Image...';
-
-    // Store original inline style
-    const origStyle = exportEl.getAttribute('style') || '';
-
-    // Enforce exact reference dimensions during capture: 1024px width, 558px height
-    exportEl.style.display = 'flex';
-    exportEl.style.flexDirection = 'row';
-    exportEl.style.width = '1024px';
-    exportEl.style.height = '558px';
-    exportEl.style.maxWidth = 'none';
-    exportEl.style.gap = '210px';
-    exportEl.style.padding = '35px 80px 25px';
-    exportEl.style.background = '#ffffff';
-    exportEl.style.justifyContent = 'center';
-    exportEl.style.alignItems = 'flex-start';
-    exportEl.style.boxSizing = 'border-box';
+    btn.disabled  = true;
+    btn.innerHTML = '<span style="display:inline-block;animation:spin 1s linear infinite;">↻</span> Generating Image…';
 
     try {
-        // Ensure all images are fully decoded before canvas rasterization
+        // Pre-decode all images so html2canvas doesn't race against lazy loading
         const imgs = exportEl.querySelectorAll('img');
+        await Promise.all(Array.from(imgs).map(img =>
+            img.complete ? Promise.resolve() : new Promise(r => { img.onload = img.onerror = r; })
+        ));
         await Promise.all(Array.from(imgs).map(img => img.decode ? img.decode().catch(() => {}) : Promise.resolve()));
 
-        const canvas = await html2canvas(exportEl, {
-            scale: 1, // Output exact 1024 x 558 canvas matching reference
-            useCORS: true,
-            allowTaint: true,
-            backgroundColor: '#ffffff'
+        // Measure the ACTUAL rendered size of the container (as shown on screen)
+        const rect = exportEl.getBoundingClientRect();
+        const W = Math.round(rect.width);
+        const H = Math.round(rect.height);
+
+        // Clone the container into a hidden off-screen div at the same size
+        const wrapper = document.createElement('div');
+        wrapper.style.cssText = [
+            'position:fixed', 'left:-9999px', 'top:0',
+            'width:' + W + 'px', 'height:' + H + 'px',
+            'overflow:visible', 'z-index:-1', 'background:#ffffff',
+            'pointer-events:none'
+        ].join(';');
+
+        const clone = exportEl.cloneNode(true);
+        clone.style.cssText = '';                         // strip any forced inline overrides
+        clone.style.display          = 'flex';
+        clone.style.flexDirection    = 'row';
+        clone.style.gap              = getComputedStyle(exportEl).gap;
+        clone.style.padding          = getComputedStyle(exportEl).padding;
+        clone.style.justifyContent   = 'center';
+        clone.style.alignItems       = 'flex-start';
+        clone.style.background       = '#ffffff';
+        clone.style.width            = W + 'px';
+        clone.style.boxSizing        = 'border-box';
+        clone.style.margin           = '0';
+
+        wrapper.appendChild(clone);
+        document.body.appendChild(wrapper);
+
+        // Wait one frame for the browser to lay out the clone
+        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+        const scale  = 2;   // 2× for high-res / retina quality
+        const canvas = await html2canvas(clone, {
+            scale          : scale,
+            useCORS        : true,
+            allowTaint     : true,
+            backgroundColor: '#ffffff',
+            logging        : false,
+            width          : W,
+            height         : clone.scrollHeight,   // capture full natural height
+            windowWidth    : W,
+            windowHeight   : clone.scrollHeight
         });
 
-        const link = document.createElement('a');
+        document.body.removeChild(wrapper);
+
+        const link    = document.createElement('a');
         link.download = 'KSPDOWA-ID-CARD-<?= Sanitize::attr($portalMember['member_no'] ?? 'MEMBER') ?>-FRONT-BACK.jpg';
-        link.href = canvas.toDataURL('image/jpeg', 0.98);
+        link.href     = canvas.toDataURL('image/jpeg', 0.98);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+
     } catch (err) {
+        console.error('JPG export error:', err);
         alert('Could not generate JPG image: ' + err);
     } finally {
-        exportEl.setAttribute('style', origStyle);
-        btn.disabled = false;
-        btn.innerHTML = originalText;
+        btn.disabled  = false;
+        btn.innerHTML = origText;
     }
 }
 </script>
