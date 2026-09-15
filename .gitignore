@@ -35,6 +35,7 @@ Thumbs.db
 
 # Uploaded files (do not commit user content to source control)
 public_html/uploads/members/
+!public_html/uploads/members/photos/.htaccess
 public_html/uploads/documents/
 public_html/uploads/grievances/
 public_html/uploads/news/

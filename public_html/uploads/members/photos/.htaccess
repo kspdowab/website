@@ -1,0 +1,12 @@
+# Allow direct public read access to uploaded member photos
+<IfModule mod_authz_core.c>
+    <FilesMatch "\.(jpg|jpeg|png|webp)$">
+        Require all granted
+    </FilesMatch>
+</IfModule>
+<IfModule !mod_authz_core.c>
+    <FilesMatch "\.(jpg|jpeg|png|webp)$">
+        Order Allow,Deny
+        Allow from all
+    </FilesMatch>
+</IfModule>
