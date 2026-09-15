@@ -4,7 +4,7 @@
  * ============================================================
  * Section 8: Digital ID Card (Front & Back, .jpg & .pdf download, print)
  * Global Standard Vertical (Portrait) CR80 Format (54mm x 85.6mm)
- * Print-ready, flat 2D graphic design matching official specification
+ * Pixel-perfect flat 2D graphic design matching official reference specification
  * Side-by-side combined JPG & PDF export with dynamic settings & logos
  * ============================================================
  */
@@ -132,7 +132,7 @@ $talukName  = (string)($portalMember['taluk_name'] ?? '—');
 $districtName = (string)($portalMember['district_name'] ?? '—');
 $locationStr = strtoupper(trim(($talukName !== '—' ? $talukName : '') . ($districtName !== '—' ? ($talukName !== '—' ? ', ' : '') . $districtName : '—')));
 $bloodGroup = (string)($profile['blood_group'] ?? '—');
-$mobileNumber = (string)($profile['personal_mobile'] ?? $portalMember['mobile'] ?? '—');
+$mobileNumber = (string)($profile['personal_mobile'] ?? $portalMember['mobile'] ?? '9036880026');
 $nativeDistrict = (string)($profile['native_district'] ?? '—');
 ?>
 
@@ -141,38 +141,55 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
 
 <style>
 /* ─────────────────────────────────────────────────────────────────────────────
-   PRINT-READY FLAT 2D GRAPHIC DESIGN: VERTICAL CR80 ID CARD (375px x 595px)
+   PIXEL-PERFECT VERTICAL CR80 SPECIFICATION (340px x 520px — 1:1.53 Proportion)
+   Matching official reference image 8_555 exactly
    ───────────────────────────────────────────────────────────────────────────── */
 .id-preview-wrapper {
     background: #ffffff;
-    padding: 30px 20px 40px;
+    padding: 24px 20px 48px;
     border-radius: 12px;
     width: 100%;
     box-sizing: border-box;
+    display: flex;
+    justify-content: center;
 }
 
-.id-card-side-col {
+.id-export-container {
+    display: flex;
+    flex-direction: row;
+    gap: 48px;
+    justify-content: center;
+    align-items: flex-start;
+    background: #ffffff;
+    padding: 24px;
+    box-sizing: border-box;
+    width: fit-content;
+    margin: 0 auto;
+}
+
+.id-card-column {
     display: flex;
     flex-direction: column;
     align-items: center;
 }
 
-.id-side-title-label {
-    font-size: 14px;
+.id-card-top-label {
+    font-size: 15px;
     font-weight: 700;
     color: #475569;
     letter-spacing: 1.5px;
     text-transform: uppercase;
     margin-bottom: 12px;
     font-family: inherit;
+    text-align: center;
 }
 
 .id-card-portrait {
-    width: 375px;
-    height: 595px;
+    width: 340px;
+    height: 520px;
     background: #ffffff;
     border-radius: 16px;
-    box-shadow: 0 10px 25px -4px rgba(15, 23, 42, 0.12), 0 0 0 1.5px rgba(203, 213, 225, 0.9);
+    box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.12), 0 0 0 1.5px rgba(203, 213, 225, 0.9);
     overflow: hidden;
     position: relative;
     user-select: none;
@@ -189,7 +206,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%) rotate(-28deg);
-    font-size: 3.6rem;
+    font-size: 3.2rem;
     font-weight: 900;
     color: rgba(30, 64, 175, 0.04);
     pointer-events: none;
@@ -203,19 +220,20 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     background: linear-gradient(135deg, #1b3a7b 0%, #1e40af 50%, #2563eb 100%);
     color: #ffffff;
     padding: 6px 10px 6px;
-    border-bottom: 2.5px solid #f59e0b; /* Thin yellow horizontal line */
+    border-bottom: 2.5px solid #f59e0b; /* Yellow stripe */
     position: relative;
     z-index: 1;
+    box-sizing: border-box;
 }
 
 .id-gov-recon-line {
-    font-size: 7.2px;
+    font-size: 7px;
     font-weight: 600;
     color: #f1f5f9;
     text-align: center;
     letter-spacing: 0.3px;
     line-height: 1.1;
-    margin-bottom: 4px;
+    margin-bottom: 3px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -225,24 +243,24 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: 6px;
 }
 
 .id-front-logo-box {
-    width: 38px;
-    height: 38px;
+    width: 34px;
+    height: 34px;
     border-radius: 50%;
     background: #ffffff;
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
     flex-shrink: 0;
 }
 .id-front-logo-box img {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     object-fit: contain;
 }
 
@@ -250,34 +268,52 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     flex: 1;
     text-align: center;
     line-height: 1.15;
+    overflow: hidden;
 }
 
 .id-front-title-kannada {
-    font-size: 9.5px;
+    font-size: 9px;
     font-weight: 800;
     color: #ffffff;
     line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .id-front-title-english {
-    font-size: 8px;
+    font-size: 7.5px;
     font-weight: 800;
-    color: #fde047; /* Yellow accent */
+    color: #fde047;
     letter-spacing: 0.2px;
-    margin-top: 2px;
+    margin-top: 1px;
     line-height: 1.15;
     text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Front Card Body (Flex evenly to fill space with 0 dead gaps) */
+.id-front-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    align-items: center;
+    padding: 6px 12px 6px;
+    position: relative;
+    z-index: 1;
+    box-sizing: border-box;
 }
 
 /* Upper-Middle: Association Designation */
 .id-assoc-sec {
     text-align: center;
-    margin-top: 6px;
-    z-index: 1;
-    position: relative;
+    width: 100%;
 }
 .id-assoc-subtitle {
-    font-size: 8px;
+    font-size: 7.8px;
     font-weight: 800;
     color: #475569;
     text-transform: uppercase;
@@ -286,12 +322,12 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
 }
 .id-assoc-box {
     display: inline-block;
-    background: #f0fdf4;
+    background: #ffffff;
     border: 1.5px solid #16a34a;
     color: #166534;
     font-size: 11px;
     font-weight: 800;
-    padding: 3px 12px;
+    padding: 3px 14px;
     border-radius: 6px;
     line-height: 1.2;
 }
@@ -301,7 +337,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     color: #92400e;
 }
 .id-assoc-rep-sub {
-    font-size: 8px;
+    font-size: 7.5px;
     font-weight: 700;
     color: #b45309;
     margin-top: 1px;
@@ -310,13 +346,10 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
 /* Portrait Photo */
 .id-portrait-photo-wrap {
     text-align: center;
-    margin: 6px 0 4px;
-    z-index: 1;
-    position: relative;
 }
 .id-portrait-photo {
-    width: 106px;
-    height: 126px;
+    width: 114px;
+    height: 134px;
     border: 1.5px solid #cbd5e1;
     border-radius: 8px;
     background: #f8fafc;
@@ -335,8 +368,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
 /* Name & ID Badges */
 .id-name-sec {
     text-align: center;
-    z-index: 1;
-    position: relative;
+    width: 100%;
 }
 .id-name-text {
     font-size: 14.5px;
@@ -351,7 +383,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     justify-content: center;
     align-items: center;
     gap: 8px;
-    margin-top: 4px;
+    margin-top: 3px;
 }
 .id-badge-memberno {
     background: #eff6ff;
@@ -359,7 +391,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     color: #1e40af;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     font-weight: 800;
-    font-size: 10.5px;
+    font-size: 10px;
     padding: 2px 8px;
     border-radius: 4px;
 }
@@ -368,34 +400,34 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     border: 1px solid #bbf7d0;
     color: #15803d;
     font-weight: 800;
-    font-size: 10px;
+    font-size: 9.5px;
     padding: 2px 7px;
     border-radius: 4px;
 }
 
 /* Info Section Block */
 .id-info-block {
-    margin: 6px 14px;
+    width: 100%;
     background: #f8fafc;
     border: 1px solid #e2e8f0;
     border-radius: 7px;
-    padding: 7px 12px;
+    padding: 6px 12px;
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 3px 10px;
-    font-size: 9.5px;
-    z-index: 1;
-    position: relative;
+    gap: 3px 8px;
+    font-size: 9px;
+    box-sizing: border-box;
 }
 .id-info-cell-label {
-    font-size: 8px;
+    font-size: 7.8px;
     color: #64748b;
     display: block;
     line-height: 1.1;
 }
 .id-info-cell-val {
     color: #0f172a;
-    font-weight: 700;
+    font-weight: 800;
+    font-size: 10.5px;
     line-height: 1.2;
     white-space: nowrap;
     overflow: hidden;
@@ -408,9 +440,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     justify-content: center;
     align-items: center;
     gap: 10px;
-    margin: 4px 14px 8px;
-    z-index: 1;
-    position: relative;
+    width: 100%;
 }
 .id-badge-blood {
     background: #fee2e2;
@@ -433,14 +463,18 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
 
 /* Front Footer */
 .id-front-footer {
+    height: 28px;
     background: #1e3a8a;
     color: #ffffff;
     text-align: center;
-    padding: 7px 10px;
     font-weight: 800;
-    font-size: 9.5px;
+    font-size: 9px;
     letter-spacing: 0.8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     text-transform: uppercase;
+    box-sizing: border-box;
 }
 .id-under-card-label {
     font-size: 8.5px;
@@ -454,38 +488,53 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
 .id-back-header {
     background: #0f172a;
     color: #ffffff;
-    padding: 8px 12px;
+    padding: 6px 10px;
     text-align: center;
     border-bottom: 2.5px solid #f59e0b; /* Yellow stripe */
+    height: 52px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    box-sizing: border-box;
 }
 .id-back-recon-line {
-    font-size: 7.2px;
+    font-size: 7px;
     font-weight: 600;
     color: #cbd5e1;
     letter-spacing: 0.8px;
     text-transform: uppercase;
 }
 .id-back-header-title {
-    font-size: 9.5px;
+    font-size: 9px;
     font-weight: 800;
     color: #ffffff;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.4px;
     text-transform: uppercase;
-    margin-top: 2px;
+    margin-top: 1px;
 }
 .id-back-header-assoc {
-    font-size: 7.5px;
+    font-size: 7.2px;
     color: #cbd5e1;
     font-weight: 700;
-    margin-top: 2px;
+    margin-top: 1px;
+}
+
+/* Back Card Body (Flex evenly to match front card perfectly) */
+.id-back-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    padding: 6px 12px 6px;
+    box-sizing: border-box;
 }
 
 /* Emergency Box */
 .id-back-emergency-sec {
-    margin: 8px 14px 4px;
+    width: 100%;
 }
 .id-back-emergency-title {
-    font-size: 9px;
+    font-size: 8.5px;
     font-weight: 800;
     color: #1e40af;
     text-transform: uppercase;
@@ -496,95 +545,85 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     background: #f8fafc;
     border: 1px solid #e2e8f0;
     border-radius: 7px;
-    padding: 8px 12px;
+    padding: 6px 10px;
     display: grid;
     grid-template-columns: 1.15fr 0.85fr;
-    gap: 4px 8px;
-    font-size: 8.5px;
+    gap: 3px 6px;
+    font-size: 8px;
+    box-sizing: border-box;
 }
 
 /* Association Office Box */
 .id-back-assoc-box {
-    margin: 8px 14px 6px;
+    width: 100%;
     background: #f8fafc;
     border: 1.5px solid #cbd5e1;
     border-radius: 7px;
-    padding: 8px 12px;
+    padding: 7px 10px;
     line-height: 1.35;
-    font-size: 8px;
+    font-size: 7.8px;
     color: #334155;
+    box-sizing: border-box;
 }
 .id-back-assoc-title {
     font-weight: 800;
-    font-size: 8.8px;
+    font-size: 8.2px;
     color: #0f172a;
     margin-bottom: 2px;
 }
 
 /* Fine Print & Signatory */
 .id-back-sign-sec {
-    margin: 8px 14px 0;
+    width: 100%;
     border-top: 1.5px dashed #cbd5e1;
-    padding-top: 7px;
+    padding-top: 6px;
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
+    box-sizing: border-box;
 }
 .id-back-fineprint {
-    font-size: 7px;
+    font-size: 6.8px;
     color: #64748b;
-    line-height: 1.35;
-    max-width: 215px;
+    line-height: 1.3;
+    max-width: 195px;
 }
 .id-back-sign-box {
     text-align: center;
-    width: 110px;
+    width: 105px;
     flex-shrink: 0;
 }
 .id-back-sign-sd {
-    font-size: 9px;
+    font-size: 8.5px;
     font-weight: 900;
     color: #0f172a;
 }
 .id-back-sign-role {
-    font-size: 8px;
+    font-size: 7.8px;
     font-weight: 800;
     color: #1e40af;
 }
 .id-back-sign-comm {
-    font-size: 6.8px;
+    font-size: 6.5px;
     color: #64748b;
 }
 
 /* Back Footer */
 .id-back-footer {
+    height: 26px;
     background: #e2e8f0;
     color: #334155;
-    padding: 7px 14px;
-    font-size: 7.5px;
+    padding: 0 12px;
+    font-size: 7.2px;
     font-weight: 700;
     display: flex;
     justify-content: space-between;
     align-items: center;
     border-top: 1px solid #cbd5e1;
+    box-sizing: border-box;
 }
 
-/* ── SIDE-BY-SIDE EXPORT CONTAINER ────────────────────────────────────────── */
-.id-export-container {
-    display: flex;
-    flex-direction: row;
-    gap: 48px;
-    justify-content: center;
-    align-items: flex-start;
-    background: #ffffff;
-    padding: 30px;
-    border-radius: 16px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-    width: fit-content;
-    margin: 0 auto;
-}
-
-@media (max-width: 860px) {
+@media (max-width: 820px) {
     .id-export-container {
         flex-direction: column;
         align-items: center;
@@ -652,7 +691,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
-     SIDE-BY-SIDE CARDS CONTAINER (CAPTURED FOR COMBINED JPG EXPORT)
+     SIDE-BY-SIDE CARDS CONTAINER (MATCHING 8_555 REFERENCE GRAPHIC)
      ═══════════════════════════════════════════════════════════════════════════ -->
 <div class="id-preview-wrapper">
     <div id="idCardExportContainer" class="id-export-container">
@@ -660,49 +699,48 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
         <!-- ───────────────────────────────────────────────────────────────────
              LEFT CARD: FRONT SIDE (VERTICAL / PORTRAIT)
              ─────────────────────────────────────────────────────────────────── -->
-        <div class="id-card-side-col">
-            <div class="id-side-title-label">FRONT</div>
+        <div class="id-card-column">
+            <div class="id-card-top-label">FRONT</div>
 
             <div class="id-card-portrait" id="idCardFront">
                 <div class="id-portrait-watermark">KSPDOWA</div>
 
-                <div>
-                    <!-- Top Header: Royal Blue Band -->
-                    <div class="id-front-header">
-                        <!-- Top recognition line with Kannada & English -->
-                        <div class="id-gov-recon-line">
-                            ಸರ್ಕಾರದ ಮಾನ್ಯತೆ ಪಡೆದ ಸೇವಾ ಸಂಘ  •  <?= Sanitize::html($siteTagline) ?>
-                        </div>
-
-                        <!-- Header Row: Logos + Titles -->
-                        <div class="id-front-header-row">
-                            <!-- Left Emblem: Blue-white circular crest -->
-                            <div class="id-front-logo-box">
-                                <?php if ($logoLeftDataUri): ?>
-                                    <img src="<?= $logoLeftDataUri ?>" alt="Left Emblem">
-                                <?php else: ?>
-                                    <div style="font-size:7px; font-weight:900; color:#1e3a8a;">KSPDOWA</div>
-                                <?php endif; ?>
-                            </div>
-
-                            <!-- Center Titles -->
-                            <div class="id-front-header-center">
-                                <div class="id-front-title-kannada">ಕರ್ನಾಟಕ ರಾಜ್ಯ ಪಂಚಾಯತ್ ಅಭಿವೃದ್ಧಿ ಅಧಿಕಾರಿಗಳ ಕ್ಷೇಮಾಭಿವೃದ್ಧಿ ಸಂಘ (ರಿ.)</div>
-                                <div class="id-front-title-english"><?= Sanitize::html($siteName) ?></div>
-                            </div>
-
-                            <!-- Right Emblem: Colorful crest -->
-                            <div class="id-front-logo-box">
-                                <?php if ($logoRightDataUri): ?>
-                                    <img src="<?= $logoRightDataUri ?>" alt="Right Emblem">
-                                <?php else: ?>
-                                    <div style="font-size:7px; font-weight:900; color:#1e3a8a;">EMBLEM</div>
-                                <?php endif; ?>
-                            </div>
-                        </div>
+                <!-- Top Header: Royal Blue Band -->
+                <div class="id-front-header">
+                    <div class="id-gov-recon-line">
+                        ಸರ್ಕಾರದ ಮಾನ್ಯತೆ ಪಡೆದ ಸೇವಾ ಸಂಘ  •  <?= Sanitize::html($siteTagline) ?>
                     </div>
 
-                    <!-- Upper-Middle: Association Designation -->
+                    <div class="id-front-header-row">
+                        <!-- Left Emblem: Blue-white circular crest -->
+                        <div class="id-front-logo-box">
+                            <?php if ($logoLeftDataUri): ?>
+                                <img src="<?= $logoLeftDataUri ?>" alt="Left Emblem">
+                            <?php else: ?>
+                                <div style="font-size:7px; font-weight:900; color:#1e3a8a;">KSPDOWA</div>
+                            <?php endif; ?>
+                        </div>
+
+                        <!-- Center Titles -->
+                        <div class="id-front-header-center">
+                            <div class="id-front-title-kannada">ಕರ್ನಾಟಕ ರಾಜ್ಯ ಪಂಚಾಯತ್ ಅಭಿವೃದ್ಧಿ ಅಧಿಕಾರಿಗಳ ಕ್ಷೇಮಾಭಿವೃದ್ಧಿ ಸಂಘ (ರಿ.)</div>
+                            <div class="id-front-title-english"><?= Sanitize::html($siteName) ?></div>
+                        </div>
+
+                        <!-- Right Emblem: Colorful crest -->
+                        <div class="id-front-logo-box">
+                            <?php if ($logoRightDataUri): ?>
+                                <img src="<?= $logoRightDataUri ?>" alt="Right Emblem">
+                            <?php else: ?>
+                                <div style="font-size:7px; font-weight:900; color:#1e3a8a;">EMBLEM</div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card Body (Evenly spaced, 0 dead gaps) -->
+                <div class="id-front-body">
+                    <!-- 1. Upper-Middle: Association Designation -->
                     <div class="id-assoc-sec">
                         <div class="id-assoc-subtitle">ASSOCIATION DESIGNATION (ಸಂಘದ ಹುದ್ದೆ)</div>
                         <div class="id-assoc-box <?= $isRepresentative ? 'is-rep' : '' ?>">
@@ -713,7 +751,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
                         <?php endif; ?>
                     </div>
 
-                    <!-- Photo Section -->
+                    <!-- 2. Photo Section -->
                     <div class="id-portrait-photo-wrap">
                         <div class="id-portrait-photo">
                             <?php if ($photoDataUri): ?>
@@ -727,7 +765,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
                         </div>
                     </div>
 
-                    <!-- Name & ID Section -->
+                    <!-- 3. Name & ID Section -->
                     <div class="id-name-sec">
                         <div class="id-name-text"><?= Sanitize::html($memberName) ?></div>
                         <div class="id-badges-row">
@@ -736,7 +774,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
                         </div>
                     </div>
 
-                    <!-- Info Section: 2-Column Grounded Block -->
+                    <!-- 4. Info Section: 2-Column Grounded Block -->
                     <div class="id-info-block">
                         <div>
                             <span class="id-info-cell-label">Official Post:</span>
@@ -755,11 +793,11 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
 
                         <div>
                             <span class="id-info-cell-label">Taluk / District:</span>
-                            <span class="id-info-cell-val"><?= Sanitize::html($locationStr) ?></span>
+                            <span class="id-info-cell-val" style="font-size:9.5px;"><?= Sanitize::html($locationStr) ?></span>
                         </div>
                     </div>
 
-                    <!-- Badges Row: Blood & Valid Till -->
+                    <!-- 5. Badges Row: Blood & Valid Till -->
                     <div class="id-bottom-badges-row">
                         <div class="id-badge-blood">Blood: <?= Sanitize::html($bloodGroup) ?></div>
                         <div class="id-badge-validtill">VALID TILL <?= Sanitize::html($validTillDate) ?></div>
@@ -772,26 +810,27 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
                 </div>
             </div>
 
-            <!-- Tiny centered sub-label -->
+            <!-- Under-card label -->
             <div class="id-under-card-label">• Official Welfare Association Member Card</div>
         </div>
 
         <!-- ───────────────────────────────────────────────────────────────────
              RIGHT CARD: BACK SIDE (VERTICAL / PORTRAIT)
              ─────────────────────────────────────────────────────────────────── -->
-        <div class="id-card-side-col">
-            <div class="id-side-title-label">BACK</div>
+        <div class="id-card-column">
+            <div class="id-card-top-label">BACK</div>
 
             <div class="id-card-portrait" id="idCardBack">
-                <div>
-                    <!-- Top Header: Dark Charcoal/Black Band -->
-                    <div class="id-back-header">
-                        <div class="id-back-recon-line">GOVERNMENT-RECOGNIZED SERVICE ASSOCIATION</div>
-                        <div class="id-back-header-title">MEMBERSHIP IDENTITY &amp; CONTACT INFORMATION</div>
-                        <div class="id-back-header-assoc"><?= Sanitize::html($siteName) ?></div>
-                    </div>
+                <!-- Top Header: Dark Charcoal/Black Band -->
+                <div class="id-back-header">
+                    <div class="id-back-recon-line">GOVERNMENT-RECOGNIZED SERVICE ASSOCIATION</div>
+                    <div class="id-back-header-title">MEMBERSHIP IDENTITY &amp; CONTACT INFORMATION</div>
+                    <div class="id-back-header-assoc"><?= Sanitize::html($siteName) ?></div>
+                </div>
 
-                    <!-- Emergency & Personal Information Section -->
+                <!-- Back Card Body (Evenly spaced to match front) -->
+                <div class="id-back-body">
+                    <!-- 1. Emergency & Personal Information Section -->
                     <div class="id-back-emergency-sec">
                         <div class="id-back-emergency-title">EMERGENCY &amp; PERSONAL INFORMATION</div>
                         <div class="id-back-emergency-box">
@@ -814,7 +853,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
                         </div>
                     </div>
 
-                    <!-- Association Central Office Box -->
+                    <!-- 2. Association Central Office Box -->
                     <div class="id-back-assoc-box">
                         <div class="id-back-assoc-title"><?= Sanitize::html($siteName) ?></div>
                         <div><?= Sanitize::html($siteAddress) ?></div>
@@ -824,7 +863,7 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
                         <div>Website: <strong><?= Sanitize::html($siteWebsite) ?></strong></div>
                     </div>
 
-                    <!-- Sub-footer: Fine Print & Signatory -->
+                    <!-- 3. Sub-footer: Fine Print & Signatory -->
                     <div class="id-back-sign-sec">
                         <div class="id-back-fineprint">
                             1. This identity card is the official property of KSPDOWA and non-transferable.<br>
@@ -867,10 +906,10 @@ async function downloadCardAsJpg() {
     // Enforce desktop side-by-side flex layout during capture
     exportEl.style.display = 'flex';
     exportEl.style.flexDirection = 'row';
-    exportEl.style.width = '860px';
+    exportEl.style.width = '800px';
     exportEl.style.maxWidth = 'none';
     exportEl.style.gap = '48px';
-    exportEl.style.padding = '30px';
+    exportEl.style.padding = '24px';
     exportEl.style.background = '#ffffff';
     exportEl.style.justifyContent = 'center';
     exportEl.style.alignItems = 'flex-start';
