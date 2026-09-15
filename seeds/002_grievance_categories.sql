@@ -33,7 +33,6 @@ INSERT IGNORE INTO `grievance_categories`
 -- ------------------------------------------------------------
 INSERT IGNORE INTO `grievance_services`
   (`category_id`, `name`, `status`, `sort_order`) VALUES
-  (1, 'Appointment',          'active',  1),
   (1, 'Probation',            'active',  2),
   (1, 'Confirmation',         'active',  3),
   (1, 'Seniority',            'active',  4),

@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS `grievance_services` (
   PRIMARY KEY (`id`),
   KEY `idx_gs_category`   (`category_id`),
   KEY `idx_gs_status_sort`(`status`, `sort_order`),
+  UNIQUE KEY `uk_gs_cat_name` (`category_id`, `name`),
   CONSTRAINT `fk_gs_category`
     FOREIGN KEY (`category_id`) REFERENCES `grievance_categories` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci

@@ -26,19 +26,39 @@ if ($currentMemberId === null) {
 
 // Fetch active master data
 $categories  = Database::fetchAll("SELECT * FROM grievance_categories WHERE status = 'active' ORDER BY sort_order, name");
-$services    = Database::fetchAll("SELECT * FROM grievance_services WHERE status = 'active' ORDER BY category_id, sort_order, name");
-$authorities = Database::fetchAll("SELECT * FROM grievance_authorities WHERE status = 'active' ORDER BY id ASC");
+$services    = Database::fetchAll("SELECT * FROM grievance_services WHERE status = 'active' AND LOWER(name) != 'appointment' ORDER BY category_id, sort_order, name");
+$allAuthorities = Database::fetchAll("SELECT * FROM grievance_authorities WHERE status = 'active' ORDER BY id ASC");
 
-// Map services by category for dependent dropdown
+// Limit authorities to Taluk Panchayati and above (remove all authorities after Taluk Panchayati)
+$authorities = [];
+foreach ($allAuthorities as $auth) {
+    $authorities[] = $auth;
+    if (stripos($auth['name'], 'Taluk Panchayati') !== false || stripos($auth['name'], 'Taluk Panchayat') !== false || strtolower($auth['code']) === 'tp') {
+        break;
+    }
+}
+
+// Map services by category for dependent dropdown (with defensive deduplication and excluding Appointment)
 $servicesByCategory = [];
+$seenServiceNames = [];
 foreach ($services as $srv) {
+    $srvName = trim($srv['name'] ?? '');
+    if (strcasecmp($srvName, 'Appointment') === 0) {
+        continue;
+    }
     $cId = (int)$srv['category_id'];
+    $normalizedKey = $cId . '_' . strtolower($srvName);
+    if (isset($seenServiceNames[$normalizedKey])) {
+        continue;
+    }
+    $seenServiceNames[$normalizedKey] = true;
+
     if (!isset($servicesByCategory[$cId])) {
         $servicesByCategory[$cId] = [];
     }
     $servicesByCategory[$cId][] = [
         'id'   => (int)$srv['id'],
-        'name' => $srv['name'],
+        'name' => $srvName,
     ];
 }
 
@@ -281,9 +301,6 @@ require_once dirname(__DIR__) . '/includes/partials/member-header.php';
                         <span style="font-weight:400; color:var(--text-muted);">(Max 2 MB • .jpg, .png, .pdf only)</span>
                     </label>
                     <input type="file" name="attachment" id="attachment" class="form-control" accept=".jpg,.jpeg,.png,.pdf">
-                    <div style="font-size:0.78rem; color:var(--text-muted); margin-top:4px;">
-                        Strict server-side security: Files over 2 MB or other extensions will be rejected.
-                    </div>
                 </div>
             </div>
 
