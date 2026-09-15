@@ -579,19 +579,27 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
     border: 1.2px solid #cbd5e1;
     border-radius: 8px;
     padding: 5px 8px;
-    line-height: 1.32;
-    font-size: 8px;
+    line-height: 1.35;
+    font-size: 7.8px;
     color: #334155;
     box-sizing: border-box;
+    text-align: center;
 }
 .id-back-assoc-title {
-    font-family: 'Arial Narrow', 'Franklin Gothic Medium', 'Roboto Condensed', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     font-weight: 800;
-    font-size: 8.8px;
+    font-size: 8.2px;
     color: #0f172a;
     margin-bottom: 2px;
-    line-height: 1.15;
+    line-height: 1.2;
     text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+.id-back-assoc-icon {
+    vertical-align: -1.5px;
+    margin-right: 2px;
+    display: inline-block;
+    color: #2563eb;
 }
 
 /* Fine Print & Signatory */
@@ -962,15 +970,25 @@ $nativeDistrict = (string)($profile['native_district'] ?? '—');
 
                     <!-- 2. Association Central Office Box -->
                     <div class="id-back-assoc-box">
-                        <div class="id-back-assoc-title">
-                            <div>KARNATAKA STATE PANCHAYAT DEVELOPMENT</div>
-                            <div>OFFICER WELFARE ASSOCIATION (R)</div>
-                        </div>
+                        <div class="id-back-assoc-title">ASSOCIATION CENTRAL OFFICE ADDRESS</div>
                         <div><?= Sanitize::html($siteAddress) ?></div>
                         <div style="margin-top:2px;">
-                            Helpline: <strong><?= Sanitize::html($sitePhone) ?></strong> • Email: <strong><?= Sanitize::html($siteEmail) ?></strong>
+                            <span style="white-space:nowrap;">
+                                <svg class="id-back-assoc-icon" width="8.5" height="8.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                                Helpline: <strong><?= Sanitize::html($sitePhone) ?></strong>
+                            </span>
+                            &nbsp;•&nbsp;
+                            <span style="white-space:nowrap;">
+                                <svg class="id-back-assoc-icon" width="8.5" height="8.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg>
+                                Email: <strong><?= Sanitize::html($siteEmail) ?></strong>
+                            </span>
                         </div>
-                        <div>Website: <strong><?= Sanitize::html($siteWebsite) ?></strong></div>
+                        <div style="margin-top:1px;">
+                            <span style="white-space:nowrap;">
+                                <svg class="id-back-assoc-icon" width="8.5" height="8.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path><path d="M2 12h20"></path></svg>
+                                Website: <strong><?= Sanitize::html($siteWebsite) ?></strong>
+                            </span>
+                        </div>
                     </div>
 
                     <!-- 3. Sub-footer: Fine Print & Signatory -->
