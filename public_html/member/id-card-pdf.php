@@ -3,8 +3,8 @@
  * KSPDOWA — Member Portal: Official Digital ID Card PDF Generator
  * ============================================================
  * Generates an official printable ID Card document with Front & Back
- * sides formatted to the Global Standard Horizontal CR80 specification
- * (85.6mm x 54.0mm) on a standard printable A4 page with cut guides.
+ * sides formatted to the Global Standard Vertical (Portrait) CR80 specification
+ * (54.0mm x 85.6mm) on a standard printable A4 page with cut guidelines.
  * ============================================================
  */
 
@@ -43,12 +43,12 @@ $validTillDate = !empty($currentYear['end_date'])
     : '31-03-' . (date('Y') + 1);
 
 // Association Identity & Contact Settings
-$siteName     = Settings::get('site_name', 'Karnataka State Panchayat Development Officers Welfare Association (R)');
-$siteTagline  = Settings::get('site_tagline', 'Reg. No. DRB/SOR/534/2012-13 • Bengaluru');
-$siteAddress  = Settings::get('site_address', 'State Central Office, Bengaluru, Karnataka');
-$sitePhone    = Settings::get('site_phone', '9036880026');
-$siteEmail    = Settings::get('site_email', 'contact@kspdowa.org');
-$siteWebsite  = Settings::get('site_website', 'https://kspdowa.org');
+$siteName     = Settings::get('site_name', 'KARNATAKA STATE PANCHAYAT DEVELOPMENT OFFICER WELFARE ASSOCIATION (R)');
+$siteTagline  = Settings::get('site_tagline', 'Government-Recognized Service Association');
+$siteAddress  = Settings::get('site_address', '# 204, 2nd Floor, Karnataka Panchayat Raj Commissionerate, K. G. Road, Bengaluru – 560009');
+$sitePhone    = Settings::get('site_phone', '9964010162');
+$siteEmail    = Settings::get('site_email', 'kspdowab@gmail.com');
+$siteWebsite  = Settings::get('site_website', 'https://kspdowa.in');
 
 // Helper to resolve logo file
 $resolveLogo = function(string $settingKey, string $defaultRel): string {
@@ -65,7 +65,7 @@ $resolveLogo = function(string $settingKey, string $defaultRel): string {
 $logoLeftAbs  = $resolveLogo('receipt_logo_left', 'assets/images/receipt-logo-left.png');
 $logoRightAbs = $resolveLogo('receipt_logo_right', 'assets/images/receipt-logo-right.png');
 
-// Check Association Designation from office_bearers or member profile
+// Check Association Designation from office_bearers or member record
 $officeBearer = Database::fetchOne(
     'SELECT ob.*, d.name AS ob_district_name, t.name AS ob_taluk_name
      FROM office_bearers ob
@@ -124,20 +124,28 @@ $pdf->SetFont('Arial', 'B', 13);
 $pdf->Cell(0, 6, $latin1('WELFARE ASSOCIATION (R) • BENGALURU'), 0, 1, 'C');
 $pdf->SetFont('Arial', '', 8.5);
 $pdf->SetTextColor(100, 116, 139);
-$pdf->Cell(0, 5, $latin1('Official CR80 Standard Horizontal Identity Card • ' . $siteTagline), 0, 1, 'C');
+$pdf->Cell(0, 5, $latin1('Official CR80 Standard Vertical Identity Card • ' . $siteTagline), 0, 1, 'C');
 $pdf->Ln(4);
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CR80 STANDARD HORIZONTAL CARD DIMENSIONS: 85.6mm Width x 54.0mm Height
+// CR80 STANDARD VERTICAL (PORTRAIT) CARD DIMENSIONS: 54.0mm Width x 85.6mm Height
 // ─────────────────────────────────────────────────────────────────────────────
-$cardW = 85.6;
-$cardH = 54.0;
-$gap   = 10.0;
-$startX = (210.0 - ($cardW * 2 + $gap)) / 2.0; // Centered on A4 (14.4mm margins)
-$startY = 44.0;
+$cardW = 54.0;
+$cardH = 85.6;
+$gap   = 16.0;
+$startX = (210.0 - ($cardW * 2 + $gap)) / 2.0; // Centered on A4
+$startY = 42.0;
+
+// Labels above cards
+$pdf->SetFont('Arial', 'B', 9);
+$pdf->SetTextColor(71, 85, 105);
+$pdf->SetXY($startX, $startY - 7);
+$pdf->Cell($cardW, 5, $latin1('FRONT'), 0, 0, 'C');
+$pdf->SetXY($startX + $cardW + $gap, $startY - 7);
+$pdf->Cell($cardW, 5, $latin1('BACK'), 0, 1, 'C');
 
 // ═════════════════════════════════════════════════════════════════════════════
-// 1. FRONT SIDE OF ID CARD (85.6mm x 54.0mm)
+// 1. FRONT SIDE OF ID CARD (PORTRAIT: 54.0mm x 85.6mm)
 // ═════════════════════════════════════════════════════════════════════════════
 
 // Outer Card Border
@@ -145,52 +153,70 @@ $pdf->SetDrawColor(148, 163, 184);
 $pdf->SetLineWidth(0.35);
 $pdf->Rect($startX, $startY, $cardW, $cardH, 'D');
 
-// Header Background (Navy Blue)
+// Header Background (Royal Blue)
 $pdf->SetFillColor(30, 58, 138);
-$pdf->Rect($startX, $startY, $cardW, 11.5, 'F');
+$pdf->Rect($startX, $startY, $cardW, 13.5, 'F');
 
-// Gold accent line under header
+// Yellow accent line under header
 $pdf->SetFillColor(245, 158, 11);
-$pdf->Rect($startX, $startY + 11.5, $cardW, 0.7, 'F');
+$pdf->Rect($startX, $startY + 13.5, $cardW, 0.7, 'F');
 
-// Left Logo (8.5mm x 8.5mm)
+// 1st Line: Tiny white text
+$pdf->SetXY($startX, $startY + 0.8);
+$pdf->SetFont('Arial', '', 3.8);
+$pdf->SetTextColor(241, 245, 249);
+$pdf->Cell($cardW, 2.2, $latin1('Government-Recognized Service Association'), 0, 1, 'C');
+
+// Left Logo (6.5mm x 6.5mm)
 if (is_file($logoLeftAbs)) {
     try {
-        $pdf->Image($logoLeftAbs, $startX + 1.5, $startY + 1.5, 8.5, 8.5);
+        $pdf->Image($logoLeftAbs, $startX + 1.5, $startY + 3.8, 6.5, 6.5);
     } catch (Throwable $e) {}
 }
 
-// Right Logo (8.5mm x 8.5mm)
+// Right Logo (6.5mm x 6.5mm)
 if (is_file($logoRightAbs)) {
     try {
-        $pdf->Image($logoRightAbs, $startX + $cardW - 10.0, $startY + 1.5, 8.5, 8.5);
+        $pdf->Image($logoRightAbs, $startX + $cardW - 8.0, $startY + 3.8, 6.5, 6.5);
     } catch (Throwable $e) {}
 }
 
-// Header Titles (between logos)
-$headW = $cardW - 23.0;
-$headX = $startX + 11.5;
-
-$pdf->SetXY($headX, $startY + 1.2);
-$pdf->SetFont('Arial', 'B', 5.5);
+// Center Title
+$pdf->SetXY($startX + 8.5, $startY + 3.6);
+$pdf->SetFont('Arial', 'B', 4.5);
 $pdf->SetTextColor(255, 255, 255);
-$pdf->Cell($headW, 3.2, $latin1('KARNATAKA STATE PDO WELFARE ASSOCIATION (R)'), 0, 1, 'C');
+$pdf->Cell($cardW - 17.0, 2.8, $latin1('KARNATAKA STATE PDO'), 0, 1, 'C');
+$pdf->SetXY($startX + 8.5, $startY + 6.4);
+$pdf->SetFont('Arial', 'B', 4.2);
+$pdf->SetTextColor(253, 224, 71); // Yellow accent
+$pdf->Cell($cardW - 17.0, 2.8, $latin1('WELFARE ASSOCIATION (R)'), 0, 1, 'C');
 
-$pdf->SetXY($headX, $startY + 4.4);
-$pdf->SetFont('Arial', 'B', 5);
-$pdf->SetTextColor(253, 224, 71); // Gold
-$pdf->Cell($headW, 3, $latin1($siteName), 0, 1, 'C');
+// Association Designation
+$pdf->SetXY($startX, $startY + 15.2);
+$pdf->SetFont('Arial', 'B', 3.8);
+$pdf->SetTextColor(100, 116, 139);
+$pdf->Cell($cardW, 2.2, $latin1('ASSOCIATION DESIGNATION'), 0, 1, 'C');
 
-$pdf->SetXY($headX, $startY + 7.4);
-$pdf->SetFont('Arial', '', 4.5);
-$pdf->SetTextColor(224, 231, 255);
-$pdf->Cell($headW, 3, $latin1($siteTagline), 0, 1, 'C');
+$assocBoxW = 42.0;
+$assocBoxX = $startX + ($cardW - $assocBoxW) / 2.0;
+if ($isRepresentative) {
+    $pdf->SetFillColor(254, 243, 199);
+    $pdf->SetDrawColor(245, 158, 11);
+} else {
+    $pdf->SetFillColor(240, 253, 244);
+    $pdf->SetDrawColor(22, 163, 74);
+}
+$pdf->Rect($assocBoxX, $startY + 17.6, $assocBoxW, 4.2, 'FD');
+$pdf->SetXY($assocBoxX, $startY + 18.2);
+$pdf->SetFont('Arial', 'B', 5.0);
+$pdf->SetTextColor($isRepresentative ? 146 : 22, $isRepresentative ? 64 : 101, $isRepresentative ? 14 : 52);
+$pdf->Cell($assocBoxW, 3.0, $latin1($assocDesignation), 0, 1, 'C');
 
-// Photo Box (Left side: 17mm width x 21mm height)
-$photoX = $startX + 3.0;
-$photoY = $startY + 14.0;
-$photoW = 17.0;
-$photoH = 21.0;
+// Photo Box (Centered: 18mm width x 22mm height)
+$photoW = 18.0;
+$photoH = 22.0;
+$photoX = $startX + ($cardW - $photoW) / 2.0;
+$photoY = $startY + 23.0;
 
 $photoRendered = false;
 if (!empty($member['photo_path'])) {
@@ -199,9 +225,7 @@ if (!empty($member['photo_path'])) {
         try {
             $pdf->Image($fullPhotoPath, $photoX, $photoY, $photoW, $photoH);
             $photoRendered = true;
-        } catch (Throwable $e) {
-            $photoRendered = false;
-        }
+        } catch (Throwable $e) {}
     }
 }
 
@@ -209,124 +233,123 @@ if (!$photoRendered) {
     $pdf->SetFillColor(241, 245, 249);
     $pdf->SetDrawColor(203, 213, 225);
     $pdf->Rect($photoX, $photoY, $photoW, $photoH, 'FD');
-    $pdf->SetXY($photoX, $photoY + 8);
+    $pdf->SetXY($photoX, $photoY + 9);
     $pdf->SetFont('Arial', 'B', 6);
     $pdf->SetTextColor(148, 163, 184);
     $pdf->Cell($photoW, 4, $latin1('PHOTO'), 0, 1, 'C');
 } else {
-    $pdf->SetDrawColor(37, 99, 235);
+    $pdf->SetDrawColor(203, 213, 225);
     $pdf->SetLineWidth(0.3);
     $pdf->Rect($photoX, $photoY, $photoW, $photoH, 'D');
 }
 
-// Blood Group Pill under photo
-$pdf->SetFillColor(254, 242, 242);
-$pdf->SetDrawColor(254, 202, 202);
-$pdf->Rect($photoX, $photoY + $photoH + 1.2, $photoW, 4.2, 'FD');
-$pdf->SetXY($photoX, $photoY + $photoH + 1.5);
-$pdf->SetFont('Arial', 'B', 5);
-$pdf->SetTextColor(220, 38, 38);
-$pdf->Cell($photoW, 3.5, $latin1('Blood: ' . ($profile['blood_group'] ?? '—')), 0, 1, 'C');
-
-// Validity Pill under blood group
-$pdf->SetFillColor(236, 253, 245);
-$pdf->SetDrawColor(167, 243, 208);
-$pdf->Rect($photoX, $photoY + $photoH + 6.0, $photoW, 5.0, 'FD');
-$pdf->SetXY($photoX, $photoY + $photoH + 6.2);
-$pdf->SetFont('Arial', 'B', 4);
-$pdf->SetTextColor(4, 120, 87);
-$pdf->Cell($photoW, 2.3, $latin1('VALID TILL'), 0, 1, 'C');
-$pdf->SetXY($photoX, $photoY + $photoH + 8.4);
-$pdf->SetFont('Arial', 'B', 4.8);
-$pdf->SetTextColor(6, 95, 70);
-$pdf->Cell($photoW, 2.3, $latin1($validTillDate), 0, 1, 'C');
-
-// Right Column: Member Details
-$detailX = $photoX + $photoW + 3.0;
-$detailW = $cardW - $photoW - 8.0;
-
 // Member Name
-$pdf->SetXY($detailX, $startY + 13.5);
+$pdf->SetXY($startX + 2, $photoY + $photoH + 1.5);
 $pdf->SetFont('Arial', 'B', 7.5);
 $pdf->SetTextColor(15, 23, 42);
-$pdf->Cell($detailW, 3.8, $latin1(strtoupper((string)($member['name'] ?? ''))), 0, 1, 'L');
+$pdf->Cell($cardW - 4, 3.5, $latin1(strtoupper((string)($member['name'] ?? ''))), 0, 1, 'C');
 
-// Member No & Verified Chip
-$pdf->SetXY($detailX, $startY + 17.5);
-$pdf->SetFont('Arial', 'B', 6);
+// Member No & Verified Badges
+$badgeW = 22.0;
+$pdf->SetFillColor(239, 246, 255);
+$pdf->SetDrawColor(191, 219, 254);
+$pdf->Rect($startX + 4.5, $photoY + $photoH + 5.5, $badgeW, 3.6, 'FD');
+$pdf->SetXY($startX + 4.5, $photoY + $photoH + 5.8);
+$pdf->SetFont('Arial', 'B', 4.8);
 $pdf->SetTextColor(30, 64, 175);
-$pdf->Cell(28, 3.2, $latin1($member['member_no'] ?? ''), 0, 0, 'L');
-$pdf->SetFont('Arial', 'B', 5);
-$pdf->SetTextColor(22, 101, 52);
-$pdf->Cell(25, 3.2, $latin1('✓ ACTIVE MEMBER'), 0, 1, 'L');
+$pdf->Cell($badgeW, 3.0, $latin1((string)($member['member_no'] ?? '')), 0, 0, 'C');
 
-// Association Designation Banner (Replacing PDO!)
-$assocBoxY = $startY + 21.5;
-if ($isRepresentative) {
-    $pdf->SetFillColor(254, 243, 199);
-    $pdf->SetDrawColor(245, 158, 11);
-} else {
-    $pdf->SetFillColor(240, 249, 255);
-    $pdf->SetDrawColor(186, 230, 253);
-}
-$pdf->Rect($detailX, $assocBoxY, $detailW, 6.8, 'FD');
+$verW = 19.0;
+$pdf->SetFillColor(220, 252, 231);
+$pdf->SetDrawColor(187, 247, 208);
+$pdf->Rect($startX + 28.5, $photoY + $photoH + 5.5, $verW, 3.6, 'FD');
+$pdf->SetXY($startX + 28.5, $photoY + $photoH + 5.8);
+$pdf->SetFont('Arial', 'B', 4.8);
+$pdf->SetTextColor(21, 128, 61);
+$pdf->Cell($verW, 3.0, $latin1('VERIFIED'), 0, 1, 'C');
 
-$pdf->SetXY($detailX + 1.5, $assocBoxY + 0.8);
-$pdf->SetFont('Arial', 'B', 4.2);
-$pdf->SetTextColor(100, 116, 139);
-$pdf->Cell($detailW - 3, 2, $latin1('ASSOCIATION DESIGNATION:'), 0, 1, 'L');
-
-$pdf->SetXY($detailX + 1.5, $assocBoxY + 2.7);
-$pdf->SetFont('Arial', 'B', 6.0);
-$pdf->SetTextColor($isRepresentative ? 146 : 30, $isRepresentative ? 64 : 64, $isRepresentative ? 14 : 175);
-$assocTitleLine = $assocDesignation . ($assocSubLabel ? ' • ' . $assocSubLabel : '');
-$pdf->Cell($detailW - 3, 3.2, $latin1($assocTitleLine), 0, 1, 'L');
-
-// Service Details Grid
-$details = [
-    ['Official Post:', (string)($member['designation'] ?? 'Panchayat Development Officer')],
-    ['KGID No:', (string)($profile['kgid_no'] ?? '—')],
-    ['Gram Panchayat:', (string)($member['gp_name'] ?? '—')],
-    ['Taluk & District:', (string)($member['taluk_name'] ?? '—') . ', ' . (string)($member['district_name'] ?? '—')]
-];
-
-$gridY = $assocBoxY + 7.8;
-$pdf->SetFont('Arial', '', 4.8);
-
-foreach ($details as [$label, $val]) {
-    $pdf->SetXY($detailX, $gridY);
-    $pdf->SetFont('Arial', '', 4.6);
-    $pdf->SetTextColor(100, 116, 139);
-    $pdf->Cell(22, 2.9, $latin1($label), 0, 0, 'L');
-    $pdf->SetFont('Arial', 'B', 4.8);
-    $pdf->SetTextColor(15, 23, 42);
-    $pdf->Cell($detailW - 22, 2.9, $latin1($val), 0, 1, 'L');
-    $gridY += 3.0;
-}
-
-// Card Front Footer
+// Info Section (2-Column Box)
+$infoBoxY = $photoY + $photoH + 10.2;
 $pdf->SetFillColor(248, 250, 252);
-$pdf->Rect($startX, $startY + $cardH - 5.0, $cardW, 5.0, 'F');
 $pdf->SetDrawColor(226, 232, 240);
-$pdf->Line($startX, $startY + $cardH - 5.0, $startX + $cardW, $startY + $cardH - 5.0);
+$pdf->Rect($startX + 3, $infoBoxY, $cardW - 6, 12.0, 'FD');
 
-$pdf->SetXY($startX + 2.5, $startY + $cardH - 4.2);
-$pdf->SetFont('Arial', '', 4.2);
+$leftInfoX = $startX + 4.5;
+$rightInfoX = $startX + 27.5;
+
+// Left column: Official Post & Gram Panchayat
+$pdf->SetXY($leftInfoX, $infoBoxY + 1.0);
+$pdf->SetFont('Arial', '', 3.8);
 $pdf->SetTextColor(100, 116, 139);
-$pdf->Cell(45, 3.5, $latin1('KSPDOWA • OFFICIAL VERIFIED MEMBER'), 0, 0, 'L');
+$pdf->Cell(22, 1.8, $latin1('Official Post:'), 0, 1, 'L');
+$pdf->SetX($leftInfoX);
+$pdf->SetFont('Arial', 'B', 4.5);
+$pdf->SetTextColor(15, 23, 42);
+$pdf->Cell(22, 2.5, $latin1((string)($member['designation'] ?? 'PDO')), 0, 1, 'L');
 
+$pdf->SetXY($leftInfoX, $infoBoxY + 6.2);
+$pdf->SetFont('Arial', '', 3.8);
+$pdf->SetTextColor(100, 116, 139);
+$pdf->Cell(22, 1.8, $latin1('Gram Panchayat:'), 0, 1, 'L');
+$pdf->SetX($leftInfoX);
+$pdf->SetFont('Arial', 'B', 4.5);
+$pdf->SetTextColor(15, 23, 42);
+$pdf->Cell(22, 2.5, $latin1((string)($member['gp_name'] ?? '—')), 0, 1, 'L');
+
+// Right column: KGID Number & Taluk/District
+$pdf->SetXY($rightInfoX, $infoBoxY + 1.0);
+$pdf->SetFont('Arial', '', 3.8);
+$pdf->SetTextColor(100, 116, 139);
+$pdf->Cell(22, 1.8, $latin1('KGID Number:'), 0, 1, 'L');
+$pdf->SetX($rightInfoX);
+$pdf->SetFont('Arial', 'B', 4.5);
+$pdf->SetTextColor(15, 23, 42);
+$pdf->Cell(22, 2.5, $latin1((string)($profile['kgid_no'] ?? '—')), 0, 1, 'L');
+
+$pdf->SetXY($rightInfoX, $infoBoxY + 6.2);
+$pdf->SetFont('Arial', '', 3.8);
+$pdf->SetTextColor(100, 116, 139);
+$pdf->Cell(22, 1.8, $latin1('Taluk / District:'), 0, 1, 'L');
+$pdf->SetX($rightInfoX);
 $pdf->SetFont('Arial', 'B', 4.2);
-$pdf->SetTextColor(30, 64, 175);
-$pdf->Cell($cardW - 50, 3.5, $latin1('STATE OF KARNATAKA'), 0, 1, 'R');
+$pdf->SetTextColor(15, 23, 42);
+$locStr = (string)($member['taluk_name'] ?? '') . ', ' . (string)($member['district_name'] ?? '');
+$pdf->Cell(22, 2.5, $latin1(strtoupper(trim($locStr, ', '))), 0, 1, 'L');
 
-// Label under front card
+// Bottom Badges: Blood & Valid Till
+$badgeY = $infoBoxY + 13.2;
+$pdf->SetFillColor(254, 226, 226);
+$pdf->SetDrawColor(254, 202, 202);
+$pdf->Rect($startX + 3, $badgeY, 21, 4.0, 'FD');
+$pdf->SetXY($startX + 3, $badgeY + 0.8);
+$pdf->SetFont('Arial', 'B', 4.8);
+$pdf->SetTextColor(185, 28, 28);
+$pdf->Cell(21, 2.6, $latin1('Blood: ' . ($profile['blood_group'] ?? '—')), 0, 0, 'C');
+
+$pdf->SetFillColor(220, 252, 231);
+$pdf->SetDrawColor(187, 247, 208);
+$pdf->Rect($startX + 27, $badgeY, 24, 4.0, 'FD');
+$pdf->SetXY($startX + 27, $badgeY + 0.8);
+$pdf->SetFont('Arial', 'B', 4.5);
+$pdf->SetTextColor(21, 128, 61);
+$pdf->Cell(24, 2.6, $latin1('VALID TILL ' . $validTillDate), 0, 1, 'C');
+
+// Footer: Dark Blue Banner
+$pdf->SetFillColor(30, 58, 138);
+$pdf->Rect($startX, $startY + $cardH - 5.5, $cardW, 5.5, 'F');
+$pdf->SetXY($startX, $startY + $cardH - 4.4);
+$pdf->SetFont('Arial', 'B', 4.5);
+$pdf->SetTextColor(255, 255, 255);
+$pdf->Cell($cardW, 3.2, $latin1('UNITED WE STAND, TOGETHER WE SERVE'), 0, 1, 'C');
+
+// Centered label under front card
 $pdf->SetXY($startX, $startY + $cardH + 2.0);
-$pdf->SetFont('Arial', 'B', 7);
+$pdf->SetFont('Arial', '', 5.5);
 $pdf->SetTextColor(100, 116, 139);
-$pdf->Cell($cardW, 4, $latin1('FRONT SIDE (ಮುಂಭಾಗ)'), 0, 1, 'C');
+$pdf->Cell($cardW, 3.0, $latin1('Official Welfare Association Member Card'), 0, 1, 'C');
 
 // ═════════════════════════════════════════════════════════════════════════════
-// 2. BACK SIDE OF ID CARD (85.6mm x 54.0mm — EXACT SAME SIZE)
+// 2. BACK SIDE OF ID CARD (PORTRAIT: 54.0mm x 85.6mm)
 // ═════════════════════════════════════════════════════════════════════════════
 $backStartX = $startX + $cardW + $gap;
 $backStartY = $startY;
@@ -336,159 +359,154 @@ $pdf->SetDrawColor(148, 163, 184);
 $pdf->SetLineWidth(0.35);
 $pdf->Rect($backStartX, $backStartY, $cardW, $cardH, 'D');
 
-// Back Header
-$pdf->SetFillColor(15, 23, 42); // Dark slate
-$pdf->Rect($backStartX, $backStartY, $cardW, 7.5, 'F');
+// Header Background (Dark Charcoal)
+$pdf->SetFillColor(15, 23, 42);
+$pdf->Rect($backStartX, $backStartY, $cardW, 11.0, 'F');
 
-// Gold stripe under back header
+// Yellow stripe
 $pdf->SetFillColor(245, 158, 11);
-$pdf->Rect($backStartX, $backStartY + 7.5, $cardW, 0.6, 'F');
+$pdf->Rect($backStartX, $backStartY + 11.0, $cardW, 0.6, 'F');
 
-$pdf->SetXY($backStartX, $backStartY + 1.5);
-$pdf->SetFont('Arial', 'B', 5.5);
-$pdf->SetTextColor(255, 255, 255);
-$pdf->Cell($cardW, 3.0, $latin1('MEMBERSHIP TERMS & ASSOCIATION CONTACT'), 0, 1, 'C');
-
-$pdf->SetXY($backStartX, $backStartY + 4.2);
-$pdf->SetFont('Arial', '', 4.2);
+$pdf->SetXY($backStartX, $backStartY + 1.2);
+$pdf->SetFont('Arial', '', 3.6);
 $pdf->SetTextColor(203, 213, 225);
-$pdf->Cell($cardW, 2.5, $latin1($siteName), 0, 1, 'C');
+$pdf->Cell($cardW, 2.0, $latin1('GOVERNMENT-RECOGNIZED SERVICE ASSOCIATION'), 0, 1, 'C');
 
-// Back Content: Emergency & Office
-$backContentX = $backStartX + 3.0;
-$backContentW = $cardW - 6.0;
+$pdf->SetXY($backStartX, $backStartY + 3.6);
+$pdf->SetFont('Arial', 'B', 4.5);
+$pdf->SetTextColor(255, 255, 255);
+$pdf->Cell($cardW, 2.6, $latin1('MEMBERSHIP IDENTITY & CONTACT INFORMATION'), 0, 1, 'C');
 
-// Emergency Contacts Box
-$pdf->SetXY($backContentX, $backStartY + 9.5);
-$pdf->SetFont('Arial', 'B', 5.0);
+$pdf->SetXY($backStartX, $backStartY + 6.6);
+$pdf->SetFont('Arial', '', 3.8);
+$pdf->SetTextColor(203, 213, 225);
+$pdf->Cell($cardW, 2.4, $latin1('KARNATAKA STATE PDO WELFARE ASSOCIATION (R)'), 0, 1, 'C');
+
+// Emergency Section
+$pdf->SetXY($backStartX + 3, $backStartY + 13.0);
+$pdf->SetFont('Arial', 'B', 4.5);
 $pdf->SetTextColor(30, 64, 175);
-$pdf->Cell($backContentW, 3.0, $latin1('EMERGENCY & PERSONAL INFORMATION:'), 0, 1, 'L');
+$pdf->Cell($cardW - 6, 2.6, $latin1('EMERGENCY & PERSONAL INFORMATION'), 0, 1, 'L');
 
 $pdf->SetFillColor(248, 250, 252);
 $pdf->SetDrawColor(226, 232, 240);
-$pdf->Rect($backContentX, $backStartY + 12.8, $backContentW, 9.0, 'FD');
+$pdf->Rect($backStartX + 3, $backStartY + 16.0, $cardW - 6, 12.0, 'FD');
 
-$pdf->SetXY($backContentX + 1.5, $backStartY + 13.5);
-$pdf->SetFont('Arial', '', 4.6);
+$bLeftX = $backStartX + 4.5;
+$bRightX = $backStartX + 29.0;
+
+$pdf->SetXY($bLeftX, $backStartY + 17.0);
+$pdf->SetFont('Arial', '', 3.6);
 $pdf->SetTextColor(100, 116, 139);
-$pdf->Cell(24, 2.7, $latin1('Registered Mobile:'), 0, 0, 'L');
-$pdf->SetFont('Arial', 'B', 4.8);
+$pdf->Cell(20, 1.8, $latin1('Registered Mobile:'), 0, 1, 'L');
+$pdf->SetX($bLeftX);
+$pdf->SetFont('Arial', 'B', 4.5);
 $pdf->SetTextColor(15, 23, 42);
-$pdf->Cell(20, 2.7, $latin1((string)($profile['personal_mobile'] ?? $member['mobile'] ?? '—')), 0, 0, 'L');
+$pdf->Cell(20, 2.5, $latin1((string)($profile['personal_mobile'] ?? $member['mobile'] ?? '—')), 0, 1, 'L');
 
-$pdf->SetFont('Arial', '', 4.6);
+$pdf->SetXY($bLeftX, $backStartY + 22.0);
+$pdf->SetFont('Arial', '', 3.6);
 $pdf->SetTextColor(100, 116, 139);
-$pdf->Cell(20, 2.7, $latin1('Native District:'), 0, 0, 'L');
-$pdf->SetFont('Arial', 'B', 4.8);
-$pdf->SetTextColor(15, 23, 42);
-$pdf->Cell(0, 2.7, $latin1((string)($profile['native_district'] ?? '—')), 0, 1, 'L');
-
-$pdf->SetXY($backContentX + 1.5, $backStartY + 17.5);
-$pdf->SetFont('Arial', '', 4.6);
-$pdf->SetTextColor(100, 116, 139);
-$pdf->Cell(24, 2.7, $latin1('Blood Group:'), 0, 0, 'L');
-$pdf->SetFont('Arial', 'B', 4.8);
+$pdf->Cell(20, 1.8, $latin1('Blood Group:'), 0, 1, 'L');
+$pdf->SetX($bLeftX);
+$pdf->SetFont('Arial', 'B', 4.5);
 $pdf->SetTextColor(220, 38, 38);
-$pdf->Cell(20, 2.7, $latin1((string)($profile['blood_group'] ?? '—')), 0, 0, 'L');
+$pdf->Cell(20, 2.5, $latin1((string)($profile['blood_group'] ?? '—')), 0, 1, 'L');
 
-$pdf->SetFont('Arial', '', 4.6);
+$pdf->SetXY($bRightX, $backStartY + 17.0);
+$pdf->SetFont('Arial', '', 3.6);
 $pdf->SetTextColor(100, 116, 139);
-$pdf->Cell(20, 2.7, $latin1('Financial Year:'), 0, 0, 'L');
-$pdf->SetFont('Arial', 'B', 4.8);
-$pdf->SetTextColor(21, 128, 61);
-$pdf->Cell(0, 2.7, $latin1((string)$fy), 0, 1, 'L');
-
-// Central Association Office Box (Settings Integration)
-$officeBoxY = $backStartY + 23.0;
-$pdf->SetXY($backContentX, $officeBoxY);
-$pdf->SetFont('Arial', 'B', 4.8);
-$pdf->SetTextColor(30, 64, 175);
-$pdf->Cell($backContentW, 2.7, $latin1('CENTRAL ASSOCIATION OFFICE:'), 0, 1, 'L');
-
-$pdf->SetFillColor(248, 250, 252);
-$pdf->Rect($backContentX, $officeBoxY + 3.0, $backContentW, 11.5, 'FD');
-
-$pdf->SetXY($backContentX + 1.5, $officeBoxY + 3.8);
-$pdf->SetFont('Arial', 'B', 4.6);
+$pdf->Cell(20, 1.8, $latin1('Native District:'), 0, 1, 'L');
+$pdf->SetX($bRightX);
+$pdf->SetFont('Arial', 'B', 4.5);
 $pdf->SetTextColor(15, 23, 42);
-$pdf->Cell($backContentW - 3, 2.4, $latin1($siteName), 0, 1, 'L');
+$pdf->Cell(20, 2.5, $latin1((string)($profile['native_district'] ?? '—')), 0, 1, 'L');
 
-$pdf->SetXY($backContentX + 1.5, $officeBoxY + 6.4);
-$pdf->SetFont('Arial', '', 4.3);
-$pdf->SetTextColor(71, 85, 105);
-$pdf->Cell($backContentW - 3, 2.4, $latin1($siteAddress), 0, 1, 'L');
-
-$pdf->SetXY($backContentX + 1.5, $officeBoxY + 9.0);
-$pdf->Cell($backContentW - 3, 2.4, $latin1('Helpline: ' . $sitePhone . '  •  Email: ' . $siteEmail), 0, 1, 'L');
-
-$pdf->SetXY($backContentX + 1.5, $officeBoxY + 11.6);
-$pdf->Cell($backContentW - 3, 2.4, $latin1('Website: ' . $siteWebsite), 0, 1, 'L');
-
-// Terms & Instructions + Signatory
-$termsY = $officeBoxY + 16.0;
-$pdf->SetDrawColor(203, 213, 225);
-$pdf->Line($backContentX, $termsY, $backContentX + $backContentW, $termsY);
-
-$pdf->SetXY($backContentX, $termsY + 1.0);
-$pdf->SetFont('Arial', '', 4.0);
+$pdf->SetXY($bRightX, $backStartY + 22.0);
+$pdf->SetFont('Arial', '', 3.6);
 $pdf->SetTextColor(100, 116, 139);
-$pdf->MultiCell(52, 2.1, $latin1(
+$pdf->Cell(20, 1.8, $latin1('Financial Year:'), 0, 1, 'L');
+$pdf->SetX($bRightX);
+$pdf->SetFont('Arial', 'B', 4.5);
+$pdf->SetTextColor(21, 128, 61);
+$pdf->Cell(20, 2.5, $latin1((string)$fy), 0, 1, 'L');
+
+// Association Box
+$assocBoxY2 = $backStartY + 29.5;
+$pdf->SetFillColor(248, 250, 252);
+$pdf->SetDrawColor(203, 213, 225);
+$pdf->Rect($backStartX + 3, $assocBoxY2, $cardW - 6, 21.0, 'FD');
+
+$pdf->SetXY($backStartX + 4.5, $assocBoxY2 + 1.5);
+$pdf->SetFont('Arial', 'B', 4.0);
+$pdf->SetTextColor(15, 23, 42);
+$pdf->MultiCell($cardW - 9, 2.0, $latin1($siteName));
+
+$pdf->SetXY($backStartX + 4.5, $assocBoxY2 + 6.2);
+$pdf->SetFont('Arial', '', 3.6);
+$pdf->SetTextColor(71, 85, 105);
+$pdf->MultiCell($cardW - 9, 2.0, $latin1($siteAddress));
+
+$pdf->SetXY($backStartX + 4.5, $assocBoxY2 + 12.8);
+$pdf->SetFont('Arial', '', 3.6);
+$pdf->Cell($cardW - 9, 2.0, $latin1('Helpline: ' . $sitePhone . ' • Email: ' . $siteEmail), 0, 1, 'L');
+
+$pdf->SetXY($backStartX + 4.5, $assocBoxY2 + 16.0);
+$pdf->Cell($cardW - 9, 2.0, $latin1('Website: ' . $siteWebsite), 0, 1, 'L');
+
+// Fine print & Signatory
+$signSecY = $backStartY + 52.0;
+$pdf->SetDrawColor(203, 213, 225);
+$pdf->Line($backStartX + 3, $signSecY, $backStartX + $cardW - 3, $signSecY);
+
+$pdf->SetXY($backStartX + 3, $signSecY + 1.5);
+$pdf->SetFont('Arial', '', 3.2);
+$pdf->SetTextColor(100, 116, 139);
+$pdf->MultiCell(32, 1.8, $latin1(
     "1. Property of KSPDOWA; non-transferable.\n" .
-    "2. If found, please return to nearest office.\n" .
-    "3. Valid till: " . $validTillDate . " (subject to renewal)."
+    "2. If found, return to nearest office.\n" .
+    "3. Valid till: " . $validTillDate . " (FY " . $fy . ")."
 ));
 
-// Signatory Block (Right side of Terms)
-$pdf->SetXY($backStartX + $cardW - 28.0, $termsY + 1.2);
-$pdf->SetFont('Arial', 'B', 5.0);
+$pdf->SetXY($backStartX + $cardW - 19, $signSecY + 2.0);
+$pdf->SetFont('Arial', 'B', 4.5);
 $pdf->SetTextColor(15, 23, 42);
-$pdf->Cell(25, 2.2, $latin1('Sd/-'), 0, 1, 'C');
-$pdf->SetX($backStartX + $cardW - 28.0);
-$pdf->SetFont('Arial', 'B', 4.8);
+$pdf->Cell(17, 2.0, $latin1('Sd/-'), 0, 1, 'C');
+$pdf->SetX($backStartX + $cardW - 19);
+$pdf->SetFont('Arial', 'B', 4.0);
 $pdf->SetTextColor(30, 64, 175);
-$pdf->Cell(25, 2.2, $latin1('General Secretary'), 0, 1, 'C');
-$pdf->SetX($backStartX + $cardW - 28.0);
-$pdf->SetFont('Arial', '', 4.0);
+$pdf->Cell(17, 2.0, $latin1('General Secretary'), 0, 1, 'C');
+$pdf->SetX($backStartX + $cardW - 19);
+$pdf->SetFont('Arial', '', 3.2);
 $pdf->SetTextColor(100, 116, 139);
-$pdf->Cell(25, 2.0, $latin1('KSPDOWA State Committee'), 0, 1, 'C');
+$pdf->Cell(17, 1.8, $latin1('KSPDOWA State Comm.'), 0, 1, 'C');
 
-// Card Back Footer
-$pdf->SetFillColor(248, 250, 252);
-$pdf->Rect($backStartX, $backStartY + $cardH - 5.0, $cardW, 5.0, 'F');
-$pdf->SetDrawColor(226, 232, 240);
-$pdf->Line($backStartX, $backStartY + $cardH - 5.0, $backStartX + $cardW, $backStartY + $cardH - 5.0);
-
-$pdf->SetXY($backStartX + 2.5, $backStartY + $cardH - 4.2);
-$pdf->SetFont('Arial', '', 4.2);
-$pdf->SetTextColor(100, 116, 139);
-$pdf->Cell(45, 3.5, $latin1($siteTagline), 0, 0, 'L');
-
-$pdf->SetFont('Arial', 'B', 4.2);
-$pdf->SetTextColor(71, 85, 105);
-$pdf->Cell($cardW - 50, 3.5, $latin1('BENGALURU • KARNATAKA'), 0, 1, 'R');
+// Back Footer
+$pdf->SetFillColor(226, 232, 240);
+$pdf->Rect($backStartX, $backStartY + $cardH - 5.5, $cardW, 5.5, 'F');
+$pdf->SetXY($backStartX + 2, $backStartY + $cardH - 4.4);
+$pdf->SetFont('Arial', 'B', 3.8);
+$pdf->SetTextColor(51, 65, 85);
+$pdf->Cell(28, 3.2, $latin1('Government-Recognized Service Assn.'), 0, 0, 'L');
+$pdf->Cell($cardW - 32, 3.2, $latin1('BENGALURU • KARNATAKA'), 0, 1, 'R');
 
 // Label under back card
 $pdf->SetXY($backStartX, $backStartY + $cardH + 2.0);
-$pdf->SetFont('Arial', 'B', 7);
+$pdf->SetFont('Arial', '', 5.5);
 $pdf->SetTextColor(100, 116, 139);
-$pdf->Cell($cardW, 4, $latin1('BACK SIDE (ಹಿಂಭಾಗ)'), 0, 1, 'C');
+$pdf->Cell($cardW, 3.0, $latin1('Back Side Information'), 0, 1, 'C');
 
-// ─────────────────────────────────────────────────────────────────────────────
-// PRINTING & PVC CARD GUIDELINES SECTION
-// ─────────────────────────────────────────────────────────────────────────────
-$guideY = $startY + $cardH + 12.0;
-$pdf->SetXY(14.4, $guideY);
-$pdf->SetFont('Arial', 'B', 9.5);
+// Instructions for printing
+$pdf->SetXY(15, $startY + $cardH + 12.0);
+$pdf->SetFont('Arial', 'B', 9);
 $pdf->SetTextColor(30, 64, 175);
-$pdf->Cell(0, 5, $latin1('CR80 Printing & Lamination Instructions (ಮುದ್ರಣ ಮತ್ತು ಲ್ಯಾಮಿನೇಷನ್ ಮಾರ್ಗಸೂಚಿ):'), 0, 1, 'L');
-
+$pdf->Cell(0, 5, $latin1('CR80 Printing & Lamination Instructions:'), 0, 1, 'L');
 $pdf->SetFont('Arial', '', 8.5);
 $pdf->SetTextColor(71, 85, 105);
 $pdf->MultiCell(0, 4.4, $latin1(
-    "1. Standard CR80 Size: Front and back cards are exactly 85.60 mm x 53.98 mm (Standard ID-1 / Credit Card dimensions).\n" .
-    "2. Print Scale: Print this sheet at 100% actual scale (do NOT select 'Fit to Page' or 'Shrink to Printable Area').\n" .
-    "3. Paper Recommendation: Use 280+ GSM photo paper, glossy synthetic paper, or direct PVC card printer.\n" .
-    "4. Assembly: Cut along the outer rectangle guidelines and place both cards inside a standard PVC ID pouch or laminate."
+    "1. Print at 100% actual scale on photo paper or 280+ GSM synthetic PVC paper.\n" .
+    "2. Cut along the outer rectangle guides for Front and Back sides.\n" .
+    "3. Standard CR80 Size (54.0 mm x 85.6 mm) fits all standard vertical badge holders and pouches."
 ));
 
 // Output PDF

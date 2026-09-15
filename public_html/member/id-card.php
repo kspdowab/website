@@ -3,7 +3,8 @@
  * KSPDOWA — Member Portal: Official Digital ID Card
  * ============================================================
  * Section 8: Digital ID Card (Front & Back, .jpg & .pdf download, print)
- * Global Standard Horizontal CR80 Format (85.6mm x 54mm ratio)
+ * Global Standard Vertical (Portrait) CR80 Format (54mm x 85.6mm)
+ * Print-ready, flat 2D graphic design matching official specification
  * Side-by-side combined JPG & PDF export with dynamic settings & logos
  * ============================================================
  */
@@ -38,12 +39,12 @@ $validTillDate = !empty($currentYear['end_date'])
 $validityDisplay = 'Valid Till: ' . $validTillDate . ' (FY ' . $fy . ')';
 
 // Association Identity & Contact Settings
-$siteName     = Settings::get('site_name', 'Karnataka State Panchayat Development Officers Welfare Association (R)');
-$siteTagline  = Settings::get('site_tagline', 'Reg. No. DRB/SOR/534/2012-13 • Bengaluru');
-$siteAddress  = Settings::get('site_address', 'State Central Office, Bengaluru, Karnataka');
-$sitePhone    = Settings::get('site_phone', '9036880026');
-$siteEmail    = Settings::get('site_email', 'contact@kspdowa.org');
-$siteWebsite  = Settings::get('site_website', 'https://kspdowa.org');
+$siteName     = Settings::get('site_name', 'KARNATAKA STATE PANCHAYAT DEVELOPMENT OFFICER WELFARE ASSOCIATION (R)');
+$siteTagline  = Settings::get('site_tagline', 'Government-Recognized Service Association');
+$siteAddress  = Settings::get('site_address', '# 204, 2nd Floor, Karnataka Panchayat Raj Commissionerate, K. G. Road, Bengaluru – 560009');
+$sitePhone    = Settings::get('site_phone', '9964010162');
+$siteEmail    = Settings::get('site_email', 'kspdowab@gmail.com');
+$siteWebsite  = Settings::get('site_website', 'https://kspdowa.in');
 
 // Helper to resolve logo to absolute path
 $resolveLogoPath = function(string $settingKey, string $defaultRel): string {
@@ -102,7 +103,6 @@ if ($officeBearer) {
     $isRepresentative = true;
     $assocDesignation = $officeBearer['association_designation'];
 
-    // Level indicator
     if (!empty($officeBearer['taluk_id']) && !empty($officeBearer['ob_taluk_name'])) {
         $assocSubLabel = 'Taluk Unit (' . $officeBearer['ob_taluk_name'] . ')';
     } elseif (!empty($officeBearer['district_id']) && !empty($officeBearer['ob_district_name'])) {
@@ -121,6 +121,19 @@ if ($officeBearer) {
 } else {
     $assocDesignation = 'Active Member (ಸಕ್ರಿಯ ಸದಸ್ಯರು)';
 }
+
+// Formatting helpers
+$memberName = strtoupper((string)($portalMember['name'] ?? ''));
+$memberNo   = (string)($portalMember['member_no'] ?? 'KSPDOWA-BGK-0001');
+$kgidNo     = (string)($profile['kgid_no'] ?? '—');
+$officialPost = (string)($portalMember['designation'] ?? 'PDO');
+$gpName     = (string)($portalMember['gp_name'] ?? '—');
+$talukName  = (string)($portalMember['taluk_name'] ?? '—');
+$districtName = (string)($portalMember['district_name'] ?? '—');
+$locationStr = strtoupper(trim(($talukName !== '—' ? $talukName : '') . ($districtName !== '—' ? ($talukName !== '—' ? ', ' : '') . $districtName : '—')));
+$bloodGroup = (string)($profile['blood_group'] ?? '—');
+$mobileNumber = (string)($profile['personal_mobile'] ?? $portalMember['mobile'] ?? '—');
+$nativeDistrict = (string)($profile['native_district'] ?? '—');
 ?>
 
 <!-- Load html2canvas for instant 300-DPI high-res JPG export -->
@@ -128,276 +141,259 @@ if ($officeBearer) {
 
 <style>
 /* ─────────────────────────────────────────────────────────────────────────────
-   GLOBAL STANDARD HORIZONTAL CR80 ID CARD (520px x 328px — 1.585:1 Aspect Ratio)
+   PRINT-READY FLAT 2D GRAPHIC DESIGN: VERTICAL CR80 ID CARD (375px x 595px)
    ───────────────────────────────────────────────────────────────────────────── */
-.id-card-cr80 {
-    width: 520px;
-    height: 328px;
+.id-preview-wrapper {
     background: #ffffff;
-    border-radius: 14px;
-    box-shadow: 0 10px 25px -4px rgba(15, 23, 42, 0.16), 0 0 0 1px rgba(203, 213, 225, 0.9);
+    padding: 30px 20px 40px;
+    border-radius: 12px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.id-card-side-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.id-side-title-label {
+    font-size: 14px;
+    font-weight: 700;
+    color: #475569;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    font-family: inherit;
+}
+
+.id-card-portrait {
+    width: 375px;
+    height: 595px;
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 10px 25px -4px rgba(15, 23, 42, 0.12), 0 0 0 1.5px rgba(203, 213, 225, 0.9);
     overflow: hidden;
     position: relative;
     user-select: none;
     display: flex;
     flex-direction: column;
-    box-sizing: border-box;
-    flex-shrink: 0;
-}
-
-/* Header Gradient */
-.id-cr80-header {
-    background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 45%, #2563eb 100%);
-    color: #ffffff;
-    padding: 7px 12px;
-    height: 64px;
-    display: flex;
-    align-items: center;
     justify-content: space-between;
-    border-bottom: 2.5px solid #f59e0b;
     box-sizing: border-box;
-    position: relative;
-}
-.id-cr80-logo {
-    width: 46px;
-    height: 46px;
-    border-radius: 6px;
-    background: #ffffff;
-    padding: 2px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-    display: flex;
-    align-items: center;
-    justify-content: center;
     flex-shrink: 0;
 }
-.id-cr80-logo img {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
-}
-.id-cr80-header-center {
-    flex: 1;
-    text-align: center;
-    padding: 0 8px;
-    overflow: hidden;
-}
-.id-cr80-header-kannada {
-    font-size: 9.5px;
-    font-weight: 800;
-    color: #ffffff;
-    letter-spacing: 0.2px;
-    line-height: 1.15;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.id-cr80-header-title {
-    font-size: 8.5px;
-    font-weight: 800;
-    color: #fde047;
-    letter-spacing: 0.3px;
-    line-height: 1.15;
-    text-transform: uppercase;
-    margin-top: 1px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.id-cr80-header-tagline {
-    font-size: 7.5px;
-    color: #e0e7ff;
-    letter-spacing: 0.2px;
-    line-height: 1.1;
-    margin-top: 1px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
 
-/* Body Layout */
-.id-cr80-body {
-    flex: 1;
-    display: flex;
-    padding: 8px 12px 6px;
-    position: relative;
-    background: #ffffff;
-    overflow: hidden;
-    box-sizing: border-box;
-}
-.id-cr80-watermark {
+/* Watermark */
+.id-portrait-watermark {
     position: absolute;
-    top: 52%;
+    top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%) rotate(-18deg);
-    font-size: 3.2rem;
+    transform: translate(-50%, -50%) rotate(-28deg);
+    font-size: 3.6rem;
     font-weight: 900;
-    color: rgba(30, 64, 175, 0.035);
+    color: rgba(30, 64, 175, 0.04);
     pointer-events: none;
     white-space: nowrap;
-    letter-spacing: 3px;
+    letter-spacing: 4px;
     z-index: 0;
 }
 
-/* Left Column: Photo, Blood Group, Validity */
-.id-cr80-col-photo {
-    width: 106px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    flex-shrink: 0;
-    margin-right: 12px;
+/* ── FRONT CARD STYLES ─────────────────────────────────────────────────────── */
+.id-front-header {
+    background: linear-gradient(135deg, #1b3a7b 0%, #1e40af 50%, #2563eb 100%);
+    color: #ffffff;
+    padding: 6px 10px 6px;
+    border-bottom: 2.5px solid #f59e0b; /* Thin yellow horizontal line */
+    position: relative;
     z-index: 1;
-}
-.id-cr80-photo-box {
-    width: 104px;
-    height: 122px;
-    border-radius: 8px;
-    background: #f8fafc;
-    border: 2px solid #3b82f6;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
-}
-.id-cr80-photo-box img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-.id-cr80-blood-pill {
-    width: 104px;
-    margin-top: 5px;
-    background: #fef2f2;
-    border: 1px solid #fecaca;
-    color: #dc2626;
-    font-size: 10px;
-    font-weight: 800;
-    text-align: center;
-    border-radius: 4px;
-    padding: 2px 0;
-    line-height: 1.1;
-}
-.id-cr80-validity-pill {
-    width: 104px;
-    margin-top: 4px;
-    background: #ecfdf5;
-    border: 1px solid #a7f3d0;
-    color: #065f46;
-    font-size: 8px;
-    font-weight: 700;
-    text-align: center;
-    border-radius: 4px;
-    padding: 2px 1px;
-    line-height: 1.15;
 }
 
-/* Right Column: Member Details */
-.id-cr80-col-details {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    z-index: 1;
-    overflow: hidden;
-}
-.id-cr80-member-name {
-    font-size: 14px;
-    font-weight: 900;
-    color: #0f172a;
-    line-height: 1.2;
-    text-transform: uppercase;
+.id-gov-recon-line {
+    font-size: 7.2px;
+    font-weight: 600;
+    color: #f1f5f9;
+    text-align: center;
+    letter-spacing: 0.3px;
+    line-height: 1.1;
+    margin-bottom: 4px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
-.id-cr80-badges-row {
+
+.id-front-header-row {
     display: flex;
     align-items: center;
-    gap: 6px;
-    margin-top: 2px;
-}
-.id-cr80-member-no {
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    font-size: 10.5px;
-    font-weight: 800;
-    color: #1e40af;
-    background: #eff6ff;
-    border: 1px solid #bfdbfe;
-    padding: 1px 7px;
-    border-radius: 4px;
-}
-.id-cr80-status-pill {
-    font-size: 8.5px;
-    font-weight: 800;
-    color: #15803d;
-    background: #dcfce7;
-    border: 1px solid #bbf7d0;
-    padding: 1px 6px;
-    border-radius: 4px;
+    justify-content: space-between;
+    gap: 8px;
 }
 
-/* Association Designation Banner */
-.id-cr80-assoc-banner {
-    margin-top: 5px;
-    padding: 4px 8px;
-    border-radius: 5px;
-    border-left: 3.5px solid #2563eb;
-    background: #f0fdf4;
-    border-top: 1px solid #e2e8f0;
-    border-right: 1px solid #e2e8f0;
-    border-bottom: 1px solid #e2e8f0;
+.id-front-logo-box {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25);
+    flex-shrink: 0;
 }
-.id-cr80-assoc-rep {
-    background: linear-gradient(135deg, #fffbeb, #fef3c7);
-    border-left-color: #d97706;
-    border-color: #fde68a;
+.id-front-logo-box img {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
 }
-.id-cr80-assoc-label {
-    font-size: 7.5px;
-    font-weight: 700;
-    color: #64748b;
+
+.id-front-header-center {
+    flex: 1;
+    text-align: center;
+    line-height: 1.15;
+}
+
+.id-front-title-kannada {
+    font-size: 9.5px;
+    font-weight: 800;
+    color: #ffffff;
+    line-height: 1.2;
+}
+
+.id-front-title-english {
+    font-size: 8px;
+    font-weight: 800;
+    color: #fde047; /* Yellow accent */
+    letter-spacing: 0.2px;
+    margin-top: 2px;
+    line-height: 1.15;
     text-transform: uppercase;
-    letter-spacing: 0.4px;
-    line-height: 1;
 }
-.id-cr80-assoc-title {
-    font-size: 11.5px;
-    font-weight: 900;
-    color: #1e3a8a;
-    line-height: 1.25;
-    margin-top: 1px;
+
+/* Upper-Middle: Association Designation */
+.id-assoc-sec {
+    text-align: center;
+    margin-top: 6px;
+    z-index: 1;
+    position: relative;
 }
-.id-cr80-assoc-rep .id-cr80-assoc-title {
+.id-assoc-subtitle {
+    font-size: 8px;
+    font-weight: 800;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+}
+.id-assoc-box {
+    display: inline-block;
+    background: #f0fdf4;
+    border: 1.5px solid #16a34a;
+    color: #166534;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 3px 12px;
+    border-radius: 6px;
+    line-height: 1.2;
+}
+.id-assoc-box.is-rep {
+    background: #fffbeb;
+    border-color: #d97706;
     color: #92400e;
 }
-.id-cr80-assoc-sub {
-    font-size: 8.5px;
+.id-assoc-rep-sub {
+    font-size: 8px;
     font-weight: 700;
     color: #b45309;
     margin-top: 1px;
 }
 
-/* Official Service Details Grid */
-.id-cr80-info-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 3px 8px;
-    font-size: 9px;
+/* Portrait Photo */
+.id-portrait-photo-wrap {
+    text-align: center;
+    margin: 6px 0 4px;
+    z-index: 1;
+    position: relative;
+}
+.id-portrait-photo {
+    width: 106px;
+    height: 126px;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 8px;
+    background: #f8fafc;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+.id-portrait-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Name & ID Badges */
+.id-name-sec {
+    text-align: center;
+    z-index: 1;
+    position: relative;
+}
+.id-name-text {
+    font-size: 14.5px;
+    font-weight: 900;
+    color: #0f172a;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    line-height: 1.2;
+}
+.id-badges-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+}
+.id-badge-memberno {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1e40af;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-weight: 800;
+    font-size: 10.5px;
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+.id-badge-verified {
+    background: #dcfce7;
+    border: 1px solid #bbf7d0;
+    color: #15803d;
+    font-weight: 800;
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 4px;
+}
+
+/* Info Section Block */
+.id-info-block {
+    margin: 6px 14px;
     background: #f8fafc;
     border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    padding: 5px 8px;
-    margin-top: 5px;
+    border-radius: 7px;
+    padding: 7px 12px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3px 10px;
+    font-size: 9.5px;
+    z-index: 1;
+    position: relative;
 }
-.id-cr80-info-label {
+.id-info-cell-label {
+    font-size: 8px;
     color: #64748b;
-    font-size: 7.5px;
     display: block;
     line-height: 1.1;
 }
-.id-cr80-info-val {
+.id-info-cell-val {
     color: #0f172a;
     font-weight: 700;
     line-height: 1.2;
@@ -406,84 +402,193 @@ if ($officeBearer) {
     text-overflow: ellipsis;
 }
 
-/* Footer Bar */
-.id-cr80-footer {
-    height: 32px;
-    background: #f8fafc;
-    border-top: 1px solid #e2e8f0;
-    padding: 0 14px;
+/* Bottom Badges: Blood & Valid Till */
+.id-bottom-badges-row {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 8px;
-    color: #64748b;
-    box-sizing: border-box;
-}
-
-/* ─────────────────────────────────────────────────────────────────────────────
-   BACK SIDE STYLES
-   ───────────────────────────────────────────────────────────────────────────── */
-.id-cr80-back-header {
-    background: #0f172a;
-    color: #ffffff;
-    height: 38px;
-    display: flex;
-    align-items: center;
     justify-content: center;
-    border-bottom: 2.5px solid #f59e0b;
-    text-align: center;
-    padding: 0 12px;
-}
-.id-cr80-back-body {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    padding: 10px 14px 8px;
-    background: #ffffff;
-    box-sizing: border-box;
-    font-size: 8.5px;
-    color: #334155;
+    align-items: center;
+    gap: 10px;
+    margin: 4px 14px 8px;
+    z-index: 1;
     position: relative;
 }
-.id-cr80-back-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 6px 12px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    padding: 6px 8px;
+.id-badge-blood {
+    background: #fee2e2;
+    border: 1px solid #fecaca;
+    color: #b91c1c;
+    font-weight: 800;
+    font-size: 10.5px;
+    padding: 3px 14px;
+    border-radius: 5px;
 }
-.id-cr80-office-card {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    padding: 6px 8px;
-    margin-top: 6px;
-    line-height: 1.35;
-    font-size: 8px;
+.id-badge-validtill {
+    background: #dcfce7;
+    border: 1px solid #bbf7d0;
+    color: #15803d;
+    font-weight: 800;
+    font-size: 10.5px;
+    padding: 3px 14px;
+    border-radius: 5px;
 }
 
-/* Responsive side-by-side export container */
+/* Front Footer */
+.id-front-footer {
+    background: #1e3a8a;
+    color: #ffffff;
+    text-align: center;
+    padding: 7px 10px;
+    font-weight: 800;
+    font-size: 9.5px;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+}
+.id-under-card-label {
+    font-size: 8.5px;
+    color: #64748b;
+    text-align: center;
+    margin-top: 6px;
+    font-weight: 600;
+}
+
+/* ── BACK CARD STYLES ──────────────────────────────────────────────────────── */
+.id-back-header {
+    background: #0f172a;
+    color: #ffffff;
+    padding: 8px 12px;
+    text-align: center;
+    border-bottom: 2.5px solid #f59e0b; /* Yellow stripe */
+}
+.id-back-recon-line {
+    font-size: 7.2px;
+    font-weight: 600;
+    color: #cbd5e1;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+}
+.id-back-header-title {
+    font-size: 9.5px;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-top: 2px;
+}
+.id-back-header-assoc {
+    font-size: 7.5px;
+    color: #cbd5e1;
+    font-weight: 700;
+    margin-top: 2px;
+}
+
+/* Emergency Box */
+.id-back-emergency-sec {
+    margin: 8px 14px 4px;
+}
+.id-back-emergency-title {
+    font-size: 9px;
+    font-weight: 800;
+    color: #1e40af;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 3px;
+}
+.id-back-emergency-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 7px;
+    padding: 8px 12px;
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 4px 8px;
+    font-size: 8.5px;
+}
+
+/* Association Office Box */
+.id-back-assoc-box {
+    margin: 8px 14px 6px;
+    background: #f8fafc;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 7px;
+    padding: 8px 12px;
+    line-height: 1.35;
+    font-size: 8px;
+    color: #334155;
+}
+.id-back-assoc-title {
+    font-weight: 800;
+    font-size: 8.8px;
+    color: #0f172a;
+    margin-bottom: 2px;
+}
+
+/* Fine Print & Signatory */
+.id-back-sign-sec {
+    margin: 8px 14px 0;
+    border-top: 1.5px dashed #cbd5e1;
+    padding-top: 7px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+}
+.id-back-fineprint {
+    font-size: 7px;
+    color: #64748b;
+    line-height: 1.35;
+    max-width: 215px;
+}
+.id-back-sign-box {
+    text-align: center;
+    width: 110px;
+    flex-shrink: 0;
+}
+.id-back-sign-sd {
+    font-size: 9px;
+    font-weight: 900;
+    color: #0f172a;
+}
+.id-back-sign-role {
+    font-size: 8px;
+    font-weight: 800;
+    color: #1e40af;
+}
+.id-back-sign-comm {
+    font-size: 6.8px;
+    color: #64748b;
+}
+
+/* Back Footer */
+.id-back-footer {
+    background: #e2e8f0;
+    color: #334155;
+    padding: 7px 14px;
+    font-size: 7.5px;
+    font-weight: 700;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #cbd5e1;
+}
+
+/* ── SIDE-BY-SIDE EXPORT CONTAINER ────────────────────────────────────────── */
 .id-export-container {
     display: flex;
     flex-direction: row;
-    gap: 28px;
+    gap: 48px;
     justify-content: center;
     align-items: flex-start;
     background: #ffffff;
-    padding: 24px;
+    padding: 30px;
     border-radius: 16px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
     width: fit-content;
     margin: 0 auto;
 }
 
-@media (max-width: 1140px) {
+@media (max-width: 860px) {
     .id-export-container {
         flex-direction: column;
         align-items: center;
+        gap: 32px;
         padding: 16px;
     }
 }
@@ -499,7 +604,7 @@ if ($officeBearer) {
         width: 100%;
         display: flex !important;
         flex-direction: row !important;
-        gap: 20px !important;
+        gap: 30px !important;
         justify-content: center !important;
         background: none !important;
         box-shadow: none !important;
@@ -513,7 +618,7 @@ if ($officeBearer) {
 <div class="page-header-row no-print">
     <div>
         <h1 class="page-heading-title">Official Digital ID Card</h1>
-        <p class="page-heading-subtitle">CR80 Global Standard Horizontal Membership Card • Front &amp; Back</p>
+        <p class="page-heading-subtitle">Print-ready flat 2D vertical CR80 membership card • Front &amp; Back</p>
     </div>
 
     <!-- Download & Print Action Buttons -->
@@ -541,218 +646,208 @@ if ($officeBearer) {
 <!-- Guidance notice -->
 <div class="no-print" style="background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; padding:12px 18px; border-radius:10px; margin-bottom:24px; font-size:0.86rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
     <div>
-        💡 <strong>CR80 Standard Format:</strong> Standard 85.6mm × 54mm horizontal identity card. Clicking <strong>Download Image (.JPG)</strong> generates both Front and Back sides side-by-side in high-resolution (300 DPI) for instant PVC printing.
+        💡 <strong>Print-Ready Format:</strong> Standard portrait membership card matching official association specifications. Clicking <strong>Download Image (.JPG)</strong> exports both FRONT and BACK side-by-side at 300 DPI on a seamless white background.
     </div>
-    <a href="/member/profile.php" class="btn btn-outline btn-sm" style="background:#ffffff; color:#1e40af; font-weight:700;">Update Photo in Profile &rarr;</a>
+    <a href="/member/profile.php" class="btn btn-outline btn-sm" style="background:#ffffff; color:#1e40af; font-weight:700;">Update Profile &rarr;</a>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
-     SIDE-BY-SIDE CARDS WRAPPER (CAPTURED FOR SINGLE COMBINED JPG EXPORT)
+     SIDE-BY-SIDE CARDS CONTAINER (CAPTURED FOR COMBINED JPG EXPORT)
      ═══════════════════════════════════════════════════════════════════════════ -->
-<div id="idCardExportContainer" class="id-export-container">
+<div class="id-preview-wrapper">
+    <div id="idCardExportContainer" class="id-export-container">
 
-    <!-- ───────────────────────────────────────────────────────────────────
-         SIDE 1: FRONT FACE (HORIZONTAL CR80)
-         ─────────────────────────────────────────────────────────────────── -->
-    <div>
-        <div style="text-align:center; margin-bottom:8px; font-size:0.75rem; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;" class="no-print">
-            Front Face (ಮುಂಭಾಗ)
-        </div>
+        <!-- ───────────────────────────────────────────────────────────────────
+             LEFT CARD: FRONT SIDE (VERTICAL / PORTRAIT)
+             ─────────────────────────────────────────────────────────────────── -->
+        <div class="id-card-side-col">
+            <div class="id-side-title-label">FRONT</div>
 
-        <div class="id-card-cr80" id="idCardFront">
-            <!-- Header with Dual Logos & Association Identity -->
-            <div class="id-cr80-header">
-                <!-- Left Logo -->
-                <div class="id-cr80-logo">
-                    <?php if ($logoLeftDataUri): ?>
-                        <img src="<?= $logoLeftDataUri ?>" alt="Left Logo">
-                    <?php else: ?>
-                        <div style="font-size:8px; font-weight:900; color:#1e3a8a;">KSPDOWA</div>
-                    <?php endif; ?>
-                </div>
+            <div class="id-card-portrait" id="idCardFront">
+                <div class="id-portrait-watermark">KSPDOWA</div>
 
-                <!-- Center Header Titles -->
-                <div class="id-cr80-header-center">
-                    <div class="id-cr80-header-kannada">ಕರ್ನಾಟಕ ರಾಜ್ಯ ಪಂಚಾಯತ್ ಅಭಿವೃದ್ಧಿ ಅಧಿಕಾರಿಗಳ ಕ್ಷೇಮಾಭಿವೃದ್ಧಿ ಸಂಘ (ರಿ.)</div>
-                    <div class="id-cr80-header-title"><?= Sanitize::html($siteName) ?></div>
-                    <div class="id-cr80-header-tagline"><?= Sanitize::html($siteTagline) ?></div>
-                </div>
+                <div>
+                    <!-- Top Header: Royal Blue Band -->
+                    <div class="id-front-header">
+                        <!-- Top recognition line with Kannada & English -->
+                        <div class="id-gov-recon-line">
+                            ಸರ್ಕಾರದ ಮಾನ್ಯತೆ ಪಡೆದ ಸೇವಾ ಸಂಘ  •  <?= Sanitize::html($siteTagline) ?>
+                        </div>
 
-                <!-- Right Logo -->
-                <div class="id-cr80-logo">
-                    <?php if ($logoRightDataUri): ?>
-                        <img src="<?= $logoRightDataUri ?>" alt="Right Logo">
-                    <?php else: ?>
-                        <div style="font-size:8px; font-weight:900; color:#1e3a8a;">EMBLEM</div>
-                    <?php endif; ?>
-                </div>
-            </div>
+                        <!-- Header Row: Logos + Titles -->
+                        <div class="id-front-header-row">
+                            <!-- Left Emblem: Blue-white circular crest -->
+                            <div class="id-front-logo-box">
+                                <?php if ($logoLeftDataUri): ?>
+                                    <img src="<?= $logoLeftDataUri ?>" alt="Left Emblem">
+                                <?php else: ?>
+                                    <div style="font-size:7px; font-weight:900; color:#1e3a8a;">KSPDOWA</div>
+                                <?php endif; ?>
+                            </div>
 
-            <!-- Card Body -->
-            <div class="id-cr80-body">
-                <div class="id-cr80-watermark">KSPDOWA</div>
+                            <!-- Center Titles -->
+                            <div class="id-front-header-center">
+                                <div class="id-front-title-kannada">ಕರ್ನಾಟಕ ರಾಜ್ಯ ಪಂಚಾಯತ್ ಅಭಿವೃದ್ಧಿ ಅಧಿಕಾರಿಗಳ ಕ್ಷೇಮಾಭಿವೃದ್ಧಿ ಸಂಘ (ರಿ.)</div>
+                                <div class="id-front-title-english"><?= Sanitize::html($siteName) ?></div>
+                            </div>
 
-                <!-- Left Column: Photo & Badges -->
-                <div class="id-cr80-col-photo">
-                    <div class="id-cr80-photo-box">
-                        <?php if ($photoDataUri): ?>
-                            <img src="<?= $photoDataUri ?>" alt="Member Photo">
-                        <?php else: ?>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" fill="none" viewBox="0 0 24 24" stroke="#94a3b8" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-                            <span style="font-size:7px; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-top:2px;">No Photo</span>
+                            <!-- Right Emblem: Colorful crest -->
+                            <div class="id-front-logo-box">
+                                <?php if ($logoRightDataUri): ?>
+                                    <img src="<?= $logoRightDataUri ?>" alt="Right Emblem">
+                                <?php else: ?>
+                                    <div style="font-size:7px; font-weight:900; color:#1e3a8a;">EMBLEM</div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Upper-Middle: Association Designation -->
+                    <div class="id-assoc-sec">
+                        <div class="id-assoc-subtitle">ASSOCIATION DESIGNATION (ಸಂಘದ ಹುದ್ದೆ)</div>
+                        <div class="id-assoc-box <?= $isRepresentative ? 'is-rep' : '' ?>">
+                            <?= Sanitize::html($assocDesignation) ?>
+                        </div>
+                        <?php if ($assocSubLabel): ?>
+                            <div class="id-assoc-rep-sub">★ <?= Sanitize::html($assocSubLabel) ?></div>
                         <?php endif; ?>
                     </div>
 
-                    <!-- Blood Group -->
-                    <div class="id-cr80-blood-pill">
-                        Blood: <?= Sanitize::html($profile['blood_group'] ?? '—') ?>
-                    </div>
-
-                    <!-- Validity Period -->
-                    <div class="id-cr80-validity-pill">
-                        <span style="display:block; font-size:6.5px; color:#047857; font-weight:800; text-transform:uppercase;">VALID TILL</span>
-                        <strong><?= $validTillDate ?></strong>
-                    </div>
-                </div>
-
-                <!-- Right Column: Name, Association Designation, Official Details -->
-                <div class="id-cr80-col-details">
-                    <div>
-                        <!-- Member Name -->
-                        <div class="id-cr80-member-name">
-                            <?= Sanitize::html($portalMember['name'] ?? '') ?>
-                        </div>
-
-                        <!-- Member No & Verified Status -->
-                        <div class="id-cr80-badges-row">
-                            <span class="id-cr80-member-no"><?= Sanitize::html($portalMember['member_no'] ?? '') ?></span>
-                            <span class="id-cr80-status-pill">✓ VERIFIED</span>
-                        </div>
-
-                        <!-- Association Designation (Dynamic replacing PDO) -->
-                        <div class="id-cr80-assoc-banner <?= $isRepresentative ? 'id-cr80-assoc-rep' : '' ?>">
-                            <div class="id-cr80-assoc-label">Association Designation (ಸಂಘದ ಹುದ್ದೆ)</div>
-                            <div class="id-cr80-assoc-title"><?= Sanitize::html($assocDesignation) ?></div>
-                            <?php if ($assocSubLabel): ?>
-                                <div class="id-cr80-assoc-sub">★ <?= Sanitize::html($assocSubLabel) ?></div>
+                    <!-- Photo Section -->
+                    <div class="id-portrait-photo-wrap">
+                        <div class="id-portrait-photo">
+                            <?php if ($photoDataUri): ?>
+                                <img src="<?= $photoDataUri ?>" alt="Member Photo">
+                            <?php else: ?>
+                                <div style="display:flex; flex-direction:column; align-items:center; color:#94a3b8;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                                    <span style="font-size:7px; font-weight:700; text-transform:uppercase; margin-top:2px;">No Photo</span>
+                                </div>
                             <?php endif; ?>
                         </div>
                     </div>
 
-                    <!-- Official Civil Post & Location Grid -->
-                    <div class="id-cr80-info-grid">
-                        <div>
-                            <span class="id-cr80-info-label">Official Post:</span>
-                            <span class="id-cr80-info-val"><?= Sanitize::html($portalMember['designation'] ?? 'Panchayat Development Officer') ?></span>
-                        </div>
-
-                        <div>
-                            <span class="id-cr80-info-label">KGID Number:</span>
-                            <span class="id-cr80-info-val" style="font-family:monospace;"><?= Sanitize::html($profile['kgid_no'] ?? '—') ?></span>
-                        </div>
-
-                        <div>
-                            <span class="id-cr80-info-label">Gram Panchayat:</span>
-                            <span class="id-cr80-info-val"><?= Sanitize::html($portalMember['gp_name'] ?? '—') ?></span>
-                        </div>
-
-                        <div>
-                            <span class="id-cr80-info-label">Taluk / District:</span>
-                            <span class="id-cr80-info-val"><?= Sanitize::html($portalMember['taluk_name'] ?? '—') ?>, <?= Sanitize::html($portalMember['district_name'] ?? '—') ?></span>
+                    <!-- Name & ID Section -->
+                    <div class="id-name-sec">
+                        <div class="id-name-text"><?= Sanitize::html($memberName) ?></div>
+                        <div class="id-badges-row">
+                            <span class="id-badge-memberno"><?= Sanitize::html($memberNo) ?></span>
+                            <span class="id-badge-verified">✔ VERIFIED</span>
                         </div>
                     </div>
+
+                    <!-- Info Section: 2-Column Grounded Block -->
+                    <div class="id-info-block">
+                        <div>
+                            <span class="id-info-cell-label">Official Post:</span>
+                            <span class="id-info-cell-val"><?= Sanitize::html($officialPost) ?></span>
+                        </div>
+
+                        <div>
+                            <span class="id-info-cell-label">KGID Number:</span>
+                            <span class="id-info-cell-val" style="font-family:monospace;"><?= Sanitize::html($kgidNo) ?></span>
+                        </div>
+
+                        <div>
+                            <span class="id-info-cell-label">Gram Panchayat:</span>
+                            <span class="id-info-cell-val"><?= Sanitize::html($gpName) ?></span>
+                        </div>
+
+                        <div>
+                            <span class="id-info-cell-label">Taluk / District:</span>
+                            <span class="id-info-cell-val"><?= Sanitize::html($locationStr) ?></span>
+                        </div>
+                    </div>
+
+                    <!-- Badges Row: Blood & Valid Till -->
+                    <div class="id-bottom-badges-row">
+                        <div class="id-badge-blood">Blood: <?= Sanitize::html($bloodGroup) ?></div>
+                        <div class="id-badge-validtill">VALID TILL <?= Sanitize::html($validTillDate) ?></div>
+                    </div>
+                </div>
+
+                <!-- Footer: Dark Blue Banner -->
+                <div class="id-front-footer">
+                    • UNITED WE STAND, TOGETHER WE SERVE •
                 </div>
             </div>
 
-            <!-- Card Footer -->
-            <div class="id-cr80-footer">
-                <div>● Official Welfare Association Member Card</div>
-                <div style="font-weight:800; color:#1e40af; letter-spacing:0.3px;">KARNATAKA STATE PDO WELFARE ASSOCIATION</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ───────────────────────────────────────────────────────────────────
-         SIDE 2: BACK FACE (HORIZONTAL CR80 — SAME EXACT DIMENSIONS)
-         ─────────────────────────────────────────────────────────────────── -->
-    <div>
-        <div style="text-align:center; margin-bottom:8px; font-size:0.75rem; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;" class="no-print">
-            Back Face (ಹಿಂಭಾಗ)
+            <!-- Tiny centered sub-label -->
+            <div class="id-under-card-label">• Official Welfare Association Member Card</div>
         </div>
 
-        <div class="id-card-cr80" id="idCardBack">
-            <!-- Back Header -->
-            <div class="id-cr80-back-header">
-                <div>
-                    <div style="font-size:9px; font-weight:800; letter-spacing:0.5px; text-transform:uppercase;">MEMBERSHIP IDENTITY &amp; CONTACT INFORMATION</div>
-                    <div style="font-size:7.5px; color:#94a3b8; letter-spacing:0.2px;"><?= Sanitize::html($siteName) ?></div>
-                </div>
-            </div>
+        <!-- ───────────────────────────────────────────────────────────────────
+             RIGHT CARD: BACK SIDE (VERTICAL / PORTRAIT)
+             ─────────────────────────────────────────────────────────────────── -->
+        <div class="id-card-side-col">
+            <div class="id-side-title-label">BACK</div>
 
-            <!-- Back Body -->
-            <div class="id-cr80-back-body">
+            <div class="id-card-portrait" id="idCardBack">
                 <div>
-                    <!-- Emergency & Personal Details -->
-                    <div style="font-size:8px; font-weight:800; color:#1e40af; text-transform:uppercase; margin-bottom:3px;">
-                        Emergency &amp; Personal Information
+                    <!-- Top Header: Dark Charcoal/Black Band -->
+                    <div class="id-back-header">
+                        <div class="id-back-recon-line">GOVERNMENT-RECOGNIZED SERVICE ASSOCIATION</div>
+                        <div class="id-back-header-title">MEMBERSHIP IDENTITY &amp; CONTACT INFORMATION</div>
+                        <div class="id-back-header-assoc"><?= Sanitize::html($siteName) ?></div>
                     </div>
-                    <div class="id-cr80-back-grid">
-                        <div>
-                            <span style="color:#64748b; font-size:7px; display:block;">Registered Mobile:</span>
-                            <strong><?= Sanitize::html($profile['personal_mobile'] ?? $portalMember['mobile'] ?? '—') ?></strong>
-                        </div>
-                        <div>
-                            <span style="color:#64748b; font-size:7px; display:block;">Native District:</span>
-                            <strong><?= Sanitize::html($profile['native_district'] ?? '—') ?></strong>
-                        </div>
-                        <div>
-                            <span style="color:#64748b; font-size:7px; display:block;">Blood Group:</span>
-                            <strong style="color:#dc2626;"><?= Sanitize::html($profile['blood_group'] ?? '—') ?></strong>
-                        </div>
-                        <div>
-                            <span style="color:#64748b; font-size:7px; display:block;">Financial Year:</span>
-                            <strong style="color:#15803d;"><?= Sanitize::html($fy) ?></strong>
+
+                    <!-- Emergency & Personal Information Section -->
+                    <div class="id-back-emergency-sec">
+                        <div class="id-back-emergency-title">EMERGENCY &amp; PERSONAL INFORMATION</div>
+                        <div class="id-back-emergency-box">
+                            <div>
+                                <span style="color:#64748b; font-size:7px; display:block;">Registered Mobile:</span>
+                                <strong style="color:#0f172a; font-size:8.8px;"><?= Sanitize::html($mobileNumber) ?></strong>
+                            </div>
+                            <div>
+                                <span style="color:#64748b; font-size:7px; display:block;">Native District:</span>
+                                <strong style="color:#0f172a; font-size:8.8px;"><?= Sanitize::html($nativeDistrict) ?></strong>
+                            </div>
+                            <div>
+                                <span style="color:#64748b; font-size:7px; display:block;">Blood Group:</span>
+                                <strong style="color:#dc2626; font-size:8.8px;"><?= Sanitize::html($bloodGroup) ?></strong>
+                            </div>
+                            <div>
+                                <span style="color:#64748b; font-size:7px; display:block;">Financial Year:</span>
+                                <strong style="color:#15803d; font-size:8.8px;"><?= Sanitize::html($fy) ?></strong>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Association Central Office (Settings Integration) -->
-                    <div class="id-cr80-office-card">
-                        <div style="font-weight:800; color:#1e3a8a; font-size:8.5px; margin-bottom:2px;">
-                            <?= Sanitize::html($siteName) ?>
-                        </div>
+                    <!-- Association Central Office Box -->
+                    <div class="id-back-assoc-box">
+                        <div class="id-back-assoc-title"><?= Sanitize::html($siteName) ?></div>
                         <div><?= Sanitize::html($siteAddress) ?></div>
                         <div style="margin-top:2px;">
-                            Helpline: <strong><?= Sanitize::html($sitePhone) ?></strong> &bull; Email: <strong><?= Sanitize::html($siteEmail) ?></strong>
+                            Helpline: <strong><?= Sanitize::html($sitePhone) ?></strong> • Email: <strong><?= Sanitize::html($siteEmail) ?></strong>
                         </div>
                         <div>Website: <strong><?= Sanitize::html($siteWebsite) ?></strong></div>
                     </div>
-                </div>
 
-                <!-- Terms, Instructions & Signatory -->
-                <div>
-                    <div style="display:flex; justify-content:space-between; align-items:flex-end; border-top:1px dashed #cbd5e1; padding-top:6px; margin-top:4px;">
-                        <div style="flex:1; color:#64748b; font-size:7px; line-height:1.35; padding-right:12px;">
+                    <!-- Sub-footer: Fine Print & Signatory -->
+                    <div class="id-back-sign-sec">
+                        <div class="id-back-fineprint">
                             1. This identity card is the official property of KSPDOWA and non-transferable.<br>
                             2. If found, return to nearest Taluk/District Association office or call helpline.<br>
-                            3. Card validity: <strong><?= Sanitize::html($validityDisplay) ?></strong>.
+                            3. Card validity: Valid Till: <?= Sanitize::html($validTillDate) ?> (FY <?= Sanitize::html($fy) ?>).
                         </div>
 
-                        <!-- Authorized Signatory Seal -->
-                        <div style="text-align:center; flex-shrink:0; width:120px;">
-                            <div style="font-size:9px; font-weight:900; color:#0f172a;">Sd/-</div>
-                            <div style="font-size:8.5px; font-weight:800; color:#1e40af;">General Secretary</div>
-                            <div style="font-size:7px; color:#64748b;">KSPDOWA State Committee</div>
+                        <div class="id-back-sign-box">
+                            <div class="id-back-sign-sd">Sd/-</div>
+                            <div class="id-back-sign-role">General Secretary</div>
+                            <div class="id-back-sign-comm">KSPDOWA State Committee</div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Back Footer -->
-            <div class="id-cr80-footer" style="background:#f1f5f9;">
-                <div><?= Sanitize::html($siteTagline) ?></div>
-                <div style="font-weight:700; color:#475569;">BENGALURU • KARNATAKA</div>
+                <!-- Footer: Pale Gray Bar -->
+                <div class="id-back-footer">
+                    <div><?= Sanitize::html($siteTagline) ?></div>
+                    <div>BENGALURU • KARNATAKA</div>
+                </div>
             </div>
         </div>
+
     </div>
 </div>
 
@@ -772,10 +867,10 @@ async function downloadCardAsJpg() {
     // Enforce desktop side-by-side flex layout during capture
     exportEl.style.display = 'flex';
     exportEl.style.flexDirection = 'row';
-    exportEl.style.width = '1120px';
+    exportEl.style.width = '860px';
     exportEl.style.maxWidth = 'none';
-    exportEl.style.gap = '28px';
-    exportEl.style.padding = '24px';
+    exportEl.style.gap = '48px';
+    exportEl.style.padding = '30px';
     exportEl.style.background = '#ffffff';
     exportEl.style.justifyContent = 'center';
     exportEl.style.alignItems = 'flex-start';
@@ -785,10 +880,7 @@ async function downloadCardAsJpg() {
             scale: 2.5, // Crisp 300 DPI high resolution
             useCORS: true,
             allowTaint: true,
-            backgroundColor: '#ffffff',
-            ignoreElements: (element) => {
-                return element.classList.contains('no-print');
-            }
+            backgroundColor: '#ffffff'
         });
 
         const link = document.createElement('a');
