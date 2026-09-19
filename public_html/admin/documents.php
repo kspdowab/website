@@ -29,6 +29,10 @@ $currentUserId = Auth::getCurrentUserId();
 
 RBAC::requirePermission($currentUserId, 'documents', 'view');
 
+if (isset($_GET['download_sample']) && $_GET['download_sample'] === '1') {
+    ContentBulkImporter::downloadSample('documents');
+}
+
 $canManage = RBAC::hasPermission($currentUserId, 'documents', 'manage') ||
              RBAC::hasPermission($currentUserId, 'documents', 'upload') ||
              RBAC::hasRole($currentUserId, 'State Super Admin');
@@ -43,6 +47,70 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
     if (!$canManage) {
         ErrorHandler::abort(403, 'You do not have permission to manage documents.');
+    }
+
+    // ── BULK UPLOAD ──
+    if ($action === 'bulk_upload') {
+        $defaultCatId = Sanitize::positiveInt($_POST['default_category_id'] ?? null);
+        $defaultAccess= Sanitize::inArray($_POST['default_access_level'] ?? 'member', ['member', 'public', 'officer', 'admin']) ?: 'member';
+
+        $hasBulkFile = isset($_FILES['bulk_file']) && $_FILES['bulk_file']['error'] === UPLOAD_ERR_OK;
+        $hasAttached = isset($_FILES['attached_files']) && !empty($_FILES['attached_files']['name']) && is_array($_FILES['attached_files']['name']) && count($_FILES['attached_files']['name']) > 0 && $_FILES['attached_files']['error'][0] === UPLOAD_ERR_OK;
+
+        if (!$hasBulkFile && !$hasAttached) {
+            Session::flash('error', 'Please select a CSV/ZIP file, or choose document files to upload.');
+            header('Location: /admin/documents.php');
+            exit;
+        }
+
+        $extracted = [
+            'rows'      => [],
+            'files_map' => [],
+            'temp_dir'  => null,
+            'error'     => null,
+        ];
+
+        if ($hasBulkFile) {
+            $extracted = ContentBulkImporter::extractUpload($_FILES['bulk_file'], $_FILES['attached_files'] ?? null);
+        } else {
+            // Direct batch files upload without CSV
+            $att = $_FILES['attached_files'];
+            $numFiles = count($att['name']);
+            for ($i = 0; $i < $numFiles; $i++) {
+                if (($att['error'][$i] ?? 1) === UPLOAD_ERR_OK) {
+                    $fn = (string)$att['name'][$i];
+                    $extracted['files_map'][strtolower($fn)] = (string)$att['tmp_name'][$i];
+                }
+            }
+        }
+
+        if (!empty($extracted['error'])) {
+            Session::flash('error', $extracted['error']);
+            header('Location: /admin/documents.php');
+            exit;
+        }
+
+        $stats = ContentBulkImporter::importDocuments($extracted, $currentUserId, $defaultCatId, $defaultAccess);
+        $msg = "Bulk import completed: {$stats['imported']} documents imported.";
+        if ($stats['skipped'] > 0) {
+            $msg .= " {$stats['skipped']} skipped.";
+        }
+        if (!empty($stats['errors'])) {
+            $sampleErrors = array_slice($stats['errors'], 0, 4);
+            $msg .= ' Details: ' . implode('; ', $sampleErrors);
+            if (count($stats['errors']) > 4) {
+                $msg .= ' (and ' . (count($stats['errors']) - 4) . ' more)';
+            }
+        }
+
+        if ($stats['imported'] > 0) {
+            Session::flash('success', $msg);
+        } else {
+            Session::flash('error', $msg);
+        }
+
+        header('Location: /admin/documents.php');
+        exit;
     }
 
     // ── UPLOAD DOCUMENT ──
@@ -231,6 +299,10 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
             <?php endif; ?>
         </button>
         <?php if ($canManage): ?>
+            <button type="button" class="btn btn-outline" onclick="openBulkModal()" style="display:inline-flex; align-items:center; gap:7px; font-size:0.84rem; padding:6px 14px; background:#ffffff; border:1px solid var(--border, #dce3ea); border-radius:6px; cursor:pointer; font-weight:600; color:var(--primary-navy, #173F67); box-shadow:0 1px 2px rgba(0,0,0,0.04);">
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                Bulk Upload
+            </button>
             <?php if ($showForm): ?>
                 <a href="/admin/documents.php" class="btn btn-outline">← Back to List</a>
             <?php else: ?>
@@ -453,7 +525,102 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
     </div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     BULK UPLOAD MODAL
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="bulkModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.6); z-index:9999; align-items:center; justify-content:center; padding:16px;">
+    <div class="modal-box" style="background:#fff; border-radius:10px; max-width:620px; width:100%; box-shadow:0 20px 45px rgba(0,0,0,0.25); overflow:hidden;">
+        <div style="padding:18px 24px; border-bottom:1px solid #e2e8f0; display:flex; align-items:center; justify-content:space-between; background:#f8fafc;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <div style="width:36px; height:36px; border-radius:8px; background:#eff6ff; color:#1d4ed8; display:flex; align-items:center; justify-content:center;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                </div>
+                <div>
+                    <h3 style="margin:0; font-size:1.1rem; color:#0f172a; font-weight:700;">Bulk Upload Documents</h3>
+                    <p style="margin:0; font-size:0.78rem; color:#64748b;">Upload metadata spreadsheet or batch document files at once</p>
+                </div>
+            </div>
+            <button type="button" onclick="closeBulkModal()" style="background:transparent; border:none; font-size:1.3rem; color:#64748b; cursor:pointer; padding:4px 8px; border-radius:4px; line-height:1;">✕</button>
+        </div>
+
+        <form method="post" action="/admin/documents.php" enctype="multipart/form-data" style="padding:22px 24px 24px;">
+            <?= CSRF::htmlField() ?>
+            <input type="hidden" name="action" value="bulk_upload">
+
+            <!-- Step 1: Download Sample -->
+            <div style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; padding:14px 16px; margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+                <div>
+                    <div style="font-weight:700; font-size:0.88rem; color:#0369a1; margin-bottom:2px;">Step 1: Download Sample Template</div>
+                    <div style="font-size:0.78rem; color:#0c4a6e;">Get the verified CSV template with sample titles, categories, and access levels.</div>
+                </div>
+                <a href="/admin/documents.php?download_sample=1" class="btn btn-sm" style="background:#0284c7; color:#ffffff; font-weight:600; text-decoration:none; padding:7px 14px; border-radius:6px; font-size:0.82rem; display:inline-flex; align-items:center; gap:6px; white-space:nowrap;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                    Download Sample CSV
+                </a>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:14px; margin-bottom:18px;">
+                <div>
+                    <label class="form-label" style="font-size:0.84rem; font-weight:600; margin-bottom:4px; display:block;">Default Category</label>
+                    <select name="default_category_id" class="form-select" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.86rem;">
+                        <option value="">— Select Default Category —</option>
+                        <?php foreach ($categories as $c): ?>
+                            <option value="<?= (int)$c['id'] ?>"><?= Sanitize::html($c['name']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label" style="font-size:0.84rem; font-weight:600; margin-bottom:4px; display:block;">Default Access Level</label>
+                    <select name="default_access_level" class="form-select" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.86rem;">
+                        <option value="member" selected>Member Only</option>
+                        <option value="public">Public</option>
+                        <option value="officer">Officer Only</option>
+                        <option value="admin">Admin Only</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Upload option 1: CSV or ZIP -->
+            <div style="margin-bottom:16px;">
+                <label style="display:block; font-weight:600; font-size:0.86rem; color:#1e293b; margin-bottom:6px;">
+                    Option A: Metadata File (CSV or ZIP)
+                </label>
+                <input type="file" name="bulk_file" id="bulk_file" accept=".csv,.zip,text/csv,application/zip" class="form-control" style="width:100%; padding:9px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem;">
+                <p style="font-size:0.75rem; color:#64748b; margin:4px 0 0;">Upload a <code>.csv</code> spreadsheet, OR a <code>.zip</code> package containing the CSV and files.</p>
+            </div>
+
+            <!-- Upload option 2: Direct Document Files -->
+            <div style="margin-bottom:20px;">
+                <label style="display:block; font-weight:600; font-size:0.86rem; color:#1e293b; margin-bottom:6px;">
+                    Option B: Document Files (Multiple PDFs / Office Files)
+                </label>
+                <input type="file" name="attached_files[]" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" class="form-control" style="width:100%; padding:9px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem;">
+                <p style="font-size:0.75rem; color:#64748b; margin:4px 0 0;">Select multiple files to upload together. If no CSV is provided, file names will be converted into document titles automatically.</p>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+                <button type="button" onclick="closeBulkModal()" class="btn btn-outline" style="padding:9px 18px;">Cancel</button>
+                <button type="submit" class="btn btn-primary" style="padding:9px 22px; font-weight:600;">
+                    Start Bulk Import
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
+function openBulkModal() {
+    var m = document.getElementById('bulkModal');
+    if (m) m.style.display = 'flex';
+}
+function closeBulkModal() {
+    var m = document.getElementById('bulkModal');
+    if (m) m.style.display = 'none';
+}
+document.getElementById('bulkModal')?.addEventListener('click', function(e) {
+    if (e.target === this) closeBulkModal();
+});
+
 document.addEventListener('DOMContentLoaded', function() {
     var filterCard = document.getElementById('filterCard');
     var toggleBtn  = document.getElementById('toggleFilterBtn');
@@ -491,3 +658,4 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <?php
 require_once dirname(__DIR__) . '/includes/partials/admin-footer.php';
+

@@ -23,6 +23,10 @@ $currentUserId = Auth::getCurrentUserId();
 
 RBAC::requirePermission($currentUserId, 'circulars', 'view');
 
+if (isset($_GET['download_sample']) && $_GET['download_sample'] === '1') {
+    ContentBulkImporter::downloadSample('circulars');
+}
+
 $canManage = RBAC::hasPermission($currentUserId, 'circulars', 'manage') ||
              RBAC::hasPermission($currentUserId, 'circulars', 'create') ||
              RBAC::hasRole($currentUserId, 'State Super Admin');
@@ -59,6 +63,46 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
     if (!$canManage) {
         ErrorHandler::abort(403, 'You do not have permission to manage circulars.');
+    }
+
+    // ── BULK UPLOAD ──
+    if ($action === 'bulk_upload') {
+        if (!isset($_FILES['bulk_file']) || $_FILES['bulk_file']['error'] !== UPLOAD_ERR_OK) {
+            Session::flash('error', 'Please select a valid CSV or ZIP file to upload.');
+            header('Location: /admin/circulars.php');
+            exit;
+        }
+
+        $extraFiles = $_FILES['attached_files'] ?? null;
+        $extracted  = ContentBulkImporter::extractUpload($_FILES['bulk_file'], $extraFiles);
+
+        if (!empty($extracted['error'])) {
+            Session::flash('error', $extracted['error']);
+            header('Location: /admin/circulars.php');
+            exit;
+        }
+
+        $stats = ContentBulkImporter::importCirculars($extracted, $currentUserId);
+        $msg = "Bulk import completed: {$stats['imported']} circulars imported ({$stats['with_files']} with documents).";
+        if ($stats['skipped'] > 0) {
+            $msg .= " {$stats['skipped']} skipped.";
+        }
+        if (!empty($stats['errors'])) {
+            $sampleErrors = array_slice($stats['errors'], 0, 4);
+            $msg .= ' Details: ' . implode('; ', $sampleErrors);
+            if (count($stats['errors']) > 4) {
+                $msg .= ' (and ' . (count($stats['errors']) - 4) . ' more)';
+            }
+        }
+
+        if ($stats['imported'] > 0) {
+            Session::flash('success', $msg);
+        } else {
+            Session::flash('error', $msg);
+        }
+
+        header('Location: /admin/circulars.php');
+        exit;
     }
 
     // ── CREATE CIRCULAR ──
@@ -346,6 +390,10 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
             <?php endif; ?>
         </button>
         <?php if ($canManage): ?>
+            <button type="button" class="btn btn-outline" onclick="openBulkModal()" style="display:inline-flex; align-items:center; gap:7px; font-size:0.84rem; padding:6px 14px; background:#ffffff; border:1px solid var(--border, #dce3ea); border-radius:6px; cursor:pointer; font-weight:600; color:var(--primary-navy, #173F67); box-shadow:0 1px 2px rgba(0,0,0,0.04);">
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                Bulk Upload
+            </button>
             <?php if ($showForm): ?>
                 <a href="/admin/circulars.php" class="btn btn-outline">← Back to List</a>
             <?php else: ?>
@@ -586,7 +634,90 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
     </div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     BULK UPLOAD MODAL
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="bulkModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.6); z-index:9999; align-items:center; justify-content:center; padding:16px;">
+    <div class="modal-box" style="background:#fff; border-radius:10px; max-width:620px; width:100%; box-shadow:0 20px 45px rgba(0,0,0,0.25); overflow:hidden;">
+        <div style="padding:18px 24px; border-bottom:1px solid #e2e8f0; display:flex; align-items:center; justify-content:space-between; background:#f8fafc;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <div style="width:36px; height:36px; border-radius:8px; background:#eff6ff; color:#1d4ed8; display:flex; align-items:center; justify-content:center;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                </div>
+                <div>
+                    <h3 style="margin:0; font-size:1.1rem; color:#0f172a; font-weight:700;">Bulk Upload Circulars</h3>
+                    <p style="margin:0; font-size:0.78rem; color:#64748b;">Upload CSV metadata or ZIP containing CSV + PDF documents</p>
+                </div>
+            </div>
+            <button type="button" onclick="closeBulkModal()" style="background:transparent; border:none; font-size:1.3rem; color:#64748b; cursor:pointer; padding:4px 8px; border-radius:4px; line-height:1;">✕</button>
+        </div>
+
+        <form method="post" action="/admin/circulars.php" enctype="multipart/form-data" style="padding:22px 24px 24px;">
+            <?= CSRF::htmlField() ?>
+            <input type="hidden" name="action" value="bulk_upload">
+
+            <!-- Step 1: Download Sample -->
+            <div style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; padding:14px 16px; margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+                <div>
+                    <div style="font-weight:700; font-size:0.88rem; color:#0369a1; margin-bottom:2px;">Step 1: Download Sample Template</div>
+                    <div style="font-size:0.78rem; color:#0c4a6e;">Get the verified CSV template with pre-filled sample rows and proper columns.</div>
+                </div>
+                <a href="/admin/circulars.php?download_sample=1" class="btn btn-sm" style="background:#0284c7; color:#ffffff; font-weight:600; text-decoration:none; padding:7px 14px; border-radius:6px; font-size:0.82rem; display:inline-flex; align-items:center; gap:6px; white-space:nowrap;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                    Download Sample CSV
+                </a>
+            </div>
+
+            <!-- Step 2: Upload Files -->
+            <div style="margin-bottom:18px;">
+                <label style="display:block; font-weight:600; font-size:0.86rem; color:#1e293b; margin-bottom:6px;">
+                    Step 2: Upload File (CSV or ZIP) <span style="color:#e11d48;">*</span>
+                </label>
+                <input type="file" name="bulk_file" id="bulk_file" accept=".csv,.zip,text/csv,application/zip" required class="form-control" style="width:100%; padding:9px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem;">
+                <p style="font-size:0.75rem; color:#64748b; margin:4px 0 0;">Upload a <code>.csv</code> file, OR a <code>.zip</code> package containing the CSV and matching PDF files.</p>
+            </div>
+
+            <!-- Optional Document Files -->
+            <div style="margin-bottom:20px;">
+                <label style="display:block; font-weight:600; font-size:0.86rem; color:#1e293b; margin-bottom:6px;">
+                    Optional: Attach Document Files (Multiple PDFs / DOCs)
+                </label>
+                <input type="file" name="attached_files[]" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" class="form-control" style="width:100%; padding:9px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem;">
+                <p style="font-size:0.75rem; color:#64748b; margin:4px 0 0;">If uploading a separate CSV, you can select and attach multiple document files here. Files are matched by filename or Circular Number.</p>
+            </div>
+
+            <div style="background:#f8fafc; border-radius:6px; padding:12px; font-size:0.78rem; color:#475569; margin-bottom:20px; line-height:1.5;">
+                <strong>Instructions &amp; Category Rules:</strong>
+                <ul style="margin:6px 0 0 18px; padding:0;">
+                    <li><strong>Category:</strong> One of: <code>16th Finance</code>, <code>VB-G RAM G</code>, <code>eSwathu</code>, <code>eGramSwaraj</code>, <code>GP Staff</code>, <code>Act/Rules</code>, <code>OSR</code>, <code>SC/ST</code>, <code>PH</code>.</li>
+                    <li><strong>Circular Number:</strong> Must be unique. Duplicates will be safely skipped.</li>
+                    <li><strong>Date:</strong> Supports <code>DD-MM-YYYY</code> or <code>YYYY-MM-DD</code> format.</li>
+                </ul>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+                <button type="button" onclick="closeBulkModal()" class="btn btn-outline" style="padding:9px 18px;">Cancel</button>
+                <button type="submit" class="btn btn-primary" style="padding:9px 22px; font-weight:600;">
+                    Start Bulk Import
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
+function openBulkModal() {
+    var m = document.getElementById('bulkModal');
+    if (m) m.style.display = 'flex';
+}
+function closeBulkModal() {
+    var m = document.getElementById('bulkModal');
+    if (m) m.style.display = 'none';
+}
+document.getElementById('bulkModal')?.addEventListener('click', function(e) {
+    if (e.target === this) closeBulkModal();
+});
+
 document.addEventListener('DOMContentLoaded', function() {
     var filterCard = document.getElementById('filterCard');
     var toggleBtn  = document.getElementById('toggleFilterBtn');
@@ -624,3 +755,4 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <?php
 require_once dirname(__DIR__) . '/includes/partials/admin-footer.php';
+
