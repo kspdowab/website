@@ -45,6 +45,9 @@ function nav_active(string $path, string $current): string
     <title><?= Sanitize::html($pageTitle) ?> — <?= Sanitize::html($siteShortName) ?></title>
     <meta name="description" content="<?= Sanitize::attr($siteName) ?>">
     <meta name="theme-color" content="#173F67">
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/images/favicon.png">
+    <link rel="icon" type="image/png" href="/assets/images/logo.png">
+    <link rel="apple-touch-icon" href="/assets/images/logo.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Kannada:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -183,9 +186,10 @@ function nav_active(string $path, string $current): string
             width: 90px;
             height: 90px;
             border-radius: 50%;
-            background: var(--light-blue);
+            background: #ffffff;
+            border: 1px solid var(--border-soft);
             flex: none;
-            box-shadow: 0 2px 6px rgba(23, 63, 103, 0.08);
+            box-shadow: 0 2px 8px rgba(23, 63, 103, 0.08);
             overflow: hidden;
         }
         .brand-mark img {
@@ -667,7 +671,7 @@ function nav_active(string $path, string $current): string
     <div class="site-header-inner">
         <a class="brand" href="/" title="<?= Sanitize::attr($siteFullName) ?>">
             <span class="brand-mark">
-                <img src="/assets/images/logo.jpg" alt="<?= Sanitize::attr($siteShortName) ?> emblem">
+                <img src="/assets/images/logo.png" alt="<?= Sanitize::attr($siteShortName) ?> emblem">
             </span>
             <span class="brand-text">
                 <?php if ($siteTagline !== ''): ?>
