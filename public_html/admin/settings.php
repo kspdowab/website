@@ -63,6 +63,13 @@ $receiptNoFields = [
     'receipt_no_pad_length'  => ['label' => 'Sequence Digits',  'maxlen' => 2,  'required' => true, 'type' => 'digits'],
 ];
 
+// Suggestion number format: PREFIX-YEAR-NNNNN (default KSPDOWA-SUG-2026-00001).
+$suggestionNoFields = [
+    'suggestion_no_prefix'      => ['label' => 'Prefix',           'maxlen' => 50, 'required' => true],
+    'suggestion_no_year_format' => ['label' => 'Year Format',      'maxlen' => 10, 'required' => true, 'type' => 'php_date_format'],
+    'suggestion_no_pad_length'  => ['label' => 'Sequence Digits',  'maxlen' => 2,  'required' => true, 'type' => 'digits'],
+];
+
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     CSRF::requireValid();
 
@@ -117,6 +124,31 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         if (($def['type'] ?? '') === 'php_date_format') {
             if (!preg_match('/^[A-Za-z]{1,10}$/', $raw)) {
                 $errors[] = $def['label'] . ' may only contain letters (a PHP date() format, e.g. Y or y).';
+                continue;
+            }
+        }
+
+        $clean[$key] = $raw;
+    }
+
+    foreach ($suggestionNoFields as $key => $def) {
+        $raw = trim(Sanitize::string($_POST[$key] ?? '', $def['maxlen']));
+
+        if ($raw === '') {
+            $errors[] = 'Suggestion ' . $def['label'] . ' is required.';
+            continue;
+        }
+
+        if (($def['type'] ?? '') === 'digits') {
+            if (!preg_match('/^\d{1,2}$/', $raw) || (int) $raw < 1 || (int) $raw > 10) {
+                $errors[] = 'Suggestion ' . $def['label'] . ' must be a number from 1 to 10.';
+                continue;
+            }
+        }
+
+        if (($def['type'] ?? '') === 'php_date_format') {
+            if (!preg_match('/^[A-Za-z]{1,10}$/', $raw)) {
+                $errors[] = 'Suggestion ' . $def['label'] . ' may only contain letters (a PHP date() format, e.g. Y or y).';
                 continue;
             }
         }
@@ -254,6 +286,13 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
     $receiptPreviewPadLength  = $receiptPreviewPadLength >= 1 && $receiptPreviewPadLength <= 10 ? $receiptPreviewPadLength : 5;
     $receiptPreviewYear       = @date($receiptPreviewYearFormat) ?: date('Y');
     $receiptPreviewExample    = sprintf('%s-%s-%0' . $receiptPreviewPadLength . 'd', $receiptPreviewPrefix, $receiptPreviewYear, 1);
+
+    $sugPreviewPrefix     = $current['suggestion_no_prefix']      ?? 'KSPDOWA-SUG';
+    $sugPreviewYearFormat = $current['suggestion_no_year_format'] ?? 'Y';
+    $sugPreviewPadLength  = (int) ($current['suggestion_no_pad_length'] ?? 5);
+    $sugPreviewPadLength  = $sugPreviewPadLength >= 1 && $sugPreviewPadLength <= 10 ? $sugPreviewPadLength : 5;
+    $sugPreviewYear       = @date($sugPreviewYearFormat) ?: date('Y');
+    $sugPreviewExample    = sprintf('%s-%s-%0' . $sugPreviewPadLength . 'd', $sugPreviewPrefix, $sugPreviewYear, 1);
     ?>
 
     <div class="panel">
@@ -316,6 +355,27 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
                 >
             <?php endforeach; ?>
             <p class="section-hint">Year Format is a PHP date() format (letters only) &mdash; "Y" gives a 4-digit year like 2026, "y" gives 2 digits like 26. Sequence Digits is how many digits the running number is padded to (5 gives 00001).</p>
+
+            <hr style="margin:24px 0 8px; border:none; border-top:1px solid #eef1f5;">
+            <h2 style="margin-top:0;">Suggestion Numbering</h2>
+            <p class="section-hint">
+                Format: PREFIX-YEAR-SEQUENCE. Example with current values:
+                <strong><?= Sanitize::html($sugPreviewExample) ?></strong>
+            </p>
+
+            <?php foreach ($suggestionNoFields as $key => $def): ?>
+                <label for="<?= Sanitize::attr($key) ?>"><?= Sanitize::html($def['label']) ?> *</label>
+                <input
+                    type="<?= ($def['type'] ?? '') === 'digits' ? 'number' : 'text' ?>"
+                    id="<?= Sanitize::attr($key) ?>"
+                    name="<?= Sanitize::attr($key) ?>"
+                    maxlength="<?= (int) $def['maxlen'] ?>"
+                    <?= ($def['type'] ?? '') === 'digits' ? 'min="1" max="10"' : '' ?>
+                    value="<?= Sanitize::attr($current[$key] ?? '') ?>"
+                    required
+                >
+            <?php endforeach; ?>
+            <p class="section-hint">Distinct reference number format for member suggestions (e.g. KSPDOWA-SUG-2026-00001). Distinguishes suggestions from grievances.</p>
 
             <button type="submit">Save Settings</button>
         </form>

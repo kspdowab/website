@@ -13,50 +13,76 @@ require_once __DIR__ . '/includes/bootstrap.php';
 $pageTitle = 'Association Gallery';
 require __DIR__ . '/includes/partials/header.php';
 
-$galleryItems = [
-    [
-        'image' => '/assets/images/gallery/meeting-state-executive.jpg',
-        'title' => 'ರಾಜ್ಯ ಕಾರ್ಯಕಾರಿಣಿ ಸಭೆ, ಬೆಂಗಳೂರು',
-        'category' => 'State Executive',
-        'date'  => '15 Aug 2026',
-        'desc'  => 'State Executive Committee meeting held at the association headquarters in Bengaluru to discuss key PDO welfare initiatives.'
-    ],
-    [
-        'image' => '/assets/images/gallery/technical-training.jpg',
-        'title' => 'ತಾಂತ್ರಿಕ ತರಬೇತಿ ಕಾರ್ಯಕ್ರಮ',
-        'category' => 'Training',
-        'date'  => '22 Jul 2026',
-        'desc'  => 'Technical skill development and Panchatantra 2.0 digital software training session conducted for Panchayat Development Officers.'
-    ],
-    [
-        'image' => '/assets/images/gallery/district-pdo-coordination.jpg',
-        'title' => 'ಜಿಲ್ಲಾ PDOಗಳ ಸಮನ್ವಯ ಸಭೆ',
-        'category' => 'Coordination',
-        'date'  => '05 Jul 2026',
-        'desc'  => 'District-level PDO coordination conference reviewing rural developmental projects and administrative coordination.'
-    ],
-    [
-        'image' => '/assets/images/gallery/felicitation-ceremony.jpg',
-        'title' => 'ಸನ್ಮಾನ ಕಾರ್ಯಕ್ರಮ',
-        'category' => 'Felicitation',
-        'date'  => '18 Jun 2026',
-        'desc'  => 'Felicitation ceremony recognizing outstanding service, dedication, and exemplary administrative excellence by association officers.'
-    ],
-    [
-        'image' => '/assets/images/gallery/general-meeting.jpg',
-        'title' => 'ರಾಜ್ಯ ಮಟ್ಟದ ಮಹಾಸಭೆ',
-        'category' => 'General Body',
-        'date'  => '28 May 2026',
-        'desc'  => 'Annual state level general body convention with representative delegates from all 31 districts of Karnataka.'
-    ],
-    [
-        'image' => '/assets/images/gallery/association-deliberation.jpg',
-        'title' => 'ಸಂಘದ ಕಾರ್ಯಕಾರಿಣಿ ಸಮಾಲೋಚನೆ',
-        'category' => 'Executive Consultation',
-        'date'  => '17 May 2026',
-        'desc'  => 'Executive deliberations on service rule amendments, cadre review, and welfare representations.'
-    ]
-];
+$galleryItems = [];
+try {
+    $dbGalleryPhotos = Database::fetchAll(
+        "SELECT id, title, category, photo_date, description, file_path 
+         FROM gallery_photos 
+         WHERE status = 'active' 
+         ORDER BY sort_order ASC, photo_date DESC, id DESC"
+    );
+    if (!empty($dbGalleryPhotos)) {
+        foreach ($dbGalleryPhotos as $photo) {
+            $dateStr = !empty($photo['photo_date']) ? date('d M Y', strtotime($photo['photo_date'])) : '';
+            $galleryItems[] = [
+                'image'    => $photo['file_path'],
+                'title'    => $photo['title'],
+                'category' => $photo['category'] ?: 'General',
+                'date'     => $dateStr,
+                'desc'     => $photo['description'] ?: ''
+            ];
+        }
+    }
+} catch (Throwable $e) {
+    // Graceful fallback
+}
+
+if (empty($galleryItems)) {
+    $galleryItems = [
+        [
+            'image' => '/assets/images/gallery/meeting-state-executive.jpg',
+            'title' => 'ರಾಜ್ಯ ಕಾರ್ಯಕಾರಿಣಿ ಸಭೆ, ಬೆಂಗಳೂರು',
+            'category' => 'State Executive',
+            'date'  => '15 Aug 2026',
+            'desc'  => 'State Executive Committee meeting held at the association headquarters in Bengaluru to discuss key PDO welfare initiatives.'
+        ],
+        [
+            'image' => '/assets/images/gallery/technical-training.jpg',
+            'title' => 'ತಾಂತ್ರಿಕ ತರಬೇತಿ ಕಾರ್ಯಕ್ರಮ',
+            'category' => 'Training',
+            'date'  => '22 Jul 2026',
+            'desc'  => 'Technical skill development and Panchatantra 2.0 digital software training session conducted for Panchayat Development Officers.'
+        ],
+        [
+            'image' => '/assets/images/gallery/district-pdo-coordination.jpg',
+            'title' => 'ಜಿಲ್ಲಾ PDOಗಳ ಸಮನ್ವಯ ಸಭೆ',
+            'category' => 'Coordination',
+            'date'  => '05 Jul 2026',
+            'desc'  => 'District-level PDO coordination conference reviewing rural developmental projects and administrative coordination.'
+        ],
+        [
+            'image' => '/assets/images/gallery/felicitation-ceremony.jpg',
+            'title' => 'ಸನ್ಮಾನ ಕಾರ್ಯಕ್ರಮ',
+            'category' => 'Felicitation',
+            'date'  => '18 Jun 2026',
+            'desc'  => 'Felicitation ceremony recognizing outstanding service, dedication, and exemplary administrative excellence by association officers.'
+        ],
+        [
+            'image' => '/assets/images/gallery/general-meeting.jpg',
+            'title' => 'ರಾಜ್ಯ ಮಟ್ಟದ ಮಹಾಸಭೆ',
+            'category' => 'General Body',
+            'date'  => '28 May 2026',
+            'desc'  => 'Annual state level general body convention with representative delegates from all 31 districts of Karnataka.'
+        ],
+        [
+            'image' => '/assets/images/gallery/association-deliberation.jpg',
+            'title' => 'ಸಂಘದ ಕಾರ್ಯಕಾರಿಣಿ ಸಮಾಲೋಚನೆ',
+            'category' => 'Executive Consultation',
+            'date'  => '17 May 2026',
+            'desc'  => 'Executive deliberations on service rule amendments, cadre review, and welfare representations.'
+        ]
+    ];
+}
 ?>
 
 <div style="margin-bottom: 24px;">

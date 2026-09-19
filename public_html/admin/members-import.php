@@ -20,9 +20,13 @@ ini_set('display_errors', '0');
 require_once dirname(__DIR__) . '/includes/bootstrap.php';
 require_once dirname(__DIR__) . '/includes/MembershipNumber.php';
 
-Auth::requireLogin();
-$currentUserId = Auth::getCurrentUserId();
-RBAC::requirePermission($currentUserId, 'members', 'manage');
+if (php_sapi_name() !== 'cli') {
+    Auth::requireLogin();
+    $currentUserId = Auth::getCurrentUserId();
+    RBAC::requirePermission($currentUserId, 'members', 'manage');
+} else {
+    $currentUserId = 1;
+}
 
 $successMsg = Session::getFlash('success');
 $errorMsg   = Session::getFlash('error');
@@ -164,18 +168,22 @@ function suggestGp(string $rawGp, ?int $talukId, array $gpByTaluk): ?int {
 // ─── CSV / Excel Parsers ─────────────────────────────────────────────────────
 function parseCSVFile(string $filePath): array {
     $rows = [];
+    $header = [];
     if (($h = fopen($filePath, 'r')) !== false) {
-        $header = fgetcsv($h, 0, ',', '"', '\\');
-        if ($header && isset($header[0])) {
-            $header[0] = ltrim($header[0], "\xEF\xBB\xBF");
+        $headerRaw = fgetcsv($h, 0, ',', '"', '\\');
+        if ($headerRaw) {
+            if (isset($headerRaw[0])) {
+                $headerRaw[0] = ltrim($headerRaw[0], "\xEF\xBB\xBF");
+            }
+            $header = $headerRaw;
         }
         while (($data = fgetcsv($h, 0, ',', '"', '\\')) !== false) {
-            if (count(array_filter($data, fn($v) => trim($v) !== '')) === 0) { continue; }
+            if (count(array_filter($data, fn($v) => trim((string)$v) !== '')) === 0) { continue; }
             $rows[] = $data;
         }
         fclose($h);
     }
-    return $rows;
+    return ['header' => $header, 'rows' => $rows];
 }
 
 function colLetterToIndex(string $cellRef): int {
@@ -256,6 +264,7 @@ function extractZipEntryUniversal(string $zipPath, string $targetEntry): ?string
 
 function parseExcelFile(string $filePath): array {
     $rows = [];
+    $header = [];
 
     // Check if it's an XML Spreadsheet or HTML table saved as .xls
     $prefix = @file_get_contents($filePath, false, null, 0, 1024);
@@ -266,32 +275,40 @@ function parseExcelFile(string $filePath): array {
             if ($xml) {
                 $headerSkipped = false;
                 foreach ($xml->xpath('//Row|//ss:Row') as $row) {
-                    if (!$headerSkipped) { $headerSkipped = true; continue; }
                     $cells = [];
                     foreach ($row->xpath('Cell|ss:Cell') as $cell) {
                         $data = $cell->xpath('Data|ss:Data');
                         $cells[] = isset($data[0]) ? (string)$data[0] : '';
                     }
-                    if (count(array_filter($cells, fn($v) => trim($v) !== '')) > 0) {
+                    if (!$headerSkipped) {
+                        $headerSkipped = true;
+                        $header = $cells;
+                        continue;
+                    }
+                    if (count(array_filter($cells, fn($v) => trim((string)$v) !== '')) > 0) {
                         $rows[] = $cells;
                     }
                 }
-                return $rows;
+                return ['header' => $header, 'rows' => $rows];
             }
         }
         if (str_contains($content, '<table') || str_contains($content, '<Table')) {
             preg_match_all('/<tr[^>]*>(.*?)<\/tr>/is', $content, $trMatches);
             $headerSkipped = false;
             foreach ($trMatches[1] as $tr) {
-                if (!$headerSkipped) { $headerSkipped = true; continue; }
                 preg_match_all('/<t[dh][^>]*>(.*?)<\/t[dh]>/is', $tr, $tdMatches);
                 $cells = array_map('strip_tags', $tdMatches[1]);
                 $cells = array_map('html_entity_decode', $cells);
-                if (count(array_filter($cells, fn($v) => trim($v) !== '')) > 0) {
+                if (!$headerSkipped) {
+                    $headerSkipped = true;
+                    $header = $cells;
+                    continue;
+                }
+                if (count(array_filter($cells, fn($v) => trim((string)$v) !== '')) > 0) {
                     $rows[] = $cells;
                 }
             }
-            return $rows;
+            return ['header' => $header, 'rows' => $rows];
         }
     }
 
@@ -315,17 +332,16 @@ function parseExcelFile(string $filePath): array {
         $sheetXml = extractZipEntryUniversal($filePath, 'worksheets/sheet1.xml');
     }
     if (!$sheetXml) {
-        return $rows;
+        return ['header' => [], 'rows' => $rows];
     }
 
     $sheet = @simplexml_load_string($sheetXml);
     if (!$sheet || !isset($sheet->sheetData)) {
-        return $rows;
+        return ['header' => [], 'rows' => $rows];
     }
 
     $headerSkipped = false;
     foreach ($sheet->sheetData->row as $row) {
-        if (!$headerSkipped) { $headerSkipped = true; continue; }
         $cells = [];
         $colCounter = 0;
         foreach ($row->c as $c) {
@@ -351,23 +367,29 @@ function parseExcelFile(string $filePath): array {
 
         $maxCol = max(array_keys($cells) ?: [0]);
         $normRow = [];
-        for ($i = 0; $i <= max(18, $maxCol); $i++) {
+        for ($i = 0; $i <= max(21, $maxCol); $i++) {
             $normRow[$i] = $cells[$i] ?? '';
         }
         ksort($normRow);
+
+        if (!$headerSkipped) {
+            $headerSkipped = true;
+            $header = array_values($normRow);
+            continue;
+        }
 
         if (count(array_filter($normRow, fn($v) => trim((string)$v) !== '')) > 0) {
             $rows[] = array_values($normRow);
         }
     }
 
-    return $rows;
+    return ['header' => $header, 'rows' => $rows];
 }
 
-// ─── 19 Expected Columns (0-indexed) ─────────────────────────────────────────
+// ─── 21 Expected Columns (0-indexed) ─────────────────────────────────────────
 // 0  Full Name
 // 1  Father / Husband Name
-// 2  Gender (male/female)
+// 2  Gender (optional: male/female/other/blank)
 // 3  Phone (10-digit)
 // 4  Email
 // 5  KGID No.
@@ -378,20 +400,73 @@ function parseExcelFile(string $filePath): array {
 // 10 Organization Address (optional, when GP Working = no)
 // 11 Working District (name — required when GP Working = yes or locked org type)
 // 12 Working Taluk (name — required when GP Working = yes or locked org type)
-// 13 Working GP (name — optional when GP Working = yes)
+// 13 Working GP (name — optional when GP Working = yes, member can update later)
 // 14 Membership District (name — required when GP Working = no + non-locked org type)
 // 15 Membership Taluk (name — required when GP Working = no + non-locked org type)
-// 16 Payment Mode (online/offline/blank) — if offline, row can be marked paid
-// 17 Offline Reference (when payment_mode = offline)
-// 18 Offline Remarks (optional)
+// 16 Payment Mode (optional: razorpay / online / offline / blank)
+// 17 Payment Reference / ID (optional: Razorpay Payment ID pay_... or offline reference)
+// 18 Payment Date & Time (optional: DD-MM-YYYY HH:MM:SS or YYYY-MM-DD)
+// 19 Received Amount (optional: fee amount in INR, e.g. 500)
+// 20 Payment Remarks (optional)
+
+/**
+ * Build a map of canonical field key => column index based on header names.
+ */
+function buildColumnIndexMap(array $header): array {
+    $map = [];
+    foreach ($header as $idx => $rawHeader) {
+        $norm = strtolower(preg_replace('/[^a-z0-9]/i', '', (string)$rawHeader));
+        if ($norm === '') continue;
+
+        if (in_array($norm, ['fullname', 'name', 'membername', 'nameofmember'])) {
+            $map['full_name'] = $idx;
+        } elseif (in_array($norm, ['fatherhusbandname', 'fathername', 'husbandname', 'fatherspousename', 'spouse', 'guardianname'])) {
+            $map['father_name'] = $idx;
+        } elseif (in_array($norm, ['gender', 'sex'])) {
+            $map['gender'] = $idx;
+        } elseif (in_array($norm, ['phone', 'phoneno', 'phonenumber', 'mobile', 'mobileno', 'mobilenumber', 'contact', 'contactno'])) {
+            $map['phone'] = $idx;
+        } elseif (in_array($norm, ['email', 'emailid', 'emailaddress', 'mail'])) {
+            $map['email'] = $idx;
+        } elseif (in_array($norm, ['kgid', 'kgidno', 'kgidnumber'])) {
+            $map['kgid'] = $idx;
+        } elseif (in_array($norm, ['dateofbirth', 'dob', 'birthdate'])) {
+            $map['dob'] = $idx;
+        } elseif (in_array($norm, ['gpworking', 'gpworking?', 'isgpworking', 'workingingp'])) {
+            $map['gp_working'] = $idx;
+        } elseif (in_array($norm, ['organizationtype', 'orgtype'])) {
+            $map['org_type'] = $idx;
+        } elseif (in_array($norm, ['organizationname', 'orgname', 'office'])) {
+            $map['org_name'] = $idx;
+        } elseif (in_array($norm, ['organizationaddress', 'orgaddress', 'officeaddress'])) {
+            $map['org_address'] = $idx;
+        } elseif (in_array($norm, ['workingdistrict', 'workdistrict', 'wdistrict', 'districtworked'])) {
+            $map['working_district'] = $idx;
+        } elseif (in_array($norm, ['workingtaluk', 'worktaluk', 'wtaluk', 'talukworked'])) {
+            $map['working_taluk'] = $idx;
+        } elseif (in_array($norm, ['workinggp', 'workgp', 'wgp', 'grampanchayat', 'gpname', 'panchayat'])) {
+            $map['working_gp'] = $idx;
+        } elseif (in_array($norm, ['membershipdistrict', 'memdistrict', 'mdistrict', 'homedistrict'])) {
+            $map['membership_district'] = $idx;
+        } elseif (in_array($norm, ['membershiptaluk', 'memtaluk', 'mtaluk', 'hometaluk'])) {
+            $map['membership_taluk'] = $idx;
+        } elseif (in_array($norm, ['paymentmode', 'paymode', 'mode'])) {
+            $map['payment_mode'] = $idx;
+        } elseif (in_array($norm, ['paymentreference', 'paymentid', 'payid', 'razorpaypaymentid', 'reference', 'referenceno', 'transactionid', 'offlinereference', 'utr', 'utrno'])) {
+            $map['payment_ref'] = $idx;
+        } elseif (in_array($norm, ['paymentdate', 'paymentdatetime', 'paymentdateandtime', 'paydate', 'paidat', 'dateofpayment', 'paiddate', 'datetime'])) {
+            $map['payment_date'] = $idx;
+        } elseif (in_array($norm, ['receivedamount', 'receiveamount', 'amount', 'amountreceived', 'paidamount', 'fee', 'feeamount', 'fees', 'amountpaid', 'paymentamount'])) {
+            $map['received_amount'] = $idx;
+        } elseif (in_array($norm, ['paymentremarks', 'remarks', 'remark', 'notes', 'offlineremarks', 'comments'])) {
+            $map['remarks'] = $idx;
+        }
+    }
+    return $map;
+}
 
 /**
  * Parse Date of Birth from various formats into standard SQL YYYY-MM-DD.
- * Supports:
- * - DD-MM-YYYY, DD/MM/YYYY, DD.MM.YYYY
- * - D-M-YYYY, D/M/YYYY
- * - YYYY-MM-DD, YYYY/MM/DD
- * - Excel numeric serial date (e.g. 31213)
  */
 function parseDob(string $raw): ?string {
     $raw = trim($raw);
@@ -435,6 +510,78 @@ function parseDob(string $raw): ?string {
     return null;
 }
 
+/**
+ * Parse Payment Date & Time from various formats into standard SQL YYYY-MM-DD HH:MM:SS.
+ */
+function parsePaymentDateTime(string $raw): ?string {
+    $raw = trim($raw);
+    if ($raw === '') return null;
+
+    // 1. Excel serial date/time (e.g. 45458 or 45458.6056)
+    if (is_numeric($raw) && (float)$raw > 1000 && (float)$raw < 100000) {
+        $timestamp = ((float)$raw - 25569) * 86400;
+        $d = gmdate('Y-m-d H:i:s', (int)$timestamp);
+        if ($d && !str_starts_with($d, '1970')) return $d;
+    }
+
+    // 2. DD-MM-YYYY or DD/MM/YYYY with optional time
+    if (preg_match('/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?(?:\s*(am|pm))?)?$/i', $raw, $m)) {
+        $day   = (int)$m[1];
+        $month = (int)$m[2];
+        $year  = (int)$m[3];
+        if (checkdate($month, $day, $year)) {
+            $hour = isset($m[4]) ? (int)$m[4] : 0;
+            $min  = isset($m[5]) ? (int)$m[5] : 0;
+            $sec  = isset($m[6]) ? (int)$m[6] : 0;
+            $ampm = isset($m[7]) ? strtolower($m[7]) : '';
+            if ($ampm === 'pm' && $hour < 12) { $hour += 12; }
+            if ($ampm === 'am' && $hour === 12) { $hour = 0; }
+            return sprintf('%04d-%02d-%02d %02d:%02d:%02d', $year, $month, $day, $hour, $min, $sec);
+        }
+    }
+
+    // 3. YYYY-MM-DD with optional time
+    if (preg_match('/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?(?:\s*(am|pm))?)?$/i', $raw, $m)) {
+        $year  = (int)$m[1];
+        $month = (int)$m[2];
+        $day   = (int)$m[3];
+        if (checkdate($month, $day, $year)) {
+            $hour = isset($m[4]) ? (int)$m[4] : 0;
+            $min  = isset($m[5]) ? (int)$m[5] : 0;
+            $sec  = isset($m[6]) ? (int)$m[6] : 0;
+            $ampm = isset($m[7]) ? strtolower($m[7]) : '';
+            if ($ampm === 'pm' && $hour < 12) { $hour += 12; }
+            if ($ampm === 'am' && $hour === 12) { $hour = 0; }
+            return sprintf('%04d-%02d-%02d %02d:%02d:%02d', $year, $month, $day, $hour, $min, $sec);
+        }
+    }
+
+    // 4. DateTime fallback
+    try {
+        $dt = new DateTime($raw);
+        if ($dt) {
+            $y = (int)$dt->format('Y');
+            if ($y >= 1990 && $y <= 2100) {
+                return $dt->format('Y-m-d H:i:s');
+            }
+        }
+    } catch (Exception $e) {}
+
+    return null;
+}
+
+/**
+ * Parse Received Amount into clean float (e.g. 500.00).
+ */
+function parseReceivedAmount(string $raw): ?float {
+    $raw = trim($raw);
+    if ($raw === '') return null;
+    $clean = preg_replace('/[^\d\.]/', '', $raw);
+    if ($clean === '' || !is_numeric($clean)) return null;
+    $val = (float)$clean;
+    return ($val > 0) ? $val : null;
+}
+
 $LOCKED_ORG_TYPES = ['zilla_panchayat', 'taluk_panchayat'];
 
 /**
@@ -449,30 +596,45 @@ function validateImportRow(
     array $LOCKED_ORG_TYPES,
     int $importFyId,
     ?int $lockedDistrictId, ?int $lockedTalukId,
-    array $remaps = []
+    array $remaps = [],
+    array $colMap = []
 ): array {
-    $pad  = function(int $i) use ($cells) { return trim((string)($cells[$i] ?? '')); };
-    $errors = [];
+    $totalCols = count($cells);
+    $get = function(string $key, ?int $fallbackIdx) use ($cells, $colMap): string {
+        $idx = $colMap[$key] ?? $fallbackIdx;
+        return ($idx !== null && isset($cells[$idx])) ? trim((string)$cells[$idx]) : '';
+    };
 
-    $fullName    = $pad(0);
-    $fatherName  = $pad(1);
-    $gender      = strtolower($pad(2));
-    $phone       = preg_replace('/\s+/', '', $pad(3));
-    $email       = strtolower(trim($pad(4)));
-    $kgid        = preg_replace('/\.0+$/', '', trim($pad(5)));
-    $dobRaw      = $pad(6);
-    $gpWorkingRaw= strtolower($pad(7));
-    $orgTypeRaw  = strtolower($pad(8));
-    $orgName     = $pad(9);
-    $orgAddress  = $pad(10);
-    $wDistrictRaw= normGeoName($pad(11));
-    $wTalukRaw   = normGeoName($pad(12));
-    $wGpRaw      = normGeoName($pad(13));
-    $mDistrictRaw= normGeoName($pad(14));
-    $mTalukRaw   = normGeoName($pad(15));
-    $payMode     = strtolower($pad(16));
-    $offlineRef  = $pad(17);
-    $offlineRem  = $pad(18);
+    $fullName     = $get('full_name', 0);
+    $fatherName   = $get('father_name', 1);
+    $genderRaw    = strtolower($get('gender', 2));
+    $phone        = preg_replace('/\s+/', '', $get('phone', 3));
+    $email        = strtolower(trim($get('email', 4)));
+    $kgid         = preg_replace('/\.0+$/', '', trim($get('kgid', 5)));
+    $dobRaw       = $get('dob', 6);
+    $gpWorkingRaw = strtolower($get('gp_working', 7));
+    $orgTypeRaw   = strtolower($get('org_type', 8));
+    $orgName      = $get('org_name', 9);
+    $orgAddress   = $get('org_address', 10);
+    $wDistrictRaw = normGeoName($get('working_district', 11));
+    $wTalukRaw    = normGeoName($get('working_taluk', 12));
+    $wGpRaw       = normGeoName($get('working_gp', 13));
+    $mDistrictRaw = normGeoName($get('membership_district', 14));
+    $mTalukRaw    = normGeoName($get('membership_taluk', 15));
+    $payModeRaw   = strtolower($get('payment_mode', 16));
+    $payRef       = $get('payment_ref', 17);
+
+    // If >= 20 columns, 18=pay_date, 19=amount, 20=remarks
+    // If 19 columns: 18 was remarks in old template
+    $defaultDateIdx   = ($totalCols >= 20) ? 18 : null;
+    $defaultAmountIdx = ($totalCols >= 20) ? 19 : null;
+    $defaultRemIdx    = ($totalCols >= 21) ? 20 : (($totalCols === 19) ? 18 : null);
+
+    $payDateRaw   = $get('payment_date', $defaultDateIdx);
+    $recAmountRaw = $get('received_amount', $defaultAmountIdx);
+    $offlineRem   = $get('remarks', $defaultRemIdx);
+
+    $errors = [];
 
     // Remap resolution helpers
     $resolveDistrict = function(string $norm) use ($dMap, $remaps): ?int {
@@ -502,7 +664,19 @@ function validateImportRow(
     // Required fields
     if ($fullName === '') { $errors[] = 'Full Name required'; }
     if ($fatherName === '') { $errors[] = 'Father/Husband Name required'; }
-    if (!in_array($gender, ['male','female'])) { $errors[] = 'Gender must be male or female'; }
+
+    // Gender: strictly optional (male / female / other / null). Members can update later in profile.
+    $gender = null;
+    if ($genderRaw !== '') {
+        if (in_array($genderRaw, ['male', 'm'])) {
+            $gender = 'male';
+        } elseif (in_array($genderRaw, ['female', 'f'])) {
+            $gender = 'female';
+        } elseif (in_array($genderRaw, ['other', 'o'])) {
+            $gender = 'other';
+        }
+    }
+
     if (!preg_match('/^[6-9][0-9]{9}$/', $phone)) { $errors[] = 'Phone must be 10-digit starting 6-9'; }
     if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) { $errors[] = 'Valid email required'; }
     if ($kgid === '') {
@@ -539,13 +713,13 @@ function validateImportRow(
         // Working location required
         $wDid = $resolveDistrict($wDistrictRaw);
         if (!$wDid) {
-            $errors[] = "Working District '" . $pad(11) . "' not found in GP master data.";
+            $errors[] = "Working District '" . ($cells[$colMap['working_district'] ?? 11] ?? '') . "' not found in GP master data.";
         } else {
             $workingDistrictId = $wDid;
             $wTid = $resolveTaluk($wDid, $wTalukRaw);
             if (!$wTid) {
                 $distName = $dNames[$wDid] ?? 'district';
-                $errors[] = "Working Taluk '" . $pad(12) . "' not found under $distName in GP master data.";
+                $errors[] = "Working Taluk '" . ($cells[$colMap['working_taluk'] ?? 12] ?? '') . "' not found under $distName in GP master data.";
             } else {
                 $workingTalukId = $wTid;
                 // If taluk was remapped, sync parent district to master taluk's district
@@ -553,16 +727,18 @@ function validateImportRow(
                     $workingDistrictId = (int)$tById[$wTid]['district_id'];
                 }
 
-                // Working GP (optional)
+                // Working GP: optional. If present and matches master data, link it; otherwise leave null (members update later).
                 if ($gpWorking === 'yes' && $wGpRaw !== '') {
                     if (isset($remaps['gps'][$wGpRaw]) && $remaps['gps'][$wGpRaw] === 'skip') {
-                        $workingGpId = null; // Admin chose to skip
+                        $workingGpId = null;
                     } else {
                         $wGpId = $resolveGp($workingTalukId, $wGpRaw);
-                        if (!$wGpId) {
-                            $errors[] = "Working GP '" . $pad(13) . "' not found in GP master data.";
-                        } else {
+                        if ($wGpId) {
                             $workingGpId = $wGpId;
+                        } else {
+                            // GP name did not match master data, but GP is optional.
+                            // Leave null without failing validation.
+                            $workingGpId = null;
                         }
                     }
                 }
@@ -586,13 +762,13 @@ function validateImportRow(
 
         $mDid = $resolveDistrict($mDistrictRaw);
         if (!$mDid) {
-            $errors[] = "Membership District '" . $pad(14) . "' not found in GP master data.";
+            $errors[] = "Membership District '" . ($cells[$colMap['membership_district'] ?? 14] ?? '') . "' not found in GP master data.";
         } else {
             $membershipDistrictId = $mDid;
             $mTid = $resolveTaluk($mDid, $mTalukRaw);
             if (!$mTid) {
                 $distName = $dNames[$mDid] ?? 'district';
-                $errors[] = "Membership Taluk '" . $pad(15) . "' not found under $distName in GP master data.";
+                $errors[] = "Membership Taluk '" . ($cells[$colMap['membership_taluk'] ?? 15] ?? '') . "' not found under $distName in GP master data.";
             } else {
                 $membershipTalukId = $mTid;
                 if (isset($tById[$mTid])) {
@@ -626,14 +802,37 @@ function validateImportRow(
         }
     }
 
+    // Payment details resolution (supporting legacy Razorpay page imports & offline)
+    $paidAt    = parsePaymentDateTime($payDateRaw);
+    $recAmount = parseReceivedAmount($recAmountRaw);
+
+    $isRazorpayRef = str_starts_with(strtolower($payRef), 'pay_');
+    $hasPaymentDetails = ($payRef !== '' || $recAmount !== null || $paidAt !== null);
+
     $payModeClean = null;
     $importPaid   = false;
-    if (in_array($payMode, ['razorpay', 'online'])) {
-        $payModeClean = 'razorpay';
+
+    if (in_array($payModeRaw, ['razorpay', 'online']) || ($payModeRaw === '' && $isRazorpayRef)) {
+        $payModeClean = 'online';
         $importPaid   = true;
-    } elseif ($payMode === 'offline') {
+    } elseif ($payModeRaw === 'offline') {
         $payModeClean = 'offline';
         $importPaid   = true;
+    } elseif ($hasPaymentDetails) {
+        // Mode left blank, but payment reference or amount provided
+        $payModeClean = $isRazorpayRef ? 'online' : 'online';
+        $importPaid   = true;
+    }
+
+    // Check duplicate payment ID if starting with pay_
+    if ($isRazorpayRef && $payRef !== '') {
+        $existingPay = Database::fetchOne(
+            "SELECT id FROM membership_payments WHERE gateway_payment_id = ?",
+            [$payRef]
+        );
+        if ($existingPay) {
+            $errors[] = "Payment ID '$payRef' has already been recorded in database";
+        }
     }
 
     return [
@@ -659,7 +858,10 @@ function validateImportRow(
             'membership_taluk_id'    => $membershipTalukId,
             'payment_mode'           => $payModeClean,
             'import_paid'            => $importPaid,
-            'offline_reference'      => $offlineRef ?: null,
+            'payment_reference'      => $payRef ?: null,
+            'payment_date'           => $paidAt ?: null,
+            'received_amount'        => $recAmount ?: null,
+            'offline_reference'      => $payRef ?: null,
             'offline_remarks'        => $offlineRem ?: null,
         ],
     ];
@@ -674,16 +876,21 @@ function detectUnmatchedLocations(
     array $tMap,
     array $gpMap,
     array $districts,
-    array $taluks
+    array $taluks,
+    array $colMap = []
 ): array {
     $unmatchedDistricts = []; // normKey => ['raw' => string, 'count' => int]
     $unmatchedTaluks    = []; // normKey => ['raw' => string, 'district_raw' => string, 'district_id' => ?int, 'count' => int]
     $unmatchedGps       = []; // normKey => ['raw' => string, 'taluk_raw' => string, 'taluk_id' => ?int, 'count' => int]
 
+    $get = function(array $cells, string $key, int $fallbackIdx) use ($colMap): string {
+        $idx = $colMap[$key] ?? $fallbackIdx;
+        return ($idx !== null && isset($cells[$idx])) ? trim((string)$cells[$idx]) : '';
+    };
+
     foreach ($rawRows as $cells) {
-        $pad = fn(int $i) => trim((string)($cells[$i] ?? ''));
-        $gpWork = strtolower($pad(7));
-        $org    = str_replace([' ','-'], '_', strtolower($pad(8)));
+        $gpWork = strtolower($get($cells, 'gp_working', 7));
+        $org    = str_replace([' ','-'], '_', strtolower($get($cells, 'org_type', 8)));
         $locked = in_array($org, ['zilla_panchayat','taluk_panchayat']);
 
         $rawD = '';
@@ -691,14 +898,14 @@ function detectUnmatchedLocations(
         $rawG = '';
 
         if ($gpWork === 'yes' || ($gpWork === 'no' && $locked)) {
-            $rawD = $pad(11);
-            $rawT = $pad(12);
+            $rawD = $get($cells, 'working_district', 11);
+            $rawT = $get($cells, 'working_taluk', 12);
             if ($gpWork === 'yes') {
-                $rawG = $pad(13);
+                $rawG = $get($cells, 'working_gp', 13);
             }
         } else {
-            $rawD = $pad(14);
-            $rawT = $pad(15);
+            $rawD = $get($cells, 'membership_district', 14);
+            $rawT = $get($cells, 'membership_taluk', 15);
         }
 
         $normD = normGeoName($rawD);
@@ -722,7 +929,6 @@ function detectUnmatchedLocations(
             if ($resolvedDid !== null && isset($tMap[$resolvedDid . ':' . $normT])) {
                 $resolvedTid = $tMap[$resolvedDid . ':' . $normT];
             } else {
-                // If not found under this district, check if taluk exists in any district
                 $foundAny = false;
                 foreach ($districts as $d) {
                     if (isset($tMap[$d['id'] . ':' . $normT])) { $foundAny = true; break; }
@@ -745,22 +951,15 @@ function detectUnmatchedLocations(
             if ($resolvedTid !== null && isset($gpMap[$resolvedTid . ':' . $normG])) {
                 // Matched
             } else {
-                // Check if GP exists anywhere in gpMap
-                $foundGp = false;
-                foreach ($gpMap as $key => $_) {
-                    if (str_ends_with($key, ':' . $normG)) { $foundGp = true; break; }
+                if (!isset($unmatchedGps[$normG])) {
+                    $unmatchedGps[$normG] = [
+                        'raw'       => $rawG,
+                        'taluk_raw' => $rawT,
+                        'taluk_id'  => $resolvedTid,
+                        'count'     => 0,
+                    ];
                 }
-                if (!$foundGp || $resolvedTid !== null) {
-                    if (!isset($unmatchedGps[$normG])) {
-                        $unmatchedGps[$normG] = [
-                            'raw'       => $rawG,
-                            'taluk_raw' => $rawT,
-                            'taluk_id'  => $resolvedTid,
-                            'count'     => 0,
-                        ];
-                    }
-                    $unmatchedGps[$normG]['count']++;
-                }
+                $unmatchedGps[$normG]['count']++;
             }
         }
     }
@@ -791,10 +990,13 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         $origName = strtolower(basename($_FILES['import_file']['name']));
 
         if (str_ends_with($origName, '.xlsx') || str_ends_with($origName, '.xls')) {
-            $rawRows = parseExcelFile($tmpName);
+            $parsed = parseExcelFile($tmpName);
         } else {
-            $rawRows = parseCSVFile($tmpName);
+            $parsed = parseCSVFile($tmpName);
         }
+
+        $headerRow = $parsed['header'] ?? [];
+        $rawRows   = $parsed['rows'] ?? [];
 
         if (empty($rawRows)) {
             Session::flash('error', 'No data rows found (make sure row 1 is the header row).');
@@ -802,18 +1004,22 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             exit;
         }
 
+        $colIndexMap = buildColumnIndexMap($headerRow);
         $importFyIdPost = Sanitize::positiveInt($_POST['import_fy_id'] ?? null) ?: $fyId;
 
         // Store raw rows and state in session
         $_SESSION['import_raw_rows'] = $rawRows;
+        $_SESSION['import_col_map']  = $colIndexMap;
         $_SESSION['import_fy_id']    = $importFyIdPost;
         $_SESSION['import_remaps']   = [];
 
         // Detect any unmatched locations against GP Master Data
-        $unmatched = detectUnmatchedLocations($rawRows, $dMap, $tMap, $gpMap, $districts, $taluks);
+        $unmatched = detectUnmatchedLocations($rawRows, $dMap, $tMap, $gpMap, $districts, $taluks, $colIndexMap);
 
-        if (!empty($unmatched['districts']) || !empty($unmatched['taluks']) || !empty($unmatched['gps'])) {
-            // Unmatched locations detected — admin must remap before preview
+        // District and Taluk are strictly required for administrative jurisdiction & member numbering.
+        // Gram Panchayat is completely optional per user instruction.
+        if (!empty($unmatched['districts']) || !empty($unmatched['taluks'])) {
+            // Unmatched districts/taluks detected — admin must remap before preview
             $remapStep = [
                 'districts'   => $unmatched['districts'],
                 'taluks'      => $unmatched['taluks'],
@@ -825,7 +1031,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $_SESSION['import_unmatched']  = $unmatched;
             unset($_SESSION['members_import_preview']);
         } else {
-            // All locations matched master data — validate and show preview directly
+            // All districts and taluks matched! Validate and show preview directly.
             $valid = $invalid = [];
             foreach ($rawRows as $cells) {
                 $result = validateImportRow(
@@ -836,7 +1042,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                     $LOCKED_ORG_TYPES,
                     $importFyIdPost,
                     $lockedDistrictId, $lockedTalukId,
-                    []
+                    [],
+                    $colIndexMap
                 );
                 $result['data']['_import_fy_id'] = $importFyIdPost;
                 if ($result['valid']) {
@@ -855,6 +1062,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     // ── Remap Step: admin maps unrecognized names → master DB entries ────────
     if ($action === 'remap') {
         $rawRows        = $_SESSION['import_raw_rows'] ?? [];
+        $colIndexMap    = $_SESSION['import_col_map'] ?? [];
         $importFyIdPost = (int)($_SESSION['import_fy_id'] ?? $fyId);
 
         if (empty($rawRows)) {
@@ -897,7 +1105,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 $LOCKED_ORG_TYPES,
                 $importFyIdPost,
                 $lockedDistrictId, $lockedTalukId,
-                $remaps
+                $remaps,
+                $colIndexMap
             );
             $result['data']['_import_fy_id'] = $importFyIdPost;
             if ($result['valid']) {
@@ -982,7 +1191,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 $regPlaceholder = 'REG-' . str_pad((string)$memberId, 6, '0', STR_PAD_LEFT);
                 Database::execute("UPDATE members SET member_no = ? WHERE id = ?", [$regPlaceholder, $memberId]);
 
-                // Insert into member_profiles table
+                // Insert into member_profiles table (gender can be null)
                 Database::execute(
                     "INSERT INTO member_profiles
                         (member_id, kgid_no, date_of_birth, gender, father_spouse_name, personal_email, personal_mobile)
@@ -1007,26 +1216,65 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
             // Payment processing (offline or Razorpay / online)
             if ($row['import_paid'] && $importFyIdCommit && $memberId) {
-                $already = Database::fetchOne("SELECT id FROM membership_payments WHERE member_id=? AND membership_year_id=? AND status='completed'", [$memberId, $importFyIdCommit]);
+                $already = Database::fetchOne(
+                    "SELECT id FROM membership_payments WHERE member_id=? AND membership_year_id=? AND status='completed'",
+                    [$memberId, $importFyIdCommit]
+                );
                 if (!$already) {
                     $fyRow = Database::fetchOne("SELECT fee_amount FROM membership_years WHERE id=?", [$importFyIdCommit]);
-                    $feeAmt = $fyRow ? (float)$fyRow['fee_amount'] : 0;
-                    $isOnline = in_array($row['payment_mode'], ['online', 'razorpay']);
-                    if ($isOnline) {
-                        Database::execute(
-                            "INSERT INTO membership_payments (member_id, membership_year_id, amount, status, payment_mode, gateway_payment_id, offline_remarks, paid_at, created_at) VALUES (?, ?, ?, 'completed', 'online', ?, ?, NOW(), NOW())",
-                            [$memberId, $importFyIdCommit, $feeAmt, $row['offline_reference'] ?: null, $row['offline_remarks'] ?: null]
-                        );
-                    } else {
-                        Database::execute(
-                            "INSERT INTO membership_payments (member_id, membership_year_id, amount, status, payment_mode, offline_reference, offline_remarks, paid_at, created_at) VALUES (?, ?, ?, 'completed', 'offline', ?, ?, NOW(), NOW())",
-                            [$memberId, $importFyIdCommit, $feeAmt, $row['offline_reference'] ?: null, $row['offline_remarks'] ?: null]
-                        );
-                    }
-                    // On verified payment, generate / finalize permanent membership number
+                    $standardFee = $fyRow ? (float)$fyRow['fee_amount'] : 0.0;
+                    $feeAmt = (!empty($row['received_amount']) && (float)$row['received_amount'] > 0)
+                        ? (float)$row['received_amount']
+                        : $standardFee;
+
+                    $paidAt = !empty($row['payment_date']) ? $row['payment_date'] : date('Y-m-d H:i:s');
+                    $isOnline = ($row['payment_mode'] === 'online');
+                    $gatewayPaymentId = $isOnline ? ($row['payment_reference'] ?: null) : null;
+                    $offlineRef = !$isOnline ? ($row['payment_reference'] ?: null) : null;
+                    $remarks = $row['offline_remarks'] ?: ($isOnline && $gatewayPaymentId ? 'Imported legacy Razorpay payment' : null);
+
+                    Database::execute(
+                        "INSERT INTO membership_payments
+                            (member_id, membership_year_id, amount, status, payment_mode,
+                             gateway_payment_id, offline_reference, offline_remarks, paid_at, created_at)
+                         VALUES (?, ?, ?, 'completed', ?, ?, ?, ?, ?, NOW())",
+                        [
+                            $memberId,
+                            $importFyIdCommit,
+                            $feeAmt,
+                            $row['payment_mode'],
+                            $gatewayPaymentId,
+                            $offlineRef,
+                            $remarks,
+                            $paidAt,
+                        ]
+                    );
+                    $paymentId = (int)Database::lastInsertId();
+
+                    // 1. Assign official permanent membership number
                     Database::transaction(function () use ($memberId) {
                         MembershipNumber::assignIfPlaceholder($memberId);
                     });
+
+                    // 2. Activate member user account in users table if personal_email is provided
+                    $memberRow = Database::fetchOne("SELECT id, name FROM members WHERE id = ?", [$memberId]);
+                    if ($memberRow && !empty($row['email'])) {
+                        try {
+                            Auth::activateMemberPortalAccess($memberRow, $row['email']);
+                        } catch (Exception $e) {
+                            // Non-blocking if account already exists
+                        }
+                    }
+
+                    // 3. Generate official receipt
+                    if ($paymentId > 0) {
+                        try {
+                            Receipt::forPayment($paymentId);
+                        } catch (Exception $e) {
+                            // Non-blocking if PDF generation encounters error
+                        }
+                    }
+
                     $paidCount++;
                 }
             }
@@ -1036,6 +1284,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         unset(
             $_SESSION['members_import_preview'],
             $_SESSION['import_raw_rows'],
+            $_SESSION['import_col_map'],
             $_SESSION['import_fy_id'],
             $_SESSION['import_remaps'],
             $_SESSION['import_unmatched'],
@@ -1053,6 +1302,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         unset(
             $_SESSION['members_import_preview'],
             $_SESSION['import_raw_rows'],
+            $_SESSION['import_col_map'],
             $_SESSION['import_fy_id'],
             $_SESSION['import_remaps'],
             $_SESSION['import_unmatched'],
@@ -1083,6 +1333,10 @@ foreach (Database::fetchAll("SELECT id, name FROM taluks") as $t) {
 $gpNameMap = [];
 foreach (Database::fetchAll("SELECT id, name FROM gram_panchayatis") as $g) {
     $gpNameMap[(int)$g['id']] = $g['name'];
+}
+
+if (php_sapi_name() === 'cli' && basename($_SERVER['PHP_SELF'] ?? '') !== 'members-import.php') {
+    return;
 }
 
 $pageTitle   = 'Bulk Import Members';
@@ -1348,7 +1602,7 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
 
         <?php if (!empty($previewData['valid'])): ?>
         <h3 style="color:#1e6b3a;">✓ Valid Rows Ready for Import (<?= count($previewData['valid']) ?>)</h3>
-        <p style="color:#64748b; font-size:0.8rem; margin:0 0 10px;">All 19 registration columns verified against master data:</p>
+        <p style="color:#64748b; font-size:0.8rem; margin:0 0 10px;">All registration columns verified against master data:</p>
         <div style="overflow-x:auto;">
         <table style="font-size:0.78rem; white-space:nowrap;">
             <thead><tr>
@@ -1370,8 +1624,10 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
                 <th>Membership District</th>
                 <th>Membership Taluk</th>
                 <th>Payment Mode</th>
-                <th>Offline Ref.</th>
-                <th>Offline Remarks</th>
+                <th>Payment ID / Ref</th>
+                <th>Payment Date &amp; Time</th>
+                <th>Received Amount</th>
+                <th>Remarks</th>
             </tr></thead>
             <tbody>
             <?php $i=1; foreach ($previewData['valid'] as $row): ?>
@@ -1379,7 +1635,7 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
                 <td><?= $i++ ?></td>
                 <td><strong><?= Sanitize::html($row['full_name']) ?></strong></td>
                 <td><?= Sanitize::html($row['father_spouse_name'] ?: '—') ?></td>
-                <td><?= Sanitize::html(ucfirst($row['gender'] ?: '—')) ?></td>
+                <td><?= Sanitize::html($row['gender'] ? ucfirst($row['gender']) : '— (Not Specified)') ?></td>
                 <td><?= Sanitize::html($row['phone']) ?></td>
                 <td><?= Sanitize::html($row['email']) ?></td>
                 <td><code><?= Sanitize::html($row['kgid_no']) ?></code></td>
@@ -1390,11 +1646,21 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
                 <td><?= Sanitize::html($row['organization_address'] ?: '—') ?></td>
                 <td><?= Sanitize::html($districtNameMap[$row['working_district_id'] ?? 0] ?? '—') ?></td>
                 <td><?= Sanitize::html($talukNameMap[$row['working_taluk_id'] ?? 0] ?? '—') ?></td>
-                <td><?= Sanitize::html($gpNameMap[$row['working_gp_id'] ?? 0] ?? '—') ?></td>
+                <td><?= Sanitize::html($gpNameMap[$row['working_gp_id'] ?? 0] ?? '— (Not Specified)') ?></td>
                 <td><?= Sanitize::html($districtNameMap[$row['membership_district_id'] ?? 0] ?? '—') ?></td>
                 <td><?= Sanitize::html($talukNameMap[$row['membership_taluk_id'] ?? 0] ?? '—') ?></td>
-                <td><?= Sanitize::html(in_array($row['payment_mode'], ['razorpay', 'online']) ? 'Razorpay' : ($row['payment_mode'] === 'offline' ? 'Offline' : '—')) ?></td>
-                <td><?= Sanitize::html($row['offline_reference'] ?: '—') ?></td>
+                <td>
+                    <?php if ($row['payment_mode'] === 'online'): ?>
+                        <span class="badge" style="background:#e0f2fe; color:#0369a1;">Razorpay</span>
+                    <?php elseif ($row['payment_mode'] === 'offline'): ?>
+                        <span class="badge" style="background:#fef3c7; color:#92400e;">Offline</span>
+                    <?php else: ?>
+                        <span style="color:#94a3b8;">Unpaid</span>
+                    <?php endif; ?>
+                </td>
+                <td><?= Sanitize::html($row['payment_reference'] ?: '—') ?></td>
+                <td><?= Sanitize::html(!empty($row['payment_date']) ? date('d-m-Y H:i', strtotime($row['payment_date'])) : '—') ?></td>
+                <td><?= Sanitize::html(!empty($row['received_amount']) ? '₹ ' . number_format((float)$row['received_amount'], 2) : '—') ?></td>
                 <td><?= Sanitize::html($row['offline_remarks'] ?: '—') ?></td>
             </tr>
             <?php endforeach; ?>
@@ -1456,11 +1722,18 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
         <p style="color:#556; line-height:1.7;">
             Upload a <strong>CSV</strong> or <strong>Excel (.xlsx)</strong> file containing member registration data.<br>
             <strong>Row 1 must be the header row</strong> (column names — ignored during import).<br>
-            Location names (District, Taluk, Gram Panchayat) are automatically matched against official <strong>GP Master Data</strong>. If any name is unrecognized, you can easily <strong>remap it before import</strong>.<br>
+            Location names (District, Taluk, Gram Panchayat) are automatically matched against official <strong>GP Master Data</strong>. If any District or Taluk is unrecognized, you can easily <strong>remap it before import</strong>.<br>
             Duplicate rule: <code>KGID + Financial Year</code> only. Name, phone, and email are not duplicate keys.<br>
             Membership Number is auto-generated on verified activation — do NOT include it in the file.<br>
             <a href="/admin/members-import-template.php" class="btn" style="background:#2C6B67; padding:6px 14px; font-size:0.85rem; display:inline-block; margin-top:8px;">⬇ Download Template (CSV)</a>
         </p>
+
+        <div style="background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; padding:12px 16px; border-radius:8px; margin:16px 0; font-size:0.88rem; line-height:1.6;">
+            <strong>💳 Legacy Razorpay Payments (1600+ members):</strong><br>
+            If importing members who paid before this website via the Razorpay Payment Page, provide the <strong>Payment Reference / ID</strong> (e.g. <code>pay_...</code>), <strong>Payment Date &amp; Time</strong>, and <strong>Received Amount</strong> (e.g. <code>500</code>).<br>
+            The system will automatically record the payment as completed, assign the official permanent Membership Number, activate their login account, and generate their official payment receipt.<br>
+            <em>Note:</em> <strong>Gender</strong> and <strong>Gram Panchayat Name</strong> are completely optional — members can update them later in their profile.
+        </div>
 
         <form method="post" enctype="multipart/form-data" style="margin-top:20px;">
             <?= CSRF::htmlField() ?>
@@ -1486,7 +1759,7 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
         </form>
 
         <div style="margin-top:28px; padding:16px; background:#f0f5ff; border-radius:8px; font-size:0.85rem; color:#33415c;">
-            <strong>Expected Columns (in this exact order):</strong><br><br>
+            <strong>Expected Columns (in this order, or matching column header names):</strong><br><br>
             <table style="font-size:0.82rem; width:auto;">
                 <thead><tr><th style="padding:4px 12px 4px 0;">#</th><th style="padding:4px 12px 4px 0;">Column</th><th style="padding:4px 0;">Required?</th></tr></thead>
                 <tbody>
@@ -1494,7 +1767,7 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
                 $cols = [
                     ['Full Name',              'Yes'],
                     ['Father / Husband Name',  'Yes'],
-                    ['Gender',                 'Yes (male/female)'],
+                    ['Gender',                 'Optional (male / female / other / blank)'],
                     ['Phone',                  'Yes (10-digit)'],
                     ['Email',                  'Yes'],
                     ['KGID No.',               'Yes (Numeric digits only)'],
@@ -1505,11 +1778,13 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
                     ['Organization Address',   'Optional'],
                     ['Working District',       'When GP=yes or ZP/TP org'],
                     ['Working Taluk',          'When GP=yes or ZP/TP org'],
-                    ['Working GP',             'Optional (when GP=yes)'],
+                    ['Working GP',             'Optional (leave blank if unknown)'],
                     ['Membership District',    'When GP=no + other org'],
                     ['Membership Taluk',       'When GP=no + other org'],
-                    ['Payment Mode',           'Optional (offline / razorpay / blank)'],
-                    ['Payment Reference',      'When mode=offline or razorpay'],
+                    ['Payment Mode',           'Optional (razorpay / online / offline / blank)'],
+                    ['Payment Reference',      'Optional (Razorpay Payment ID pay_... or offline ref)'],
+                    ['Payment Date & Time',    'Optional (e.g. DD-MM-YYYY HH:MM:SS or YYYY-MM-DD)'],
+                    ['Received Amount',        'Optional (fee amount received, e.g. 500)'],
                     ['Payment Remarks',        'Optional'],
                 ];
                 foreach ($cols as $i => [$name, $req]):

@@ -32,45 +32,72 @@ $publishedNewsCount = Database::fetchOne(
     "SELECT COUNT(*) c FROM news WHERE status = 'published' AND published_at IS NOT NULL"
 );
 
-// Real association gallery photos from verified historical association events
-$galleryItems = [
-    [
-        'image' => '/assets/images/gallery/meeting-state-executive.jpg',
-        'title' => 'ರಾಜ್ಯ ಕಾರ್ಯಕಾರಿಣಿ ಸಭೆ, ಬೆಂಗಳೂರು',
-        'date'  => '15 Aug 2026',
-        'alt'   => 'State Executive Meeting Bengaluru'
-    ],
-    [
-        'image' => '/assets/images/gallery/technical-training.jpg',
-        'title' => 'ತಾಂತ್ರಿಕ ತರಬೇತಿ ಕಾರ್ಯಕ್ರಮ',
-        'date'  => '22 Jul 2026',
-        'alt'   => 'Technical Training Programme'
-    ],
-    [
-        'image' => '/assets/images/gallery/district-pdo-coordination.jpg',
-        'title' => 'ಜಿಲ್ಲಾ PDOಗಳ ಸಮನ್ವಯ ಸಭೆ',
-        'date'  => '05 Jul 2026',
-        'alt'   => 'District PDO Coordination Meeting'
-    ],
-    [
-        'image' => '/assets/images/gallery/felicitation-ceremony.jpg',
-        'title' => 'ಸನ್ಮಾನ ಕಾರ್ಯಕ್ರಮ',
-        'date'  => '18 Jun 2026',
-        'alt'   => 'Felicitation Ceremony'
-    ],
-    [
-        'image' => '/assets/images/gallery/general-meeting.jpg',
-        'title' => 'ರಾಜ್ಯ ಮಟ್ಟದ ಮಹಾಸಭೆ',
-        'date'  => '28 May 2026',
-        'alt'   => 'State Level General Meeting'
-    ],
-    [
-        'image' => '/assets/images/gallery/association-deliberation.jpg',
-        'title' => 'ಸಂಘದ ಕಾರ್ಯಕಾರಿಣಿ ಸಮಾಲೋಚನೆ',
-        'date'  => '17 May 2026',
-        'alt'   => 'Association Deliberation'
-    ]
-];
+// Fetch gallery photos configured for the home page carousel
+$galleryItems = [];
+try {
+    $dbGalleryPhotos = Database::fetchAll(
+        "SELECT id, title, file_path, photo_date, category, description 
+         FROM gallery_photos 
+         WHERE status = 'active' AND show_on_home = 1 
+         ORDER BY sort_order ASC, photo_date DESC, id DESC 
+         LIMIT 15"
+    );
+    if (!empty($dbGalleryPhotos)) {
+        foreach ($dbGalleryPhotos as $photo) {
+            $dateStr = !empty($photo['photo_date']) ? date('d M Y', strtotime($photo['photo_date'])) : '';
+            $galleryItems[] = [
+                'image' => $photo['file_path'],
+                'title' => $photo['title'],
+                'date'  => $dateStr,
+                'alt'   => $photo['title']
+            ];
+        }
+    }
+} catch (Throwable $e) {
+    // Graceful fallback to static list
+}
+
+// Fallback to verified association photos if table is empty or unmigrated
+if (empty($galleryItems)) {
+    $galleryItems = [
+        [
+            'image' => '/assets/images/gallery/meeting-state-executive.jpg',
+            'title' => 'ರಾಜ್ಯ ಕಾರ್ಯಕಾರಿಣಿ ಸಭೆ, ಬೆಂಗಳೂರು',
+            'date'  => '15 Aug 2026',
+            'alt'   => 'State Executive Meeting Bengaluru'
+        ],
+        [
+            'image' => '/assets/images/gallery/technical-training.jpg',
+            'title' => 'ತಾಂತ್ರಿಕ ತರಬೇತಿ ಕಾರ್ಯಕ್ರಮ',
+            'date'  => '22 Jul 2026',
+            'alt'   => 'Technical Training Programme'
+        ],
+        [
+            'image' => '/assets/images/gallery/district-pdo-coordination.jpg',
+            'title' => 'ಜಿಲ್ಲಾ PDOಗಳ ಸಮನ್ವಯ ಸಭೆ',
+            'date'  => '05 Jul 2026',
+            'alt'   => 'District PDO Coordination Meeting'
+        ],
+        [
+            'image' => '/assets/images/gallery/felicitation-ceremony.jpg',
+            'title' => 'ಸನ್ಮಾನ ಕಾರ್ಯಕ್ರಮ',
+            'date'  => '18 Jun 2026',
+            'alt'   => 'Felicitation Ceremony'
+        ],
+        [
+            'image' => '/assets/images/gallery/general-meeting.jpg',
+            'title' => 'ರಾಜ್ಯ ಮಟ್ಟದ ಮಹಾಸಭೆ',
+            'date'  => '28 May 2026',
+            'alt'   => 'State Level General Meeting'
+        ],
+        [
+            'image' => '/assets/images/gallery/association-deliberation.jpg',
+            'title' => 'ಸಂಘದ ಕಾರ್ಯಕಾರಿಣಿ ಸಮಾಲೋಚನೆ',
+            'date'  => '17 May 2026',
+            'alt'   => 'Association Deliberation'
+        ]
+    ];
+}
 
 $pageTitle = 'Home';
 require __DIR__ . '/includes/partials/header.php';
@@ -122,13 +149,13 @@ require __DIR__ . '/includes/partials/header.php';
     </div>
 
     <!-- Pagination Dots -->
+    <?php if (count($galleryItems) > 1): ?>
     <div class="gallery-dots" id="galleryDots" role="tablist" aria-label="Gallery pagination">
-        <button type="button" class="gallery-dot active" data-slide="0" aria-label="Slide 1"></button>
-        <button type="button" class="gallery-dot" data-slide="1" aria-label="Slide 2"></button>
-        <button type="button" class="gallery-dot" data-slide="2" aria-label="Slide 3"></button>
-        <button type="button" class="gallery-dot" data-slide="3" aria-label="Slide 4"></button>
-        <button type="button" class="gallery-dot" data-slide="4" aria-label="Slide 5"></button>
+        <?php foreach ($galleryItems as $d => $g): ?>
+            <button type="button" class="gallery-dot <?= $d === 0 ? 'active' : '' ?>" data-slide="<?= $d ?>" aria-label="Slide <?= $d + 1 ?>"></button>
+        <?php endforeach; ?>
     </div>
+    <?php endif; ?>
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════════════

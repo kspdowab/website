@@ -58,6 +58,15 @@ $grvStats = Database::fetchOne(
 $totalGrv    = (int)($grvStats['total'] ?? 0);
 $resolvedGrv = (int)($grvStats['resolved'] ?? 0);
 
+// Member Suggestions Count
+$totalSuggestions = 0;
+try {
+    $sugCountRow = Database::fetchOne("SELECT COUNT(*) AS total FROM suggestions WHERE member_id = ?", [$currentMemberId]);
+    $totalSuggestions = (int)($sugCountRow['total'] ?? 0);
+} catch (Throwable $e) {
+    $totalSuggestions = 0;
+}
+
 // Total Orders & Circulars count
 $totalOrders = (int)(Database::fetchOne("SELECT COUNT(*) AS total FROM orders WHERE access_level IN ('member','public')")['total'] ?? 0);
 $totalCirculars = (int)(Database::fetchOne("SELECT COUNT(*) AS total FROM circulars WHERE access_level IN ('member','public')")['total'] ?? 0);
@@ -206,6 +215,16 @@ $latestOrders = Database::fetchAll(
             <div>
                 <div class="tile-title">Submit Grievance</div>
                 <div class="tile-desc">Track issues</div>
+            </div>
+        </a>
+
+        <a href="/member/suggestions.php" class="quick-action-tile tile-purple">
+            <div class="tile-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+            </div>
+            <div>
+                <div class="tile-title">Suggestions (<?= $totalSuggestions ?>)</div>
+                <div class="tile-desc">Ideas &amp; proposals</div>
             </div>
         </a>
 

@@ -123,6 +123,17 @@ class RBAC
         return in_array($module . '.' . $action, self::getUserPermissions($userId), true);
     }
 
+    /**
+     * Check whether a user has a specific permission or is a State Super Admin.
+     */
+    public static function can(int $userId, string $module, string $action = 'view'): bool
+    {
+        if (self::hasRole($userId, 'State Super Admin')) {
+            return true;
+        }
+        return self::hasPermission($userId, $module, $action);
+    }
+
     // ------------------------------------------------------------------
     // Enforcement (abort on failure)
     // ------------------------------------------------------------------
@@ -223,3 +234,13 @@ class RBAC
         self::$permissionsCache = [];
     }
 }
+
+if (!function_exists('admin_can')) {
+    /**
+     * Helper to check RBAC module permission, granting full access to State Super Admin.
+     */
+    function admin_can(int $userId, string $module, string $action = 'view'): bool {
+        return RBAC::can($userId, $module, $action);
+    }
+}
+

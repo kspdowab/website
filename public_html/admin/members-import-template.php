@@ -19,12 +19,12 @@ Auth::requireLogin();
 $currentUserId = Auth::getCurrentUserId();
 RBAC::requirePermission($currentUserId, 'members', 'manage');
 
-// ── Column headers — EXACTLY 19, clean names, no parenthetical notes ─────────
+// ── Column headers — EXACTLY 21, clean names, no parenthetical notes ─────────
 // These must match the column order expected by members-import.php
 $columns = [
     'Full Name',              // 1
     'Father / Husband Name',  // 2
-    'Gender',                 // 3  values: male / female
+    'Gender',                 // 3  optional (male / female / other / blank)
     'Phone',                  // 4  10-digit, starts 6-9
     'Email',                  // 5
     'KGID No.',               // 6  format: numeric digits only (e.g. 1234567)
@@ -35,21 +35,23 @@ $columns = [
     'Organization Address',   // 11 optional
     'Working District',       // 12 when GP=yes OR org type is zilla_panchayat/taluk_panchayat
     'Working Taluk',          // 13 when GP=yes OR org type is zilla_panchayat/taluk_panchayat
-    'Working GP',             // 14 optional (when GP Working=yes)
+    'Working GP',             // 14 optional (can leave blank, member will update later)
     'Membership District',    // 15 when GP=no + other org type
     'Membership Taluk',       // 16 when GP=no + other org type
-    'Payment Mode',           // 17 values: offline | razorpay / (leave blank for unpaid)
-    'Payment Reference',      // 18 when Payment Mode=offline or razorpay
-    'Payment Remarks',        // 19 optional
+    'Payment Mode',           // 17 values: razorpay / offline / (leave blank for unpaid)
+    'Payment Reference',      // 18 Razorpay Payment ID (e.g. pay_...) or offline reference / UTR
+    'Payment Date & Time',    // 19 format: DD-MM-YYYY HH:MM:SS or DD/MM/YYYY
+    'Received Amount',        // 20 fee amount in INR (e.g. 500)
+    'Payment Remarks',        // 21 optional
 ];
 
 // ── Example rows — 3 scenarios ────────────────────────────────────────────────
 $exampleRows = [
-    // Row 2: GP Working = yes
+    // Row 2: GP Working = yes, Legacy Razorpay payment (Gender & GP left blank)
     [
         'RAJESH KUMAR',          // Full Name
         'RAMESH KUMAR',          // Father / Husband Name
-        'male',                  // Gender
+        '',                      // Gender (optional - left blank)
         '9876543210',            // Phone
         'rajesh.kumar@example.com', // Email
         '1234567',               // KGID No. (numeric digits only)
@@ -60,12 +62,14 @@ $exampleRows = [
         '',                      // Organization Address
         'BAGALKOTE',             // Working District
         'BADAMI',                // Working Taluk
-        'KAKANUR',               // Working GP (optional)
+        '',                      // Working GP (optional - left blank)
         '',                      // Membership District (auto from working)
         '',                      // Membership Taluk (auto from working)
-        '',                      // Payment Mode (unpaid)
-        '',                      // Payment Reference
-        '',                      // Payment Remarks
+        'razorpay',              // Payment Mode
+        'pay_ABC123456789',      // Payment Reference (Razorpay payment id)
+        '15-06-2024 14:30:00',   // Payment Date & Time
+        '500',                   // Received Amount
+        'Legacy Razorpay payment', // Payment Remarks
     ],
     // Row 3: GP Working = no, Zilla Panchayat (locked org type) + offline paid
     [
@@ -87,9 +91,11 @@ $exampleRows = [
         '',                      // Membership Taluk (auto from working)
         'offline',               // Payment Mode
         'RCPT-001',              // Payment Reference
+        '20-06-2024 11:15:00',   // Payment Date & Time
+        '500',                   // Received Amount
         'Cash received at office', // Payment Remarks
     ],
-    // Row 4: GP Working = no, other org + Razorpay online paid
+    // Row 4: GP Working = yes, with GP name and online Razorpay paid
     [
         'MEENA T',
         'TEJA T',
@@ -98,17 +104,19 @@ $exampleRows = [
         'meena.t@example.com',
         '3456789',               // KGID No. (numeric digits only)
         '10-11-1988',            // Date of Birth (DD-MM-YYYY)
-        'no',
-        'secretariat',           // Organization Type
-        'Karnataka Secretariat', // Organization Name
+        'yes',
+        '',                      // Organization Type
+        '',                      // Organization Name
         '',                      // Organization Address
-        '',                      // Working District (not needed for non-ZP/TP)
-        '',                      // Working Taluk
-        '',                      // Working GP
-        'BENGALURU',             // Membership District
-        'BENGALURU NORTH',       // Membership Taluk
-        'razorpay',              // Payment Mode (Razorpay online)
+        'BAGALKOTE',             // Working District
+        'BADAMI',                // Working Taluk
+        'KAKANUR',               // Working GP
+        '',                      // Membership District
+        '',                      // Membership Taluk
+        'razorpay',              // Payment Mode
         'pay_NZ1234567890',      // Payment Reference
+        '01-07-2024 16:45:12',   // Payment Date & Time
+        '500',                   // Received Amount
         'Paid via Razorpay gateway', // Payment Remarks
     ],
 ];

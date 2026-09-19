@@ -54,12 +54,10 @@ $breadcrumbs = $breadcrumbs ?? [
 ];
 
 // Helper to check RBAC module permission
-function admin_can(int $userId, string $module, string $action = 'view'): bool {
-    // Super admin has all permissions
-    if (RBAC::hasRole($userId, 'State Super Admin')) {
-        return true;
+if (!function_exists('admin_can')) {
+    function admin_can(int $userId, string $module, string $action = 'view'): bool {
+        return RBAC::can($userId, $module, $action);
     }
-    return RBAC::hasPermission($userId, $module, $action);
 }
 ?>
 <!DOCTYPE html>
@@ -104,7 +102,7 @@ function admin_can(int $userId, string $module, string $action = 'view'): bool {
             $isMembersGroup    = in_array($activeMenu, ['members', 'members_add', 'members_import', 'membership', 'reports'], true);
             $isFinanceGroup    = in_array($activeMenu, ['payments', 'donations'], true);
             $isOrdersGroup     = in_array($activeMenu, ['orders', 'circulars', 'documents'], true);
-            $isActivitiesGroup = in_array($activeMenu, ['activities', 'events', 'meetings', 'news'], true);
+            $isActivitiesGroup = in_array($activeMenu, ['activities', 'events', 'meetings', 'news', 'gallery'], true);
             $isSystemGroup     = in_array($activeMenu, ['users', 'audit_logs', 'settings'], true);
 
             // Group permission visibility
@@ -122,7 +120,8 @@ function admin_can(int $userId, string $module, string $action = 'view'): bool {
             $canViewAnyActivities = admin_can($currentUserId, 'activities', 'view') || 
                                     admin_can($currentUserId, 'events', 'view') || 
                                     admin_can($currentUserId, 'meetings', 'view') || 
-                                    admin_can($currentUserId, 'news', 'view');
+                                    admin_can($currentUserId, 'news', 'view') ||
+                                    admin_can($currentUserId, 'gallery', 'view');
 
             $canViewAnySystem     = admin_can($currentUserId, 'users', 'view') || 
                                     admin_can($currentUserId, 'roles', 'view') || 
@@ -231,6 +230,9 @@ function admin_can(int $userId, string $module, string $action = 'view'): bool {
                     <?php if (admin_can($currentUserId, 'news', 'view')): ?>
                         <a href="/admin/news.php" class="nav-sublink <?= $activeMenu === 'news' ? 'active' : '' ?>">News &amp; Updates</a>
                     <?php endif; ?>
+                    <?php if (admin_can($currentUserId, 'gallery', 'view') || admin_can($currentUserId, 'activities', 'view')): ?>
+                        <a href="/admin/gallery.php" class="nav-sublink <?= $activeMenu === 'gallery' ? 'active' : '' ?>">Photo Gallery</a>
+                    <?php endif; ?>
                 </div>
             </div>
             <?php endif; ?>
@@ -239,6 +241,13 @@ function admin_can(int $userId, string $module, string $action = 'view'): bool {
             <a href="/admin/grievances.php" class="nav-link <?= $activeMenu === 'grievances' ? 'active' : '' ?>">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
                 Grievances
+            </a>
+            <?php endif; ?>
+
+            <?php if (admin_can($currentUserId, 'suggestions', 'view')): ?>
+            <a href="/admin/suggestions.php" class="nav-link <?= $activeMenu === 'suggestions' ? 'active' : '' ?>">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+                Suggestions
             </a>
             <?php endif; ?>
 

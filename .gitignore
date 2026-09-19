@@ -60,3 +60,6 @@ package-lock.json
 # OS files
 .DS_Store
 desktop.ini
+
+# Codebase Memory MCP cache
+.codebase-memory/

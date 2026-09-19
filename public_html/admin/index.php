@@ -106,6 +106,47 @@ $rowGrv = Database::fetchOne(
 );
 $pendingGrievancesCount = (int)($rowGrv['total'] ?? 0);
 
+// Suggestions Stats (Scope Aware §28.11)
+$canViewSuggestions = admin_can($currentUserId, 'suggestions', 'view');
+$sugTotal           = 0;
+$sugSubmitted       = 0;
+$sugUnderReview     = 0;
+$sugPendingResponse = 0;
+
+if ($canViewSuggestions) {
+    try {
+        $sugWhere = ["1=1"];
+        $sugParams = [];
+        if ($lockedTalukId) {
+            $sugWhere[]  = "m.taluk_id = ?";
+            $sugParams[] = $lockedTalukId;
+        } elseif ($lockedDistrictId) {
+            $sugWhere[]  = "m.district_id = ?";
+            $sugParams[] = $lockedDistrictId;
+        }
+        $sugSql = implode(' AND ', $sugWhere);
+
+        $sugRow = Database::fetchOne(
+            "SELECT COUNT(*) AS total_all,
+                    SUM(CASE WHEN s.current_status = 'Submitted' THEN 1 ELSE 0 END) AS count_submitted,
+                    SUM(CASE WHEN s.current_status IN ('Under Review', 'Under Consideration') THEN 1 ELSE 0 END) AS count_review,
+                    SUM(CASE WHEN s.association_response IS NULL OR s.association_response = '' THEN 1 ELSE 0 END) AS count_pending_resp
+             FROM suggestions s
+             INNER JOIN members m ON m.id = s.member_id
+             WHERE {$sugSql}",
+            $sugParams
+        );
+        if ($sugRow) {
+            $sugTotal           = (int)($sugRow['total_all'] ?? 0);
+            $sugSubmitted       = (int)($sugRow['count_submitted'] ?? 0);
+            $sugUnderReview     = (int)($sugRow['count_review'] ?? 0);
+            $sugPendingResponse = (int)($sugRow['count_pending_resp'] ?? 0);
+        }
+    } catch (Throwable $e) {
+        // Defensive fallback
+    }
+}
+
 // Content counts
 $totalOrders = (int)(Database::fetchOne("SELECT COUNT(*) AS total FROM orders")['total'] ?? 0);
 $totalCirculars = (int)(Database::fetchOne("SELECT COUNT(*) AS total FROM circulars")['total'] ?? 0);
@@ -277,6 +318,18 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
         </div>
     </div>
+
+    <?php if ($canViewSuggestions): ?>
+    <a href="/admin/suggestions.php" class="summary-bar-card summary-bar-purple" style="text-decoration:none;">
+        <div>
+            <div class="summary-bar-num"><?= number_format($sugPendingResponse) ?></div>
+            <div class="summary-bar-label">SUGGESTIONS • <?= number_format($sugPendingResponse) ?> Pending Response (<?= number_format($sugTotal) ?> Total)</div>
+        </div>
+        <div class="summary-bar-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+        </div>
+    </a>
+    <?php endif; ?>
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
@@ -380,6 +433,18 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
             <div>
                 <div class="tile-title">Abstract Reports</div>
                 <div class="tile-desc">District &amp; Taluk abstracts</div>
+            </div>
+        </a>
+        <?php endif; ?>
+
+        <?php if ($canViewSuggestions): ?>
+        <a href="/admin/suggestions.php" class="quick-action-tile tile-indigo">
+            <div class="tile-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+            </div>
+            <div>
+                <div class="tile-title">Suggestions</div>
+                <div class="tile-desc"><?= $sugPendingResponse ?> Pending review</div>
             </div>
         </a>
         <?php endif; ?>
