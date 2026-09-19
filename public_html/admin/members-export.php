@@ -218,9 +218,7 @@ if ($reportType === 'detailed') {
         if ($lockedDistrictId) { $whereStr .= " AND m.district_id = {$lockedDistrictId}"; }
         elseif ($filterDistrictId) { $whereStr .= " AND m.district_id = {$filterDistrictId}"; }
 
-        $orderExpr = in_array($sortBy, ['total_members','paid_members','unpaid_members'])
-            ? "CAST({$sortBy} AS UNSIGNED) {$sqlDir}"
-            : "{$sortBy} {$sqlDir}";
+        $orderExpr = "{$sortBy} {$sqlDir}";
 
         $sql = "SELECT d.name AS district_name,
                        COUNT(m.id) AS total_members,
@@ -242,9 +240,7 @@ if ($reportType === 'detailed') {
         if ($lockedTalukId)        { $whereStr .= " AND m.taluk_id = {$lockedTalukId}"; }
         elseif ($filterTalukId)    { $whereStr .= " AND m.taluk_id = {$filterTalukId}"; }
 
-        $orderExpr = in_array($sortBy, ['total_members','paid_members','unpaid_members'])
-            ? "CAST({$sortBy} AS UNSIGNED) {$sqlDir}"
-            : "{$sortBy} {$sqlDir}";
+        $orderExpr = "{$sortBy} {$sqlDir}";
 
         $sql = "SELECT d.name AS district_name,
                        t.name AS taluk_name,

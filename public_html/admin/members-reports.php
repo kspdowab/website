@@ -83,10 +83,7 @@ if ($view === 'district') {
         $whereStr .= " AND m.district_id = ?";
         $params[]  = $filterDistrictId;
     }
-    // Numeric sort columns need explicit numeric cast for correct ordering
-    $orderExpr = in_array($sortBy, ['total_members','paid_members','unpaid_members'])
-        ? "CAST($sortBy AS UNSIGNED) $sqlDir"
-        : "$sortBy $sqlDir";
+    $orderExpr = "$sortBy $sqlDir";
 
     $sql = "SELECT d.id AS district_id, d.name AS district_name,
                    COUNT(m.id) AS total_members,
@@ -114,9 +111,7 @@ if ($view === 'district') {
         $whereStr .= " AND m.taluk_id = " . (int)$filterTalukId;
     }
 
-    $orderExpr = in_array($sortBy, ['total_members','paid_members','unpaid_members'])
-        ? "CAST($sortBy AS UNSIGNED) $sqlDir"
-        : "$sortBy $sqlDir";
+    $orderExpr = "$sortBy $sqlDir";
 
     $sql = "SELECT d.name AS district_name, t.name AS taluk_name,
                    COUNT(m.id) AS total_members,
