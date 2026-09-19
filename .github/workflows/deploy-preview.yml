@@ -45,5 +45,7 @@ jobs:
           SSH_PORT: 65002
         run: |
           rsync -rltvz --delete \
+            --exclude='config/*.secret.php' \
+            --exclude='uploads/' \
             -e "ssh -i ~/.ssh/deploy_key -p $SSH_PORT -o StrictHostKeyChecking=no" \
             ./public_html/ $SSH_USER@$SSH_HOST:/home/u278446798/domains/kspdowa.in/public_html/preview/
