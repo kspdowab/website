@@ -102,7 +102,7 @@ if (!function_exists('admin_can')) {
             $isMembersGroup    = in_array($activeMenu, ['members', 'members_add', 'members_import', 'membership', 'reports'], true);
             $isFinanceGroup    = in_array($activeMenu, ['payments', 'donations'], true);
             $isOrdersGroup     = in_array($activeMenu, ['orders', 'circulars', 'documents'], true);
-            $isActivitiesGroup = in_array($activeMenu, ['activities', 'events', 'meetings', 'news', 'gallery'], true);
+            $isActivitiesGroup = in_array($activeMenu, ['activities', 'events', 'meetings', 'resolutions', 'news', 'gallery'], true);
             $isSystemGroup     = in_array($activeMenu, ['users', 'audit_logs', 'settings'], true);
 
             // Group permission visibility
@@ -226,6 +226,7 @@ if (!function_exists('admin_can')) {
                     <?php endif; ?>
                     <?php if (admin_can($currentUserId, 'meetings', 'view')): ?>
                         <a href="/admin/meetings.php" class="nav-sublink <?= $activeMenu === 'meetings' ? 'active' : '' ?>">Meetings</a>
+                        <a href="/admin/resolutions.php" class="nav-sublink <?= $activeMenu === 'resolutions' ? 'active' : '' ?>">Resolutions</a>
                     <?php endif; ?>
                     <?php if (admin_can($currentUserId, 'news', 'view')): ?>
                         <a href="/admin/news.php" class="nav-sublink <?= $activeMenu === 'news' ? 'active' : '' ?>">News &amp; Updates</a>

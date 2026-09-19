@@ -152,6 +152,86 @@ $totalOrders = (int)(Database::fetchOne("SELECT COUNT(*) AS total FROM orders")[
 $totalCirculars = (int)(Database::fetchOne("SELECT COUNT(*) AS total FROM circulars")['total'] ?? 0);
 $totalDocuments = (int)(Database::fetchOne("SELECT COUNT(*) AS total FROM documents WHERE status = 'active'")['total'] ?? 0);
 
+// ─── Scope-Specific Administrative Breakdown Dataset ────────────────────────
+$districtBreakdowns = [];
+$talukBreakdowns    = [];
+$talukGpStats       = [];
+
+if ($lockedTalukId) {
+    // Taluk Administration: Gram Panchayat level coverage summary
+    $talukGpStats = Database::fetchAll(
+        "SELECT gp.id, gp.name AS gp_name, gp.code AS gp_code,
+                COUNT(DISTINCT m.id) AS total_members,
+                COUNT(DISTINCT CASE WHEN m.membership_status = 'active' THEN m.id END) AS active_members,
+                COUNT(DISTINCT CASE WHEN p.id IS NOT NULL THEN m.id END) AS paid_members,
+                COUNT(DISTINCT m.id) - COUNT(DISTINCT CASE WHEN p.id IS NOT NULL THEN m.id END) AS unpaid_members,
+                COALESCE(grv.pending_count, 0) AS pending_grievances
+         FROM gram_panchayatis gp
+         LEFT JOIN members m ON m.gp_id = gp.id
+         LEFT JOIN membership_payments p ON p.member_id = m.id AND p.membership_year_id = ? AND p.status = 'completed'
+         LEFT JOIN (
+             SELECT m2.gp_id, COUNT(g.id) AS pending_count
+             FROM grievances g
+             JOIN members m2 ON m2.id = g.member_id
+             WHERE g.current_status IN ('Submitted', 'Under Verification', 'Under Review', 'Pending', 'Forwarded')
+             GROUP BY m2.gp_id
+         ) grv ON grv.gp_id = gp.id
+         WHERE gp.taluk_id = ?
+         GROUP BY gp.id, gp.name, gp.code, grv.pending_count
+         ORDER BY total_members DESC, gp.name ASC",
+        [$currentFyId, $lockedTalukId]
+    );
+} elseif ($lockedDistrictId) {
+    // District Administration: Taluk-wise summary breakdown
+    $talukBreakdowns = Database::fetchAll(
+        "SELECT t.id, t.name AS taluk_name,
+                COUNT(DISTINCT m.id) AS total_members,
+                COUNT(DISTINCT CASE WHEN m.membership_status = 'active' THEN m.id END) AS active_members,
+                COUNT(DISTINCT CASE WHEN p.id IS NOT NULL THEN m.id END) AS paid_members,
+                COUNT(DISTINCT m.id) - COUNT(DISTINCT CASE WHEN p.id IS NOT NULL THEN m.id END) AS unpaid_members,
+                COALESCE(SUM(p.amount), 0) AS paid_amount,
+                COALESCE(grv.pending_count, 0) AS pending_grievances
+         FROM taluks t
+         LEFT JOIN members m ON m.taluk_id = t.id
+         LEFT JOIN membership_payments p ON p.member_id = m.id AND p.membership_year_id = ? AND p.status = 'completed'
+         LEFT JOIN (
+             SELECT m2.taluk_id, COUNT(g.id) AS pending_count
+             FROM grievances g
+             JOIN members m2 ON m2.id = g.member_id
+             WHERE g.current_status IN ('Submitted', 'Under Verification', 'Under Review', 'Pending', 'Forwarded')
+             GROUP BY m2.taluk_id
+         ) grv ON grv.taluk_id = t.id
+         WHERE t.district_id = ?
+         GROUP BY t.id, t.name, grv.pending_count
+         ORDER BY total_members DESC, t.name ASC",
+        [$currentFyId, $lockedDistrictId]
+    );
+} else {
+    // State Administration: District-wise membership and grievance summary
+    $districtBreakdowns = Database::fetchAll(
+        "SELECT d.id, d.name AS district_name,
+                COUNT(DISTINCT m.id) AS total_members,
+                COUNT(DISTINCT CASE WHEN m.membership_status = 'active' THEN m.id END) AS active_members,
+                COUNT(DISTINCT CASE WHEN p.id IS NOT NULL THEN m.id END) AS paid_members,
+                COUNT(DISTINCT m.id) - COUNT(DISTINCT CASE WHEN p.id IS NOT NULL THEN m.id END) AS unpaid_members,
+                COALESCE(SUM(p.amount), 0) AS paid_amount,
+                COALESCE(grv.pending_count, 0) AS pending_grievances
+         FROM districts d
+         LEFT JOIN members m ON m.district_id = d.id
+         LEFT JOIN membership_payments p ON p.member_id = m.id AND p.membership_year_id = ? AND p.status = 'completed'
+         LEFT JOIN (
+             SELECT m2.district_id, COUNT(g.id) AS pending_count
+             FROM grievances g
+             JOIN members m2 ON m2.id = g.member_id
+             WHERE g.current_status IN ('Submitted', 'Under Verification', 'Under Review', 'Pending', 'Forwarded')
+             GROUP BY m2.district_id
+         ) grv ON grv.district_id = d.id
+         GROUP BY d.id, d.name, grv.pending_count
+         ORDER BY total_members DESC, d.name ASC",
+        [$currentFyId]
+    );
+}
+
 // ─── Recent Members Sample (Scope Aware) ─────────────────────────────────────
 $recentMembers = Database::fetchAll(
     "SELECT m.id, m.member_no, m.name, m.membership_status, m.created_at,
@@ -450,6 +530,218 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
         <?php endif; ?>
     </div>
 </section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     ADMINISTRATIVE JURISDICTION BREAKDOWN (State / District / Taluk Scoped)
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<?php if (!empty($districtBreakdowns)): ?>
+<div class="table-card" style="margin-bottom: 24px;">
+    <div class="table-card-header">
+        <div>
+            <span class="table-card-title">District-Wise Administrative Summary</span>
+            <span class="table-card-count">(Statewide Overview — <?= count($districtBreakdowns) ?> Districts)</span>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center;">
+            <input type="text" id="districtSearchInput" class="form-control form-control-sm" placeholder="Search district..." onkeyup="filterAdminTable('districtSearchInput', 'districtTableBody')" style="max-width:180px; padding:4px 10px; font-size:0.82rem;">
+            <?php if (admin_can($currentUserId, 'reports', 'view')): ?>
+            <a href="/admin/members-reports.php" class="btn btn-outline btn-sm">Full Report →</a>
+            <?php endif; ?>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th style="width: 50px;">Sl No</th>
+                    <th>District</th>
+                    <th style="text-align:center;">Total PDOs</th>
+                    <th style="text-align:center;">Active</th>
+                    <th style="text-align:center;"><?= Sanitize::html($fyLabel) ?> Paid</th>
+                    <th style="text-align:center;">Unpaid</th>
+                    <th style="text-align:center;">Collection %</th>
+                    <th style="text-align:center;">Pending Grievances</th>
+                    <th style="text-align:right;">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="districtTableBody">
+                <?php $sl = 1; foreach ($districtBreakdowns as $row): 
+                    $pct = $row['total_members'] > 0 ? round(($row['paid_members'] / $row['total_members']) * 100, 1) : 0;
+                    $badgeClass = $pct >= 80 ? 'badge-success' : ($pct >= 50 ? 'badge-warning' : 'badge-danger');
+                ?>
+                <tr>
+                    <td style="color:var(--text-muted);"><?= $sl++ ?></td>
+                    <td style="font-weight:700; color:var(--blue-700);">
+                        <?= Sanitize::html($row['district_name']) ?>
+                    </td>
+                    <td style="text-align:center; font-weight:600;"><?= number_format((int)$row['total_members']) ?></td>
+                    <td style="text-align:center; color:var(--success-dark); font-weight:600;"><?= number_format((int)$row['active_members']) ?></td>
+                    <td style="text-align:center; font-weight:700; color:var(--success-dark);">
+                        <?= number_format((int)$row['paid_members']) ?>
+                    </td>
+                    <td style="text-align:center; font-weight:600; color:var(--danger-dark);">
+                        <?= number_format((int)$row['unpaid_members']) ?>
+                    </td>
+                    <td style="text-align:center;">
+                        <span class="badge <?= $badgeClass ?>"><?= $pct ?>%</span>
+                    </td>
+                    <td style="text-align:center;">
+                        <?php if ((int)$row['pending_grievances'] > 0): ?>
+                            <span class="badge badge-warning"><?= (int)$row['pending_grievances'] ?> Pending</span>
+                        <?php else: ?>
+                            <span class="badge badge-neutral">0</span>
+                        <?php endif; ?>
+                    </td>
+                    <td style="text-align:right;">
+                        <a href="/admin/members.php?district_id=<?= (int)$row['id'] ?>" class="btn btn-outline btn-sm" title="View members in <?= Sanitize::html($row['district_name']) ?>">
+                            View PDOs
+                        </a>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
+<?php elseif (!empty($talukBreakdowns)): ?>
+<div class="table-card" style="margin-bottom: 24px;">
+    <div class="table-card-header">
+        <div>
+            <span class="table-card-title">Taluk-Wise Administrative Summary</span>
+            <span class="table-card-count">(<?= count($talukBreakdowns) ?> Taluks)</span>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center;">
+            <input type="text" id="talukSearchInput" class="form-control form-control-sm" placeholder="Search taluk..." onkeyup="filterAdminTable('talukSearchInput', 'talukTableBody')" style="max-width:180px; padding:4px 10px; font-size:0.82rem;">
+            <?php if (admin_can($currentUserId, 'reports', 'view')): ?>
+            <a href="/admin/members-reports.php" class="btn btn-outline btn-sm">Full Report →</a>
+            <?php endif; ?>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th style="width: 50px;">Sl No</th>
+                    <th>Taluk</th>
+                    <th style="text-align:center;">Total PDOs</th>
+                    <th style="text-align:center;">Active</th>
+                    <th style="text-align:center;"><?= Sanitize::html($fyLabel) ?> Paid</th>
+                    <th style="text-align:center;">Unpaid</th>
+                    <th style="text-align:center;">Collection %</th>
+                    <th style="text-align:center;">Pending Grievances</th>
+                    <th style="text-align:right;">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="talukTableBody">
+                <?php $sl = 1; foreach ($talukBreakdowns as $row): 
+                    $pct = $row['total_members'] > 0 ? round(($row['paid_members'] / $row['total_members']) * 100, 1) : 0;
+                    $badgeClass = $pct >= 80 ? 'badge-success' : ($pct >= 50 ? 'badge-warning' : 'badge-danger');
+                ?>
+                <tr>
+                    <td style="color:var(--text-muted);"><?= $sl++ ?></td>
+                    <td style="font-weight:700; color:var(--blue-700);">
+                        <?= Sanitize::html($row['taluk_name']) ?>
+                    </td>
+                    <td style="text-align:center; font-weight:600;"><?= number_format((int)$row['total_members']) ?></td>
+                    <td style="text-align:center; color:var(--success-dark); font-weight:600;"><?= number_format((int)$row['active_members']) ?></td>
+                    <td style="text-align:center; font-weight:700; color:var(--success-dark);">
+                        <?= number_format((int)$row['paid_members']) ?>
+                    </td>
+                    <td style="text-align:center; font-weight:600; color:var(--danger-dark);">
+                        <?= number_format((int)$row['unpaid_members']) ?>
+                    </td>
+                    <td style="text-align:center;">
+                        <span class="badge <?= $badgeClass ?>"><?= $pct ?>%</span>
+                    </td>
+                    <td style="text-align:center;">
+                        <?php if ((int)$row['pending_grievances'] > 0): ?>
+                            <span class="badge badge-warning"><?= (int)$row['pending_grievances'] ?> Pending</span>
+                        <?php else: ?>
+                            <span class="badge badge-neutral">0</span>
+                        <?php endif; ?>
+                    </td>
+                    <td style="text-align:right;">
+                        <a href="/admin/members.php?taluk_id=<?= (int)$row['id'] ?>" class="btn btn-outline btn-sm" title="View members in <?= Sanitize::html($row['taluk_name']) ?>">
+                            View PDOs
+                        </a>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
+<?php elseif (!empty($talukGpStats)): ?>
+<div class="table-card" style="margin-bottom: 24px;">
+    <div class="table-card-header">
+        <div>
+            <span class="table-card-title">Gram Panchayat Coverage Summary</span>
+            <span class="table-card-count">(<?= count($talukGpStats) ?> Gram Panchayats)</span>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center;">
+            <input type="text" id="gpSearchInput" class="form-control form-control-sm" placeholder="Search GP..." onkeyup="filterAdminTable('gpSearchInput', 'gpTableBody')" style="max-width:180px; padding:4px 10px; font-size:0.82rem;">
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th style="width: 50px;">Sl No</th>
+                    <th>Gram Panchayat</th>
+                    <th>Code</th>
+                    <th style="text-align:center;">PDO Count</th>
+                    <th style="text-align:center;">Active</th>
+                    <th style="text-align:center;"><?= Sanitize::html($fyLabel) ?> Paid</th>
+                    <th style="text-align:center;">Unpaid</th>
+                    <th style="text-align:center;">Pending Grievances</th>
+                    <th style="text-align:center;">Coverage Status</th>
+                </tr>
+            </thead>
+            <tbody id="gpTableBody">
+                <?php $sl = 1; foreach ($talukGpStats as $row): 
+                    $hasMembers = (int)$row['total_members'] > 0;
+                ?>
+                <tr>
+                    <td style="color:var(--text-muted);"><?= $sl++ ?></td>
+                    <td style="font-weight:700; color:var(--text-main);">
+                        <?= Sanitize::html($row['gp_name']) ?>
+                    </td>
+                    <td><code><?= Sanitize::html($row['gp_code'] ?? '—') ?></code></td>
+                    <td style="text-align:center; font-weight:600;"><?= number_format((int)$row['total_members']) ?></td>
+                    <td style="text-align:center; color:var(--success-dark);"><?= number_format((int)$row['active_members']) ?></td>
+                    <td style="text-align:center; font-weight:700; color:var(--success-dark);"><?= number_format((int)$row['paid_members']) ?></td>
+                    <td style="text-align:center; font-weight:600; color:var(--danger-dark);"><?= number_format((int)$row['unpaid_members']) ?></td>
+                    <td style="text-align:center;">
+                        <?php if ((int)$row['pending_grievances'] > 0): ?>
+                            <span class="badge badge-warning"><?= (int)$row['pending_grievances'] ?> Pending</span>
+                        <?php else: ?>
+                            <span class="badge badge-neutral">0</span>
+                        <?php endif; ?>
+                    </td>
+                    <td style="text-align:center;">
+                        <?php if ($hasMembers): ?>
+                            <span class="badge badge-success">● Covered</span>
+                        <?php else: ?>
+                            <span class="badge badge-neutral">○ Unassigned</span>
+                        <?php endif; ?>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
+<?php endif; ?>
+
+<script>
+function filterAdminTable(inputId, tbodyId) {
+    const filter = document.getElementById(inputId).value.toLowerCase();
+    const rows = document.getElementById(tbodyId).getElementsByTagName('tr');
+    for (let i = 0; i < rows.length; i++) {
+        const text = rows[i].textContent.toLowerCase();
+        rows[i].style.display = text.includes(filter) ? '' : 'none';
+    }
+}
+</script>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
      RECENT MEMBERS (Scope-Aware Table)
