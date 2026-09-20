@@ -49,7 +49,7 @@ if ($associationUnitId) {
 
 // ─── Input Parameters ────────────────────────────────────────────────────────
 $reportType = Sanitize::inArray($_GET['report_type'] ?? 'finance', ['finance', 'grievance', 'activity']) ?: 'finance';
-$format     = Sanitize::inArray($_GET['format']      ?? 'pdf', ['pdf', 'excel']) ?: 'pdf';
+$format     = Sanitize::inArray($_GET['format']      ?? 'pdf', ['pdf', 'excel', 'xlsx', 'csv']) ?: 'pdf';
 $fyId       = Sanitize::positiveInt($_GET['fy_id']   ?? null);
 
 // Scope overrides
@@ -361,135 +361,38 @@ if ($format === 'pdf') {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// EXCEL EXPORT (XML Spreadsheet)
+// EXCEL / SPREADSHEET EXPORT (.xlsx / .csv)
 // ═══════════════════════════════════════════════════════════════════════════════
-if ($format === 'excel') {
-    $filename = "KSPDOWA_{$reportType}_report_" . date('Ymd_His') . ".xls";
+if ($format === 'excel' || $format === 'xlsx' || $format === 'csv') {
+    require_once dirname(__DIR__) . '/includes/SimpleXLSXWriter.php';
 
-    header('Content-Type: application/vnd.ms-excel; charset=utf-8');
-    header('Content-Disposition: attachment; filename="' . $filename . '"');
-    header('Cache-Control: max-age=0');
+    $totalRow = null;
+    if ($hasTotals && !empty($grandTotals)) {
+        $totalRow = $grandTotals;
+    }
 
-    $colCount = count($columns);
+    $cw = array_fill(0, count($columns), 18);
+    $cw[0] = 8;
+    if (isset($cw[1])) $cw[1] = 25;
+    if (isset($cw[2])) $cw[2] = 25;
 
-    echo '<?xml version="1.0"?>' . "\n";
-    echo '<?mso-application progid="Excel.Sheet"?>' . "\n";
-    ?>
-<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
- xmlns:o="urn:schemas-microsoft-com:office:office"
- xmlns:x="urn:schemas-microsoft-com:office:excel"
- xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
- xmlns:html="http://www.w3.org/TR/REC-html40">
- <Styles>
-  <Style ss:ID="Default" ss:Name="Normal">
-   <Alignment ss:Vertical="Center"/>
-   <Font ss:FontName="Segoe UI" ss:Size="10" ss:Color="#000000"/>
-  </Style>
-  <Style ss:ID="Title">
-   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
-   <Font ss:FontName="Segoe UI" ss:Size="12" ss:Bold="1" ss:Color="#1A3A6B"/>
-  </Style>
-  <Style ss:ID="Subtitle">
-   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
-   <Font ss:FontName="Segoe UI" ss:Size="9" ss:Italic="1" ss:Color="#475569"/>
-  </Style>
-  <Style ss:ID="Header">
-   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
-   <Borders>
-    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CBD5E1"/>
-    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CBD5E1"/>
-    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CBD5E1"/>
-    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CBD5E1"/>
-   </Borders>
-   <Font ss:FontName="Segoe UI" ss:Size="10" ss:Bold="1" ss:Color="#FFFFFF"/>
-   <Interior ss:Color="#1A3A6B" ss:Pattern="Solid"/>
-  </Style>
-  <Style ss:ID="Data">
-   <Borders>
-    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
-    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
-    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
-   </Borders>
-   <Font ss:FontName="Segoe UI" ss:Size="9"/>
-  </Style>
-  <Style ss:ID="DataNum">
-   <Alignment ss:Horizontal="Right" ss:Vertical="Center"/>
-   <Borders>
-    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
-    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
-    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
-   </Borders>
-   <Font ss:FontName="Segoe UI" ss:Size="9"/>
-  </Style>
-  <Style ss:ID="Total">
-   <Alignment ss:Horizontal="Right" ss:Vertical="Center"/>
-   <Borders>
-    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="2" ss:Color="#64748B"/>
-    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="2" ss:Color="#64748B"/>
-   </Borders>
-   <Font ss:FontName="Segoe UI" ss:Size="10" ss:Bold="1" ss:Color="#1A3A6B"/>
-   <Interior ss:Color="#F1F5F9" ss:Pattern="Solid"/>
-  </Style>
-  <Style ss:ID="Footer">
-   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
-   <Font ss:FontName="Segoe UI" ss:Size="8" ss:Italic="1" ss:Color="#64748B"/>
-  </Style>
- </Styles>
- <Worksheet ss:Name="Report">
-  <Table>
-   <?php foreach ($columns as $c): ?>
-   <Column ss:AutoFitWidth="1" ss:Width="110"/>
-   <?php endforeach; ?>
+    if ($format === 'csv') {
+        $filename = "KSPDOWA_{$reportType}_report_" . date('Ymd_His') . ".csv";
+        header('Content-Type: text/csv; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        $out = fopen('php://output', 'w');
+        fwrite($out, "\xEF\xBB\xBF");
+        fputcsv($out, [$title]);
+        if ($filterInfo !== '') { fputcsv($out, [$filterInfo]); }
+        fputcsv($out, $columns);
+        foreach ($data as $r) { fputcsv($out, $r); }
+        if (!empty($totalRow)) { fputcsv($out, $totalRow); }
+        fclose($out);
+        exit;
+    }
 
-   <Row ss:Height="24">
-    <Cell ss:MergeAcross="<?= $colCount - 1 ?>" ss:StyleID="Title">
-     <Data ss:Type="String"><?= htmlspecialchars($title) ?></Data>
-    </Cell>
-   </Row>
-   <Row ss:Height="18">
-    <Cell ss:MergeAcross="<?= $colCount - 1 ?>" ss:StyleID="Subtitle">
-     <Data ss:Type="String"><?= htmlspecialchars($filterInfo) ?></Data>
-    </Cell>
-   </Row>
-   <Row ss:Height="8"></Row>
-
-   <!-- Column Headers -->
-   <Row ss:Height="22">
-    <?php foreach ($columns as $c): ?>
-    <Cell ss:StyleID="Header"><Data ss:Type="String"><?= htmlspecialchars($c) ?></Data></Cell>
-    <?php endforeach; ?>
-   </Row>
-
-   <!-- Rows -->
-   <?php foreach ($data as $row): ?>
-   <Row ss:Height="18">
-    <?php foreach ($row as $idx => $val): 
-        $isNum = ($idx === 0 || ($idx >= 3 && $idx <= 8));
-        $style = $isNum ? 'DataNum' : 'Data';
-    ?>
-    <Cell ss:StyleID="<?= $style ?>"><Data ss:Type="<?= is_numeric(str_replace(',', '', (string)$val)) ? 'Number' : 'String' ?>"><?= htmlspecialchars((string)$val) ?></Data></Cell>
-    <?php endforeach; ?>
-   </Row>
-   <?php endforeach; ?>
-
-   <!-- Grand Totals -->
-   <?php if ($hasTotals && !empty($grandTotals)): ?>
-   <Row ss:Height="22">
-    <?php foreach ($grandTotals as $idx => $val): ?>
-    <Cell ss:StyleID="Total"><Data ss:Type="<?= is_numeric(str_replace(',', '', (string)$val)) ? 'Number' : 'String' ?>"><?= htmlspecialchars((string)$val) ?></Data></Cell>
-    <?php endforeach; ?>
-   </Row>
-   <?php endif; ?>
-
-   <Row ss:Height="14"></Row>
-   <Row ss:Height="18">
-    <Cell ss:MergeAcross="<?= $colCount - 1 ?>" ss:StyleID="Footer">
-     <Data ss:Type="String">Designed &amp; Developed by : KHUBAASING JADAV • Karnataka State Panchayat Development Officers Welfare Association (R.)</Data>
-    </Cell>
-   </Row>
-  </Table>
- </Worksheet>
-</Workbook>
-    <?php
+    $filename = "KSPDOWA_{$reportType}_report_" . date('Ymd_His') . ".xlsx";
+    SimpleXLSXWriter::streamDownload($filename, $title, $columns, $data, $totalRow, $cw, $filterInfo);
     exit;
 }
+

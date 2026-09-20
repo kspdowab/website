@@ -988,6 +988,101 @@ function detectUnmatchedLocations(
     ];
 }
 
+// ─── GET Actions ──────────────────────────────────────────────────────────────
+if (($_GET['action'] ?? '') === 'download_errors') {
+    Auth::requireLogin();
+    $preview = $_SESSION['members_import_preview'] ?? null;
+    $errorRows = [];
+    if (!empty($preview['invalid'])) {
+        foreach ($preview['invalid'] as $inv) {
+            $errs = $inv['_errors'] ?? [];
+            $realErrs = array_filter($errs, fn($e) => !str_contains($e, 'already PAID for this FY'));
+            if (!empty($realErrs)) {
+                $inv['_errors_clean'] = implode('; ', $realErrs);
+                $errorRows[] = $inv;
+            }
+        }
+    }
+
+    if (empty($errorRows)) {
+        Session::flash('info', 'No skipped error rows found in current session. Please upload the file first.');
+        header('Location: /admin/members-import.php');
+        exit;
+    }
+
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="skipped_members_to_fix_' . date('Ymd_His') . '.csv"');
+
+    $out = fopen('php://output', 'w');
+    fputcsv($out, [
+        'Full Name',
+        'Father / Husband Name',
+        'Gender',
+        'Phone',
+        'Email',
+        'KGID No.',
+        'Date of Birth',
+        'GP Working?',
+        'Organization Type',
+        'Organization Name',
+        'Organization Address',
+        'Working District',
+        'Working Taluk',
+        'Working GP',
+        'Membership District',
+        'Membership Taluk',
+        'Payment Mode',
+        'Payment Reference',
+        'Payment Date & Time',
+        'Received Amount',
+        'Payment Remarks',
+        'Reason Why Skipped (Fix this column)',
+    ]);
+
+    $dNames = [];
+    foreach (Database::fetchAll("SELECT id, name FROM districts") as $d) {
+        $dNames[$d['id']] = $d['name'];
+    }
+    $tNames = [];
+    foreach (Database::fetchAll("SELECT id, name FROM taluks") as $t) {
+        $tNames[$t['id']] = $t['name'];
+    }
+    $gNames = [];
+    foreach (Database::fetchAll("SELECT id, name FROM gram_panchayatis") as $g) {
+        $gNames[$g['id']] = $g['name'];
+    }
+
+    foreach ($errorRows as $row) {
+        fputcsv($out, [
+            $row['full_name'] ?? '',
+            $row['father_spouse_name'] ?? '',
+            $row['gender'] ?? '',
+            $row['phone'] ?? '',
+            $row['email'] ?? '',
+            $row['kgid_no'] ?? '',
+            !empty($row['dob']) ? date('d-m-Y', strtotime($row['dob'])) : '',
+            $row['gp_working'] ?? 'yes',
+            $row['organization_type'] ?? '',
+            $row['organization_name'] ?? '',
+            $row['organization_address'] ?? '',
+            $dNames[$row['working_district_id'] ?? 0] ?? '',
+            $tNames[$row['working_taluk_id'] ?? 0] ?? '',
+            $gNames[$row['working_gp_id'] ?? 0] ?? '',
+            $dNames[$row['membership_district_id'] ?? 0] ?? '',
+            $tNames[$row['membership_taluk_id'] ?? 0] ?? '',
+            $row['payment_mode'] ?? '',
+            $row['payment_reference'] ?? '',
+            $row['payment_date'] ?? '',
+            $row['received_amount'] ?? '',
+            $row['offline_remarks'] ?? '',
+            $row['_errors_clean'] ?? 'Validation error',
+        ]);
+    }
+
+    fclose($out);
+    exit;
+}
+
 // ─── POST Handlers ────────────────────────────────────────────────────────────
 $previewData = null;
 $remapStep   = null;
@@ -1903,23 +1998,98 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
         </div>
         <?php endif; ?>
 
-        <?php if (!empty($previewData['invalid'])): ?>
-        <h3 style="color:#a12622; margin-top:28px;">✗ Invalid Rows (<?= count($previewData['invalid']) ?>) — will be skipped</h3>
-        <div style="overflow-x:auto;">
-        <table>
-            <thead><tr><th style="width:40px;">#</th><th style="width:200px;">Full Name</th><th style="width:140px;">KGID</th><th>Validation Error(s)</th></tr></thead>
-            <tbody>
-            <?php $i=1; foreach ($previewData['invalid'] as $row): ?>
-            <tr>
-                <td><?= $i++ ?></td>
-                <td><?= Sanitize::html($row['full_name'] ?: '(blank)') ?></td>
-                <td><code><?= Sanitize::html($row['kgid_no'] ?: '—') ?></code></td>
-                <td class="err-cell"><?= Sanitize::html(implode('; ', $row['_errors'] ?? [])) ?></td>
-            </tr>
-            <?php endforeach; ?>
-            </tbody>
-        </table>
+        <?php if (!empty($previewData['invalid'])): 
+            $actualErrors = [];
+            $alreadyPaidRows = [];
+            foreach ($previewData['invalid'] as $row) {
+                $errs = $row['_errors'] ?? [];
+                $isOnlyPaid = true;
+                foreach ($errs as $e) {
+                    if (!str_contains($e, 'already PAID for this FY')) {
+                        $isOnlyPaid = false;
+                        break;
+                    }
+                }
+                if ($isOnlyPaid) {
+                    $alreadyPaidRows[] = $row;
+                } else {
+                    $actualErrors[] = $row;
+                }
+            }
+        ?>
+
+        <?php if (!empty($actualErrors)): ?>
+        <div style="background:#fef2f2; border:2px solid #ef4444; border-radius:10px; padding:20px 24px; margin:28px 0; box-shadow:0 4px 12px rgba(239,68,68,0.08);">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+                <div>
+                    <h3 style="color:#991b1b; margin:0; font-size:1.15rem; display:flex; align-items:center; gap:8px;">
+                        <span>⚠️</span>
+                        <span><?= count($actualErrors) ?> Member Rows Need Correction (To Import)</span>
+                    </h3>
+                    <p style="color:#7f1d1d; margin:6px 0 0; font-size:0.88rem; line-height:1.5;">
+                        These <?= count($actualErrors) ?> rows were skipped due to data validation errors (e.g. invalid phone number, missing KGID, or date format).<br>
+                        Review the reasons below, or download the pre-filled CSV to fix and re-upload them.
+                    </p>
+                </div>
+                <a href="/admin/members-import.php?action=download_errors" class="btn" style="background:#b91c1c; color:#fff; text-decoration:none; padding:10px 18px; font-weight:700; border-radius:6px; font-size:0.9rem;">
+                    ⬇ Download <?= count($actualErrors) ?> Skipped Rows (CSV)
+                </a>
+            </div>
+
+            <div style="overflow-x:auto; margin-top:16px; background:#fff; border-radius:6px; border:1px solid #fca5a5;">
+            <table>
+                <thead>
+                    <tr style="background:#991b1b; color:#fff;">
+                        <th style="width:40px; color:#fff;">#</th>
+                        <th style="width:180px; color:#fff;">Full Name</th>
+                        <th style="width:120px; color:#fff;">KGID</th>
+                        <th style="width:120px; color:#fff;">Phone</th>
+                        <th style="width:180px; color:#fff;">Email</th>
+                        <th style="color:#fff;">Reason Why Skipped (Fix This)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                <?php $i=1; foreach ($actualErrors as $row): 
+                    $cleanErrors = array_filter($row['_errors'] ?? [], fn($e) => !str_contains($e, 'already PAID for this FY'));
+                ?>
+                <tr>
+                    <td><?= $i++ ?></td>
+                    <td><strong><?= Sanitize::html($row['full_name'] ?: '(blank)') ?></strong></td>
+                    <td><code><?= Sanitize::html($row['kgid_no'] ?: '—') ?></code></td>
+                    <td><?= Sanitize::html($row['phone'] ?: '—') ?></td>
+                    <td><?= Sanitize::html($row['email'] ?: '—') ?></td>
+                    <td class="err-cell" style="font-weight:700; color:#b91c1c;"><?= Sanitize::html(implode('; ', $cleanErrors)) ?></td>
+                </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+            </div>
         </div>
+        <?php endif; ?>
+
+        <?php if (!empty($alreadyPaidRows)): ?>
+        <details style="margin:20px 0; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px 16px;">
+            <summary style="cursor:pointer; font-weight:600; color:#475569; font-size:0.9rem;">
+                ✓ <?= count($alreadyPaidRows) ?> Members Already Recorded in Database (Skipped from re-importing) — Click to view
+            </summary>
+            <div style="overflow-x:auto; margin-top:12px;">
+            <table>
+                <thead><tr><th style="width:40px;">#</th><th style="width:200px;">Full Name</th><th style="width:140px;">KGID</th><th>Status</th></tr></thead>
+                <tbody>
+                <?php $i=1; foreach ($alreadyPaidRows as $row): ?>
+                <tr>
+                    <td><?= $i++ ?></td>
+                    <td><?= Sanitize::html($row['full_name'] ?: '(blank)') ?></td>
+                    <td><code><?= Sanitize::html($row['kgid_no'] ?: '—') ?></code></td>
+                    <td style="color:#166534; font-size:0.8rem; font-weight:600;">Already registered &amp; paid for this Financial Year</td>
+                </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+            </div>
+        </details>
+        <?php endif; ?>
+
         <?php endif; ?>
 
         <!-- Real-time Progress Bar Card -->

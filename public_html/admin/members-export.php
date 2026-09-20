@@ -44,7 +44,7 @@ if ($associationUnitId) {
 }
 
 // ─── Input parameters ────────────────────────────────────────────────────────
-$format     = Sanitize::inArray($_GET['format']      ?? '', ['pdf','excel']) ?: 'pdf';
+$format     = Sanitize::inArray($_GET['format']      ?? '', ['pdf','excel','xlsx','csv']) ?: 'pdf';
 $reportType = Sanitize::inArray($_GET['report_type'] ?? '', ['detailed','abstract_district','abstract_taluk']) ?: 'detailed';
 
 $fyId              = Sanitize::positiveInt($_GET['fy_id']           ?? null);
@@ -406,192 +406,105 @@ if ($format === 'pdf') {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// EXCEL OUTPUT (XML Spreadsheet 2003)
+// EXCEL / SPREADSHEET OUTPUT (.xlsx / .csv)
 // ═══════════════════════════════════════════════════════════════════════════════
-if ($format === 'excel') {
-    $colCount = count($columns);
+if ($format === 'excel' || $format === 'xlsx' || $format === 'csv') {
+    require_once dirname(__DIR__) . '/includes/SimpleXLSXWriter.php';
 
-    // Shared styles
-    $styles = '<?xml version="1.0"?>
-<?mso-application progid="Excel.Sheet"?>
-<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
- xmlns:o="urn:schemas-microsoft-com:office:office"
- xmlns:x="urn:schemas-microsoft-com:office:excel"
- xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
- <Styles>
-  <Style ss:ID="Default" ss:Name="Normal">
-   <Alignment ss:Vertical="Bottom"/>
-   <Borders/>
-   <Font ss:FontName="Calibri" ss:Size="11"/>
-  </Style>
-  <Style ss:ID="TitleStyle">
-   <Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/>
-   <Font ss:FontName="Calibri" ss:Size="12" ss:Bold="1"/>
-  </Style>
-  <Style ss:ID="Header">
-   <Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/>
-   <Borders>
-    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/>
-    <Border ss:Position="Left"   ss:LineStyle="Continuous" ss:Weight="1"/>
-    <Border ss:Position="Right"  ss:LineStyle="Continuous" ss:Weight="1"/>
-    <Border ss:Position="Top"    ss:LineStyle="Continuous" ss:Weight="1"/>
-   </Borders>
-   <Font ss:FontName="Calibri" ss:Size="11" ss:Color="#FFFFFF" ss:Bold="1"/>
-   <Interior ss:Color="#1a3a6b" ss:Pattern="Solid"/>
-  </Style>
-  <Style ss:ID="Data">
-   <Alignment ss:Vertical="Top" ss:WrapText="1"/>
-   <Borders>
-    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
-    <Border ss:Position="Left"   ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
-    <Border ss:Position="Right"  ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
-    <Border ss:Position="Top"    ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
-   </Borders>
-   <Font ss:FontName="Calibri" ss:Size="10"/>
-  </Style>
-  <Style ss:ID="DataNum">
-   <Alignment ss:Horizontal="Right" ss:Vertical="Top"/>
-   <Borders>
-    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
-    <Border ss:Position="Left"   ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
-    <Border ss:Position="Right"  ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
-    <Border ss:Position="Top"    ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
-   </Borders>
-   <Font ss:FontName="Calibri" ss:Size="10"/>
-  </Style>
-  <Style ss:ID="Footer">
-   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
-   <Font ss:FontName="Calibri" ss:Size="9" ss:Italic="1" ss:Color="#555555"/>
-  </Style>
-  <Style ss:ID="GrandTotal">
-   <Alignment ss:Horizontal="Right" ss:Vertical="Center"/>
-   <Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1" ss:Color="#FFFFFF"/>
-   <Interior ss:Color="#1a3a6b" ss:Pattern="Solid"/>
-   <Borders>
-    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/>
-    <Border ss:Position="Left"   ss:LineStyle="Continuous" ss:Weight="1"/>
-    <Border ss:Position="Right"  ss:LineStyle="Continuous" ss:Weight="1"/>
-    <Border ss:Position="Top"    ss:LineStyle="Continuous" ss:Weight="2"/>
-   </Borders>
-  </Style>
- </Styles>
- <Worksheet ss:Name="Members Report">
-  <Table>';
-
-    $xml = $styles;
-
-    // Column width hints (in points; 1 pt ≈ 0.75px)
-    if ($reportType === 'detailed') {
-        $cwPts = [30, 130, 110, 45, 85, 130, 75, 100, 100, 75];
-    } elseif ($reportType === 'abstract_district') {
-        $cwPts = [40, 200, 80, 80, 80];
-    } else {
-        $cwPts = [35, 140, 140, 70, 70, 70];
-    }
-    foreach ($cwPts as $cw) {
-        $xml .= '<Column ss:Width="' . $cw . '"/>';
-    }
-
-    // Title row (merged)
-    $xml .= '<Row ss:Height="28">'
-         . '<Cell ss:MergeAcross="' . ($colCount - 1) . '" ss:StyleID="TitleStyle">'
-         . '<Data ss:Type="String">' . htmlspecialchars($reportTitle) . '</Data>'
-         . '</Cell></Row>';
-
-    // Blank spacer
-    $xml .= '<Row ss:Height="6"></Row>';
-
-    // Header row
-    $xml .= '<Row ss:Height="18">';
-    foreach ($columns as $col) {
-        $xml .= '<Cell ss:StyleID="Header"><Data ss:Type="String">' . htmlspecialchars($col) . '</Data></Cell>';
-    }
-    $xml .= '</Row>';
-
-    // Data rows
+    $rows = [];
+    $totalRow = null;
     $i = 1;
     $gt = [0, 0, 0];
 
-    foreach ($data as $row) {
-        $xml .= '<Row ss:Height="16">';
-
-        if ($reportType === 'detailed') {
-            $xml .= '<Cell ss:StyleID="DataNum"><Data ss:Type="Number">' . $i . '</Data></Cell>';
-            $xml .= '<Cell ss:StyleID="Data"><Data ss:Type="String">' . htmlspecialchars((string)($row['name'] ?? '')) . '</Data></Cell>';
-            $xml .= '<Cell ss:StyleID="Data"><Data ss:Type="String">' . htmlspecialchars((string)($row['father_spouse_name'] ?? '')) . '</Data></Cell>';
-            $xml .= '<Cell ss:StyleID="Data"><Data ss:Type="String">' . htmlspecialchars(ucfirst(strtolower((string)($row['gender'] ?? '')))) . '</Data></Cell>';
-            $xml .= '<Cell ss:StyleID="Data"><Data ss:Type="String">' . htmlspecialchars($row['_masked_phone']) . '</Data></Cell>';
-            $xml .= '<Cell ss:StyleID="Data"><Data ss:Type="String">' . htmlspecialchars($row['_masked_email']) . '</Data></Cell>';
-            $xml .= '<Cell ss:StyleID="Data"><Data ss:Type="String">' . htmlspecialchars($row['_masked_kgid']) . '</Data></Cell>';
-            $xml .= '<Cell ss:StyleID="Data"><Data ss:Type="String">' . htmlspecialchars((string)($row['taluk_name']    ?? '')) . '</Data></Cell>';
-            $xml .= '<Cell ss:StyleID="Data"><Data ss:Type="String">' . htmlspecialchars((string)($row['district_name'] ?? '')) . '</Data></Cell>';
-            $xml .= '<Cell ss:StyleID="Data"><Data ss:Type="String">' . htmlspecialchars($row['_payment_date']) . '</Data></Cell>';
-        } elseif ($reportType === 'abstract_district') {
-            $xml .= '<Cell ss:StyleID="DataNum"><Data ss:Type="Number">' . $i . '</Data></Cell>';
-            $xml .= '<Cell ss:StyleID="Data"><Data ss:Type="String">' . htmlspecialchars((string)$row['district_name']) . '</Data></Cell>';
-            $xml .= '<Cell ss:StyleID="DataNum"><Data ss:Type="Number">' . (int)$row['total_members']   . '</Data></Cell>';
-            $xml .= '<Cell ss:StyleID="DataNum"><Data ss:Type="Number">' . (int)$row['paid_members']    . '</Data></Cell>';
-            $xml .= '<Cell ss:StyleID="DataNum"><Data ss:Type="Number">' . (int)$row['unpaid_members']  . '</Data></Cell>';
-            $gt[0] += (int)$row['total_members']; $gt[1] += (int)$row['paid_members']; $gt[2] += (int)$row['unpaid_members'];
-        } else {
-            $xml .= '<Cell ss:StyleID="DataNum"><Data ss:Type="Number">' . $i . '</Data></Cell>';
-            $xml .= '<Cell ss:StyleID="Data"><Data ss:Type="String">' . htmlspecialchars((string)$row['district_name']) . '</Data></Cell>';
-            $xml .= '<Cell ss:StyleID="Data"><Data ss:Type="String">' . htmlspecialchars((string)$row['taluk_name']) . '</Data></Cell>';
-            $xml .= '<Cell ss:StyleID="DataNum"><Data ss:Type="Number">' . (int)$row['total_members']   . '</Data></Cell>';
-            $xml .= '<Cell ss:StyleID="DataNum"><Data ss:Type="Number">' . (int)$row['paid_members']    . '</Data></Cell>';
-            $xml .= '<Cell ss:StyleID="DataNum"><Data ss:Type="Number">' . (int)$row['unpaid_members']  . '</Data></Cell>';
-            $gt[0] += (int)$row['total_members']; $gt[1] += (int)$row['paid_members']; $gt[2] += (int)$row['unpaid_members'];
+    if ($reportType === 'detailed') {
+        $colWidths = [8, 28, 24, 10, 16, 28, 14, 20, 20, 14];
+        foreach ($data as $row) {
+            $rows[] = [
+                $i++,
+                (string)($row['name'] ?? ''),
+                (string)($row['father_spouse_name'] ?? ''),
+                ucfirst(strtolower((string)($row['gender'] ?? ''))),
+                $row['_masked_phone'],
+                $row['_masked_email'],
+                $row['_masked_kgid'],
+                (string)($row['taluk_name'] ?? ''),
+                (string)($row['district_name'] ?? ''),
+                $row['_payment_date'],
+            ];
         }
-
-        $xml .= '</Row>';
-        $i++;
+    } elseif ($reportType === 'abstract_district') {
+        $colWidths = [8, 30, 16, 16, 16];
+        foreach ($data as $row) {
+            $rows[] = [
+                $i++,
+                (string)$row['district_name'],
+                (int)$row['total_members'],
+                (int)$row['paid_members'],
+                (int)$row['unpaid_members'],
+            ];
+            $gt[0] += (int)$row['total_members'];
+            $gt[1] += (int)$row['paid_members'];
+            $gt[2] += (int)$row['unpaid_members'];
+        }
+        if (!empty($data)) {
+            $totalRow = [
+                'GRAND TOTAL',
+                '',
+                $gt[0],
+                $gt[1],
+                $gt[2],
+                '_merge_cols' => 2,
+            ];
+        }
+    } else {
+        $colWidths = [8, 24, 24, 16, 16, 16];
+        foreach ($data as $row) {
+            $rows[] = [
+                $i++,
+                (string)$row['district_name'],
+                (string)$row['taluk_name'],
+                (int)$row['total_members'],
+                (int)$row['paid_members'],
+                (int)$row['unpaid_members'],
+            ];
+            $gt[0] += (int)$row['total_members'];
+            $gt[1] += (int)$row['paid_members'];
+            $gt[2] += (int)$row['unpaid_members'];
+        }
+        if (!empty($data)) {
+            $totalRow = [
+                'GRAND TOTAL',
+                '',
+                '',
+                $gt[0],
+                $gt[1],
+                $gt[2],
+                '_merge_cols' => 3,
+            ];
+        }
     }
 
-    // Grand Total row for abstracts
-    if ($reportType !== 'detailed' && !empty($data)) {
-        if ($reportType === 'abstract_district') {
-            $mergeLabel = 1; // merges col 0+1
-        } else {
-            $mergeLabel = 2; // merges col 0+1+2
+    if ($format === 'csv') {
+        $filename = 'KSPDOWA_' . ($filterDistrictId ? strtoupper(str_replace(' ', '_', $districtName)) : 'ALL') . '_' . date('dmY') . '_' . date('His') . '.csv';
+        header('Content-Type: text/csv; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        $out = fopen('php://output', 'w');
+        fwrite($out, "\xEF\xBB\xBF");
+        fputcsv($out, [$reportTitle]);
+        fputcsv($out, $columns);
+        foreach ($rows as $r) {
+            fputcsv($out, $r);
         }
-        $xml .= '<Row ss:Height="18">';
-        $xml .= '<Cell ss:MergeAcross="' . $mergeLabel . '" ss:StyleID="GrandTotal"><Data ss:Type="String">GRAND TOTAL</Data></Cell>';
-        $xml .= '<Cell ss:StyleID="GrandTotal"><Data ss:Type="Number">' . $gt[0] . '</Data></Cell>';
-        $xml .= '<Cell ss:StyleID="GrandTotal"><Data ss:Type="Number">' . $gt[1] . '</Data></Cell>';
-        $xml .= '<Cell ss:StyleID="GrandTotal"><Data ss:Type="Number">' . $gt[2] . '</Data></Cell>';
-        $xml .= '</Row>';
+        if (!empty($totalRow)) {
+            unset($totalRow['_merge_cols']);
+            fputcsv($out, array_values($totalRow));
+        }
+        fclose($out);
+        exit;
     }
 
-    // Footer row
-    $xml .= '<Row ss:Height="16">';
-    $xml .= '<Cell ss:MergeAcross="' . ($colCount - 1) . '" ss:StyleID="Footer">';
-    $xml .= '<Data ss:Type="String">Designed &amp; Developed by : KHUBAASING JADAV</Data>';
-    $xml .= '</Cell></Row>';
-
-    $xml .= '</Table>
-  <WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">
-   <PageSetup>
-    <Layout x:Orientation="' . ($reportType === 'detailed' ? 'Landscape' : 'Portrait') . '"/>
-    <PageMargins x:Left="0.5" x:Right="0.5" x:Top="0.75" x:Bottom="0.75"/>
-   </PageSetup>
-   <Print>
-    <FitWidth>1</FitWidth>
-    <FitHeight>0</FitHeight>
-   </Print>
-   <FreezePanes/>
-   <FrozenNoSplit/>
-   <SplitHorizontal>3</SplitHorizontal>
-   <TopRowBottomPane>3</TopRowBottomPane>
-   <ActivePane>2</ActivePane>
-  </WorksheetOptions>
-  <AutoFilter x:Range="R3C1:R3C' . $colCount . '" xmlns="urn:schemas-microsoft-com:office:excel"></AutoFilter>
- </Worksheet>
-</Workbook>';
-
-    $filename = 'KSPDOWA_' . ($filterDistrictId ? strtoupper(str_replace(' ', '_', $districtName)) : 'ALL') . '_' . date('dmY') . '_' . date('His') . '.xml';
-    header('Content-Type: application/vnd.ms-excel');
-    header('Content-Disposition: attachment; filename="' . $filename . '"');
-    header('Cache-Control: max-age=0');
-    echo $xml;
+    $filename = 'KSPDOWA_' . ($filterDistrictId ? strtoupper(str_replace(' ', '_', $districtName)) : 'ALL') . '_' . date('dmY') . '_' . date('His') . '.xlsx';
+    SimpleXLSXWriter::streamDownload($filename, $reportTitle, $columns, $rows, $totalRow, $colWidths);
     exit;
 }
+
