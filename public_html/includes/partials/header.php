@@ -157,12 +157,12 @@ function nav_active(string $path, string $current): string
 
         /* ---------------- Header / Navigation ---------------- */
         .site-header {
-            background: #ffffff;
-            border-bottom: 1px solid var(--border-color);
+            background: linear-gradient(180deg, #F8FAFD 0%, #EAF1F8 100%);
+            border-bottom: 1px solid #CADAE8;
             position: sticky;
             top: 0;
             z-index: 100;
-            box-shadow: 0 2px 8px rgba(23, 63, 103, 0.04);
+            box-shadow: 0 3px 12px rgba(16, 49, 84, 0.12);
         }
         .site-header-inner {
             max-width: var(--content-width);
@@ -244,7 +244,7 @@ function nav_active(string $path, string $current): string
             flex-wrap: wrap;
             padding-top: 4px;
             width: 100%;
-            border-top: 1px solid var(--border-soft);
+            border-top: 1px solid #D5E2EE;
         }
         nav.main-nav a.nav-link {
             text-decoration: none;
@@ -260,8 +260,9 @@ function nav_active(string $path, string $current): string
             transition: all 0.15s ease;
         }
         nav.main-nav a.nav-link:hover {
-            background: var(--light-blue);
+            background: #ffffff;
             color: var(--prof-blue);
+            box-shadow: 0 1px 4px rgba(23, 63, 103, 0.08);
         }
         nav.main-nav a.nav-link.active {
             color: var(--prof-blue);
