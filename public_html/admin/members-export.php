@@ -22,7 +22,9 @@ require_once dirname(__DIR__) . '/includes/lib/fpdf.php';
 
 Auth::requireLogin();
 $currentUserId = Auth::getCurrentUserId();
-RBAC::requirePermission($currentUserId, 'members', 'manage');
+if (!RBAC::can($currentUserId, 'reports', 'export') && !RBAC::can($currentUserId, 'members', 'export') && !RBAC::can($currentUserId, 'reports', 'view') && !RBAC::can($currentUserId, 'members', 'manage')) {
+    ErrorHandler::abort(403, 'You do not have permission to export this report.');
+}
 
 // ─── RBAC / Geographic scope ────────────────────────────────────────────────
 $associationUnitId = RBAC::getUserAssociationUnit($currentUserId);

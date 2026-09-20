@@ -99,19 +99,22 @@ if (!function_exists('admin_can')) {
         <nav class="sidebar-nav">
             <?php
             // Active group calculation
-            $isMembersGroup    = in_array($activeMenu, ['members', 'members_add', 'members_import', 'membership', 'reports'], true);
-            $isFinanceGroup    = in_array($activeMenu, ['payments', 'donations'], true);
+            $isMembersGroup    = in_array($activeMenu, ['members', 'members_add', 'members_import', 'membership'], true);
+            $isFinanceGroup    = in_array($activeMenu, ['payments', 'donations', 'reports_finance'], true);
+            $isReportsGroup    = in_array($activeMenu, ['reports', 'reports_hub', 'reports_finance', 'reports_grievances', 'reports_activities'], true);
             $isOrdersGroup     = in_array($activeMenu, ['orders', 'circulars', 'documents'], true);
             $isActivitiesGroup = in_array($activeMenu, ['activities', 'events', 'meetings', 'resolutions', 'news', 'gallery'], true);
             $isSystemGroup     = in_array($activeMenu, ['users', 'audit_logs', 'settings'], true);
 
             // Group permission visibility
             $canViewAnyMember     = admin_can($currentUserId, 'members', 'view') || 
-                                    admin_can($currentUserId, 'membership', 'view') || 
-                                    admin_can($currentUserId, 'reports', 'view');
+                                    admin_can($currentUserId, 'membership', 'view');
 
             $canViewAnyFinance    = admin_can($currentUserId, 'payments', 'view') || 
-                                    admin_can($currentUserId, 'donations', 'view');
+                                    admin_can($currentUserId, 'donations', 'view') ||
+                                    admin_can($currentUserId, 'reports', 'view');
+
+            $canViewAnyReports    = admin_can($currentUserId, 'reports', 'view');
 
             $canViewAnyOrders     = admin_can($currentUserId, 'orders', 'view') || 
                                     admin_can($currentUserId, 'circulars', 'view') || 
@@ -181,6 +184,28 @@ if (!function_exists('admin_can')) {
                     <?php if (admin_can($currentUserId, 'donations', 'view')): ?>
                         <a href="/admin/donations.php" class="nav-sublink <?= $activeMenu === 'donations' ? 'active' : '' ?>">Donations</a>
                     <?php endif; ?>
+                    <?php if (admin_can($currentUserId, 'reports', 'view')): ?>
+                        <a href="/admin/finance-reports.php" class="nav-sublink <?= $activeMenu === 'reports_finance' ? 'active' : '' ?>">Finance Reports</a>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <?php if ($canViewAnyReports): ?>
+            <div class="nav-dropdown <?= $isReportsGroup ? 'open active-parent' : '' ?>">
+                <button type="button" class="nav-dropdown-toggle" aria-expanded="<?= $isReportsGroup ? 'true' : 'false' ?>">
+                    <span class="nav-dropdown-title">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                        Reports &amp; Analytics
+                    </span>
+                    <svg class="nav-chevron" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                </button>
+                <div class="nav-submenu">
+                    <a href="/admin/reports.php" class="nav-sublink <?= $activeMenu === 'reports_hub' ? 'active' : '' ?>">Overview Hub</a>
+                    <a href="/admin/members-reports.php" class="nav-sublink <?= $activeMenu === 'reports' ? 'active' : '' ?>">Membership Reports</a>
+                    <a href="/admin/finance-reports.php" class="nav-sublink <?= $activeMenu === 'reports_finance' ? 'active' : '' ?>">Finance Reports</a>
+                    <a href="/admin/grievance-analytics.php" class="nav-sublink <?= $activeMenu === 'reports_grievances' ? 'active' : '' ?>">Grievance Analytics</a>
+                    <a href="/admin/activity-reports.php" class="nav-sublink <?= $activeMenu === 'reports_activities' ? 'active' : '' ?>">Activity Reports</a>
                 </div>
             </div>
             <?php endif; ?>
