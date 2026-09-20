@@ -294,16 +294,21 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         <form method="post" action="/login.php" id="login-form">
             <?= CSRF::htmlField() ?>
 
-            <label for="identifier">Email, Mobile, or Username</label>
+            <label for="identifier">KGID No., Mobile, or Email Address</label>
             <input type="text" id="identifier" name="identifier" required
                    autocomplete="username"
+                   placeholder="e.g. 2227325 or 9036880026 or email@example.com"
                    <?= $identifierFromQuery ? 'readonly' : 'autofocus' ?>
                    value="<?= Sanitize::attr($identifierValue) ?>">
 
-            <label for="password">Password</label>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <label for="password" style="margin-bottom:0;">Password</label>
+                <span style="font-size:0.75rem; color:#0369a1;">Initial Default: <code>Kspdowa@&lt;KGID&gt;</code></span>
+            </div>
             <div class="password-field-wrap">
                 <input type="password" id="password" name="password" required class="has-toggle"
                        autocomplete="current-password"
+                       placeholder="e.g. Kspdowa@2227325"
                        <?= $identifierFromQuery ? 'autofocus' : '' ?>>
                 <button type="button" class="password-toggle-btn" data-target="password" aria-label="Show password" aria-pressed="false" title="Show password">
                     <svg class="icon-eye" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
