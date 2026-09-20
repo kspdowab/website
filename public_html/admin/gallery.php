@@ -92,6 +92,17 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && $canManage) {
             exit;
         }
 
+        // Mirror uploaded image to sibling preview or production directory if it exists
+        $siblingDirs = [
+            dirname(__DIR__, 2) . '/assets/images/gallery',
+            dirname(__DIR__) . '/preview/assets/images/gallery',
+        ];
+        foreach ($siblingDirs as $sDir) {
+            if (is_dir($sDir) && is_writable($sDir)) {
+                @copy($destPath, $sDir . '/' . $newFilename);
+            }
+        }
+
         $webPath = '/assets/images/gallery/' . $newFilename;
 
         if ($photoDate === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $photoDate)) {

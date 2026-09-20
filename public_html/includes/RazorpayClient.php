@@ -80,6 +80,20 @@ class RazorpayClient
         ]);
     }
 
+    /**
+     * Fetch a Razorpay Order by ID.
+     *
+     * @return array{success:bool, order?:array, error?:string}
+     */
+    public static function fetchOrder(string $orderId): array
+    {
+        if ($orderId === '') {
+            return ['success' => false, 'error' => 'Missing order ID.'];
+        }
+
+        return self::request('GET', '/orders/' . rawurlencode($orderId));
+    }
+
     // ------------------------------------------------------------------
     // Payments API
     // ------------------------------------------------------------------

@@ -51,14 +51,6 @@ require __DIR__ . '/includes/partials/header.php';
     </table>
     </div>
 
-    <div class="alert alert-info" style="margin-top:20px;">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; color:var(--prof-blue);"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-        <div>
-            Per the order text itself, recognition was granted <strong>for a period of 2 years from the date
-            of this order, subject to conditions and subsequent renewal</strong>. This page reflects only
-            what the order document states.
-        </div>
-    </div>
 
     <?php if ($doc): ?>
         <p style="margin-top:22px; margin-bottom:0;">

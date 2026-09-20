@@ -88,16 +88,28 @@ class PaymentGateway
                 }
 
                 if ($row['gateway_order_id'] !== null && $row['gateway_order_id'] !== '') {
-                    // Already has an order -- reuse it, no API call.
-                    return [
-                        'success'        => true,
-                        'order_id'       => $row['gateway_order_id'],
-                        'amount_paise'   => (int) round(((float) $row['amount']) * 100),
-                        'currency'       => 'INR',
-                        'key_id'         => RAZORPAY_KEY_ID,
-                        'amount'         => (float) $row['amount'],
-                        'member'         => $member,
-                    ];
+                    // Verify the existing order actually exists and is active under the current Razorpay key
+                    $existingOrder = RazorpayClient::fetchOrder($row['gateway_order_id']);
+                    if ($existingOrder['success'] && ($existingOrder['order']['status'] ?? '') !== 'paid') {
+                        // Already has a valid order under this key -- reuse it
+                        return [
+                            'success'        => true,
+                            'order_id'       => $row['gateway_order_id'],
+                            'amount_paise'   => (int) round(((float) $row['amount']) * 100),
+                            'currency'       => 'INR',
+                            'key_id'         => RAZORPAY_KEY_ID,
+                            'amount'         => (float) $row['amount'],
+                            'member'         => $member,
+                        ];
+                    }
+
+                    // Order does not exist on this Razorpay account (e.g. switched between test/live key, or expired)
+                    // Clear it so a fresh order under the active key is created below
+                    Database::execute(
+                        'UPDATE membership_payments SET gateway_order_id = NULL WHERE id = ?',
+                        [$paymentId]
+                    );
+                    $row['gateway_order_id'] = null;
                 }
 
                 // Determine the financial year for this payment attempt.
