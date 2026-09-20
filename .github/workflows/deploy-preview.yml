@@ -24,7 +24,11 @@ jobs:
           SSH_PORT: 65002
         run: |
           mkdir -p ~/.ssh
-          echo "$SSH_PRIVATE_KEY_B64" | base64 -d > ~/.ssh/deploy_key
+          if echo "$SSH_PRIVATE_KEY_B64" | grep -q -- "-----BEGIN"; then
+            printf '%s\n' "$SSH_PRIVATE_KEY_B64" > ~/.ssh/deploy_key
+          else
+            echo "$SSH_PRIVATE_KEY_B64" | tr -d '\r\n ' | base64 -d > ~/.ssh/deploy_key
+          fi
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -p $SSH_PORT $SSH_HOST >> ~/.ssh/known_hosts 2>/dev/null
 
