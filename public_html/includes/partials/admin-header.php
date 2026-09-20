@@ -104,7 +104,7 @@ if (!function_exists('admin_can')) {
             $isReportsGroup    = in_array($activeMenu, ['reports', 'reports_hub', 'reports_finance', 'reports_grievances', 'reports_activities'], true);
             $isOrdersGroup     = in_array($activeMenu, ['orders', 'circulars', 'documents'], true);
             $isActivitiesGroup = in_array($activeMenu, ['activities', 'events', 'meetings', 'resolutions', 'news', 'gallery'], true);
-            $isSystemGroup     = in_array($activeMenu, ['users', 'audit_logs', 'settings'], true);
+            $isSystemGroup     = in_array($activeMenu, ['users', 'audit_logs', 'settings', 'integrations'], true);
 
             // Group permission visibility
             $canViewAnyMember     = admin_can($currentUserId, 'members', 'view') || 
@@ -306,6 +306,7 @@ if (!function_exists('admin_can')) {
                     <?php endif; ?>
                     <?php if (admin_can($currentUserId, 'settings', 'view')): ?>
                         <a href="/admin/settings.php" class="nav-sublink <?= $activeMenu === 'settings' ? 'active' : '' ?>">Settings</a>
+                        <a href="/admin/integrations.php" class="nav-sublink <?= $activeMenu === 'integrations' ? 'active' : '' ?>">Integrations</a>
                     <?php endif; ?>
                 </div>
             </div>

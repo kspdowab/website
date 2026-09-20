@@ -1065,11 +1065,28 @@ class Grievance
     public static function notify(int $userId, string $type, string $title, string $message, ?int $grievanceId = null): void
     {
         try {
-            Database::execute(
-                "INSERT INTO notifications (user_id, type, title, message, related_module, related_id, created_at)
-                 VALUES (?, ?, ?, ?, 'grievances', ?, NOW())",
-                [$userId, $type, $title, $message, $grievanceId]
-            );
+            if (class_exists('NotificationService')) {
+                $extra = [];
+                if ($grievanceId !== null) {
+                    $grv = Database::fetchOne("SELECT grievance_no, subject, status FROM grievances WHERE id = ? LIMIT 1", [$grievanceId]);
+                    if ($grv) {
+                        $extra['summary_table'] = [
+                            'Grievance No' => $grv['grievance_no'],
+                            'Subject'      => $grv['subject'],
+                            'Status'       => $grv['status'],
+                        ];
+                        $extra['action_url'] = (defined('APP_URL') ? APP_URL : '') . '/member/grievance-view.php?id=' . $grievanceId;
+                        $extra['action_label'] = 'View Grievance Status';
+                    }
+                }
+                NotificationService::sendToUser($userId, $type, $title, $message, 'grievances', $grievanceId, $extra);
+            } else {
+                Database::execute(
+                    "INSERT INTO notifications (user_id, type, title, message, related_module, related_id, created_at)
+                     VALUES (?, ?, ?, ?, 'grievances', ?, NOW())",
+                    [$userId, $type, $title, $message, $grievanceId]
+                );
+            }
         } catch (\Throwable $e) {
             // Notifications should never throw uncaught fatal errors
             error_log('[GRIEVANCE NOTIFY ERROR] ' . $e->getMessage());

@@ -1,0 +1,69 @@
+{
+  "name": "Karnataka State Panchayat Development Officer Welfare Association (R)",
+  "short_name": "KSPDOWA",
+  "description": "Official Web Portal for Panchayat Development Officers across Karnataka",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#F5F7FA",
+  "theme_color": "#173F67",
+  "lang": "en-IN",
+  "dir": "ltr",
+  "categories": [
+    "government",
+    "productivity",
+    "social"
+  ],
+  "icons": [
+    {
+      "src": "/assets/images/favicon.png",
+      "sizes": "32x32 48x48",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/images/logo.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Member Portal",
+      "short_name": "Portal",
+      "description": "Member dashboard and grievance tracking",
+      "url": "/login.php",
+      "icons": [
+        {
+          "src": "/assets/images/favicon.png",
+          "sizes": "32x32"
+        }
+      ]
+    },
+    {
+      "name": "News & Announcements",
+      "short_name": "News",
+      "description": "Latest updates and circular notices",
+      "url": "/news.php",
+      "icons": [
+        {
+          "src": "/assets/images/favicon.png",
+          "sizes": "32x32"
+        }
+      ]
+    },
+    {
+      "name": "Office Bearers",
+      "short_name": "Bearers",
+      "description": "Association leadership directory",
+      "url": "/office-bearers.php",
+      "icons": [
+        {
+          "src": "/assets/images/favicon.png",
+          "sizes": "32x32"
+        }
+      ]
+    }
+  ]
+}

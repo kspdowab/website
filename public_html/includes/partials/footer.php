@@ -106,5 +106,16 @@ $footerShort   = Settings::get('site_short_name', APP_SHORT_NAME);
     }
 }
 </style>
+<script>
+if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
+    window.addEventListener('load', function() {
+        navigator.serviceWorker.register('/sw.js').then(function(reg) {
+            // Service worker successfully registered
+        }).catch(function(err) {
+            console.warn('[PWA] Service worker registration error:', err);
+        });
+    });
+}
+</script>
 </body>
 </html>

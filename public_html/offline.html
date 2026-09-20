@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offline — KSPDOWA</title>
+    <meta name="theme-color" content="#173F67">
+    <link rel="icon" type="image/png" href="/assets/images/favicon.png">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body {
+            background-color: #F5F7FA;
+            color: #1e293b;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            text-align: center;
+        }
+        .header {
+            background-color: #173F67;
+            color: #ffffff;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .header h1 {
+            font-size: 1.25rem;
+            letter-spacing: 0.5px;
+        }
+        .content {
+            max-width: 540px;
+            margin: 40px auto;
+            padding: 36px 24px;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+            border: 1px solid #e2e8f0;
+        }
+        .icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 20px;
+            color: #1769AA;
+        }
+        h2 {
+            font-size: 1.4rem;
+            color: #0f172a;
+            margin-bottom: 12px;
+        }
+        p {
+            font-size: 0.95rem;
+            color: #64748b;
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+        .kannada-text {
+            font-size: 0.9rem;
+            color: #475569;
+            background: #f8fafc;
+            padding: 14px;
+            border-radius: 8px;
+            border-left: 4px solid #1769AA;
+            margin-bottom: 24px;
+            text-align: left;
+        }
+        .btn {
+            display: inline-block;
+            background-color: #1769AA;
+            color: #ffffff;
+            padding: 12px 28px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .btn:hover {
+            background-color: #0F4C81;
+        }
+        .footer {
+            padding: 20px;
+            font-size: 0.8rem;
+            color: #94a3b8;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1>KSPDOWA Official Web Portal</h1>
+    </header>
+
+    <main class="content">
+        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 4.243a9 9 0 01-1.414-1.414m-1.414-1.414a9 9 0 010-12.728M8.464 8.464a5 5 0 00-1.414 1.414M3 3l18 18" />
+        </svg>
+
+        <h2>You are currently offline</h2>
+        <p>It seems your device has lost connection to the internet. Please check your mobile data or Wi-Fi network and try reloading the page.</p>
+
+        <div class="kannada-text">
+            <strong>ದಯವಿಟ್ಟು ಗಮನಿಸಿ:</strong> ಇಂಟರ್ನೆಟ್ ಸಂಪರ್ಕವಿಲ್ಲದಿರುವುದರಿಂದ ಪುಟವನ್ನು ಪ್ರದರ್ಶಿಸಲು ಸಾಧ್ಯವಾಗುತ್ತಿಲ್ಲ. ನಿಮ್ಮ ಡೇಟಾ ಸಂಪರ್ಕವನ್ನು ಪರಿಶೀಲಿಸಿ ಪುನಃ ಪ್ರಯತ್ನಿಸಿ.
+        </div>
+
+        <button class="btn" onclick="window.location.reload();">Retry Connection</button>
+    </main>
+
+    <footer class="footer">
+        Karnataka State Panchayat Development Officer Welfare Association (R)<br>
+        Designed &amp; Developed by : KHUBAASING JADAV
+    </footer>
+</body>
+</html>

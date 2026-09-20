@@ -86,6 +86,9 @@ require_once INCLUDES_DIR . '/DonationReceipt.php'; // needs Database, AuditLogg
 require_once INCLUDES_DIR . '/Grievance.php';       // Phase 5 Grievance Engine
 require_once INCLUDES_DIR . '/Suggestion.php';      // Section 28 Members' Suggestions Engine
 require_once INCLUDES_DIR . '/ContentBulkImporter.php'; // Bulk Importer for Orders, Circulars, Documents
+require_once INCLUDES_DIR . '/EmailTemplates.php';   // Phase 8 Transactional Email Templates
+require_once INCLUDES_DIR . '/WhatsApp.php';         // Phase 8 WhatsApp Messaging Driver
+require_once INCLUDES_DIR . '/NotificationService.php'; // Phase 8 Multi-Channel Notification Dispatcher
 
 // ------------------------------------------------------------------
 // 4. Register centralized error handler

@@ -570,11 +570,28 @@ class Suggestion
     public static function notify(int $userId, string $type, string $title, string $message, ?int $suggestionId = null): void
     {
         try {
-            Database::execute(
-                "INSERT INTO notifications (user_id, type, title, message, related_module, related_id, created_at)
-                 VALUES (?, ?, ?, ?, 'suggestions', ?, NOW())",
-                [$userId, $type, $title, $message, $suggestionId]
-            );
+            if (class_exists('NotificationService')) {
+                $extra = [];
+                if ($suggestionId !== null) {
+                    $sug = Database::fetchOne("SELECT suggestion_no, subject, status FROM member_suggestions WHERE id = ? LIMIT 1", [$suggestionId]);
+                    if ($sug) {
+                        $extra['summary_table'] = [
+                            'Suggestion No' => $sug['suggestion_no'],
+                            'Subject'       => $sug['subject'],
+                            'Status'        => $sug['status'],
+                        ];
+                        $extra['action_url'] = (defined('APP_URL') ? APP_URL : '') . '/member/suggestions.php';
+                        $extra['action_label'] = 'View My Suggestions';
+                    }
+                }
+                NotificationService::sendToUser($userId, $type, $title, $message, 'suggestions', $suggestionId, $extra);
+            } else {
+                Database::execute(
+                    "INSERT INTO notifications (user_id, type, title, message, related_module, related_id, created_at)
+                     VALUES (?, ?, ?, ?, 'suggestions', ?, NOW())",
+                    [$userId, $type, $title, $message, $suggestionId]
+                );
+            }
         } catch (Throwable $e) {
             // Notifications should never crash the main transaction
             error_log('[SUGGESTION NOTIFY ERROR] ' . $e->getMessage());
