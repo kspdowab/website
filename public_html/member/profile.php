@@ -120,13 +120,14 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         exit;
     }
 
-    // 2. Personal & Service Details (Blood group, native district, batch, etc.)
+    // 2. Personal & Service Details (Blood group, native district, gender, joining_date, etc.)
     if ($action === 'update_personal_service') {
         ensureProfileExists($currentMemberId);
         $bloodGroup      = trim(Sanitize::string($_POST['blood_group'] ?? '', 10));
         $nativeDistrict  = trim(Sanitize::string($_POST['native_district'] ?? '', 100));
-        $recruitmentBatch= trim(Sanitize::string($_POST['recruitment_batch'] ?? '', 50));
         $recruitmentType = trim(Sanitize::string($_POST['recruitment_type'] ?? '', 100));
+        $gender          = Sanitize::inArray($_POST['gender'] ?? '', ['male', 'female', 'other']) ?: null;
+        $joiningDateRaw  = trim(Sanitize::string($_POST['joining_date'] ?? '', 10));
 
         if ($bloodGroup !== '' && !in_array($bloodGroup, $allowedBloodGroups, true)) {
             Session::flash('error', 'Invalid blood group selected.');
@@ -134,18 +135,37 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             exit;
         }
 
+        $joiningDate = null;
+        if ($joiningDateRaw !== '') {
+            $d = DateTime::createFromFormat('Y-m-d', $joiningDateRaw);
+            if ($d && $d->format('Y-m-d') === $joiningDateRaw) {
+                $joiningDate = $joiningDateRaw;
+            }
+        }
+
+        Database::execute(
+            'UPDATE members SET joining_date = ?, updated_at = NOW() WHERE id = ?',
+            [$joiningDate, $currentMemberId]
+        );
+
         Database::execute(
             'UPDATE member_profiles
-             SET blood_group = ?, native_district = ?, recruitment_batch = ?, recruitment_type = ?, updated_at = NOW()
+             SET blood_group = ?, native_district = ?, recruitment_type = ?, gender = ?, updated_at = NOW()
              WHERE member_id = ?',
             [
                 $bloodGroup !== '' ? $bloodGroup : null,
                 $nativeDistrict !== '' ? $nativeDistrict : null,
-                $recruitmentBatch !== '' ? $recruitmentBatch : null,
                 $recruitmentType !== '' ? $recruitmentType : null,
+                $gender,
                 $currentMemberId
             ]
         );
+
+        AuditLogger::log('PROFILE_DETAILS_UPDATED', 'members', $currentMemberId, null, [
+            'gender' => $gender,
+            'joining_date' => $joiningDate,
+            'blood_group' => $bloodGroup
+        ]);
 
         Session::flash('success', 'Personal and service details updated successfully.');
         header('Location: /member/profile.php');
@@ -462,9 +482,9 @@ if (!empty($memberRow['photo_path']) && is_file(PUBLIC_HTML . '/' . ltrim($membe
             </div>
 
             <div>
-                <label class="form-label" style="color:var(--text-muted);">Recruitment Batch</label>
+                <label class="form-label" style="color:var(--text-muted);">Date of Joining (ಸೇವಾ ಸೇರ್ಪಡೆ ದಿನಾಂಕ)</label>
                 <div style="font-size:1rem; font-weight:600; color:var(--text-main);">
-                    <?= !empty($profile['recruitment_batch']) ? Sanitize::html($profile['recruitment_batch']) : '—' ?>
+                    <?= !empty($memberRow['joining_date']) ? date('d M Y', strtotime((string)$memberRow['joining_date'])) : '—' ?>
                 </div>
             </div>
 
@@ -722,7 +742,17 @@ if (!empty($memberRow['photo_path']) && is_file(PUBLIC_HTML . '/' . ltrim($membe
             <div class="modal-body">
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:14px; margin-bottom:14px;">
                     <div class="form-group">
-                        <label class="form-label" for="modal_blood_group">Blood Group *</label>
+                        <label class="form-label" for="modal_gender">Gender (ಲಿಂಗ)</label>
+                        <select name="gender" id="modal_gender" class="form-select">
+                            <option value="">— Select Gender —</option>
+                            <option value="male" <?= (($profile['gender'] ?? '') === 'male') ? 'selected' : '' ?>>Male (ಪುರುಷ)</option>
+                            <option value="female" <?= (($profile['gender'] ?? '') === 'female') ? 'selected' : '' ?>>Female (ಮಹಿಳೆ)</option>
+                            <option value="other" <?= (($profile['gender'] ?? '') === 'other') ? 'selected' : '' ?>>Other (ಇತರೆ)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="modal_blood_group">Blood Group</label>
                         <select name="blood_group" id="modal_blood_group" class="form-select">
                             <option value="">— Select Blood Group —</option>
                             <?php foreach ($allowedBloodGroups as $bg): ?>
@@ -732,17 +762,12 @@ if (!empty($memberRow['photo_path']) && is_file(PUBLIC_HTML . '/' . ltrim($membe
                             <?php endforeach; ?>
                         </select>
                     </div>
-
-                    <div class="form-group">
-                        <label class="form-label" for="native_district">Native District (ಸ್ವಂತ ಜಿಲ್ಲೆ)</label>
-                        <input type="text" name="native_district" id="native_district" class="form-control" value="<?= Sanitize::attr($profile['native_district'] ?? '') ?>" placeholder="e.g. Belagavi, Mandya...">
-                    </div>
                 </div>
 
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:14px; margin-bottom:14px;">
                     <div class="form-group">
-                        <label class="form-label" for="recruitment_batch">Recruitment Batch Year</label>
-                        <input type="text" name="recruitment_batch" id="recruitment_batch" class="form-control" value="<?= Sanitize::attr($profile['recruitment_batch'] ?? '') ?>" placeholder="e.g. 2011 Batch, 2017 Batch">
+                        <label class="form-label" for="modal_joining_date">Date of Joining (ಸೇವಾ ಸೇರ್ಪಡೆ ದಿನಾಂಕ)</label>
+                        <input type="date" name="joining_date" id="modal_joining_date" class="form-control" value="<?= Sanitize::attr($memberRow['joining_date'] ?? '') ?>">
                     </div>
 
                     <div class="form-group">
@@ -756,6 +781,11 @@ if (!empty($memberRow['photo_path']) && is_file(PUBLIC_HTML . '/' . ltrim($membe
                             <?php endforeach; ?>
                         </select>
                     </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label class="form-label" for="native_district">Native District (ಸ್ವಂತ ಜಿಲ್ಲೆ)</label>
+                    <input type="text" name="native_district" id="native_district" class="form-control" value="<?= Sanitize::attr($profile['native_district'] ?? '') ?>" placeholder="e.g. Belagavi, Mandya...">
                 </div>
 
                 <div style="font-size:0.8rem; color:var(--text-muted);">

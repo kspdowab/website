@@ -31,18 +31,38 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/includes/bootstrap.php';
 
-$donationId = Session::get('donation_id');
-if ($donationId === null) {
-    ErrorHandler::abort(404, 'Receipt not found.');
-}
-$donationId = (int) $donationId;
+$queryDonationId = Sanitize::positiveInt($_GET['id'] ?? null);
+if ($queryDonationId !== false) {
+    Auth::requireLogin();
+    $currentMemberId = Auth::getCurrentMemberId();
+    $currentUserId   = Auth::getCurrentUserId();
+    $donation = Database::fetchOne(
+        "SELECT * FROM donations WHERE id = ? AND status = 'completed'",
+        [$queryDonationId]
+    );
+    if (!$donation) {
+        ErrorHandler::abort(404, 'Receipt not found.');
+    }
+    $canView = ($currentMemberId !== null && (int)($donation['member_id'] ?? 0) === $currentMemberId)
+               || ($currentUserId !== null && RBAC::can($currentUserId, 'donations', 'view'));
+    if (!$canView) {
+        ErrorHandler::abort(403, 'Unauthorized access to this receipt.');
+    }
+    $donationId = $queryDonationId;
+} else {
+    $donationId = Session::get('donation_id');
+    if ($donationId === null) {
+        ErrorHandler::abort(404, 'Receipt not found.');
+    }
+    $donationId = (int) $donationId;
 
-$donation = Database::fetchOne(
-    "SELECT id FROM donations WHERE id = ? AND status = 'completed'",
-    [$donationId]
-);
-if ($donation === false) {
-    ErrorHandler::abort(404, 'Receipt not found.');
+    $donation = Database::fetchOne(
+        "SELECT id FROM donations WHERE id = ? AND status = 'completed'",
+        [$donationId]
+    );
+    if ($donation === false) {
+        ErrorHandler::abort(404, 'Receipt not found.');
+    }
 }
 
 $receipt = DonationReceipt::forDonation($donationId);

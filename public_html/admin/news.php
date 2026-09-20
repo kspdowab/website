@@ -103,6 +103,31 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $categoryId = null;
         }
 
+        $featuredImage = null;
+        $removeAttachment = !empty($_POST['remove_attachment']);
+
+        $uploadedFile = $_FILES['paper_cutting'] ?? null;
+        if ($uploadedFile && ($uploadedFile['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+            $allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+            $uploadErrors = Sanitize::fileUpload($uploadedFile, $allowedMimes, 5 * 1024 * 1024);
+            if (!empty($uploadErrors)) {
+                $errors[] = 'Paper Cutting upload: ' . implode(' ', $uploadErrors);
+            } else {
+                $targetDir = PUBLIC_HTML . '/uploads/news';
+                if (!is_dir($targetDir)) {
+                    mkdir($targetDir, 0755, true);
+                }
+                $ext = strtolower(pathinfo($uploadedFile['name'], PATHINFO_EXTENSION));
+                $safeFilename = sprintf('paper_cutting_%d_%s.%s', time(), bin2hex(random_bytes(4)), $ext);
+                $dest = $targetDir . '/' . $safeFilename;
+                if (move_uploaded_file($uploadedFile['tmp_name'], $dest)) {
+                    $featuredImage = 'uploads/news/' . $safeFilename;
+                } else {
+                    $errors[] = 'Failed to save uploaded paper cutting file.';
+                }
+            }
+        }
+
         if (!empty($errors)) {
             Session::flash('error', implode(' ', $errors));
             header('Location: /admin/news.php' . ($id ? '?edit=' . $id : ''));
@@ -114,12 +139,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $publishedAt = $status === 'published' ? date('Y-m-d H:i:s') : null;
 
             Database::execute(
-                'INSERT INTO news (title, slug, content, language, category_id, status, published_at, created_by, created_at, updated_at)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())',
-                [$title, $slug, $content, $language, $categoryId, $status, $publishedAt, $currentUserId]
+                'INSERT INTO news (title, slug, content, language, category_id, featured_image, status, published_at, created_by, created_at, updated_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())',
+                [$title, $slug, $content, $language, $categoryId, $featuredImage, $status, $publishedAt, $currentUserId]
             );
             $newId = (int) Database::lastInsertId();
-            AuditLogger::log('CREATE', 'news', $newId, null, ['title' => $title, 'status' => $status]);
+            AuditLogger::log('CREATE', 'news', $newId, null, ['title' => $title, 'status' => $status, 'featured_image' => $featuredImage]);
             Session::flash('success', 'News item created.');
         } else {
             $existing = Database::fetchOne('SELECT * FROM news WHERE id = ?', [$id]);
@@ -135,13 +160,27 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 $publishedAt = date('Y-m-d H:i:s');
             }
 
+            $finalImage = $existing['featured_image'] ?? null;
+            if ($removeAttachment) {
+                if (!empty($finalImage) && is_file(PUBLIC_HTML . '/' . ltrim($finalImage, '/'))) {
+                    @unlink(PUBLIC_HTML . '/' . ltrim($finalImage, '/'));
+                }
+                $finalImage = null;
+            }
+            if ($featuredImage !== null) {
+                if (!empty($finalImage) && is_file(PUBLIC_HTML . '/' . ltrim($finalImage, '/'))) {
+                    @unlink(PUBLIC_HTML . '/' . ltrim($finalImage, '/'));
+                }
+                $finalImage = $featuredImage;
+            }
+
             Database::execute(
                 'UPDATE news SET title = ?, slug = ?, content = ?, language = ?, category_id = ?,
-                    status = ?, published_at = ?, updated_by = ?, updated_at = NOW()
+                    featured_image = ?, status = ?, published_at = ?, updated_by = ?, updated_at = NOW()
                  WHERE id = ?',
-                [$title, $slug, $content, $language, $categoryId, $status, $publishedAt, $currentUserId, $id]
+                [$title, $slug, $content, $language, $categoryId, $finalImage, $status, $publishedAt, $currentUserId, $id]
             );
-            AuditLogger::log('UPDATE', 'news', $id, $existing, ['title' => $title, 'status' => $status]);
+            AuditLogger::log('UPDATE', 'news', $id, $existing, ['title' => $title, 'status' => $status, 'featured_image' => $finalImage]);
             Session::flash('success', 'News item updated.');
         }
 
@@ -218,7 +257,7 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
         <div class="msg error" role="alert">No news categories exist. Run seeds/005_news_categories.sql.</div>
     <?php endif; ?>
 
-        <form method="post" action="/admin/news.php">
+        <form method="post" action="/admin/news.php" enctype="multipart/form-data">
             <?= CSRF::htmlField() ?>
             <input type="hidden" name="action" value="<?= $editRow ? 'update' : 'create' ?>">
             <?php if ($editRow): ?><input type="hidden" name="id" value="<?= (int) $editRow['id'] ?>"><?php endif; ?>
@@ -229,6 +268,28 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
 
             <label for="content">Content</label>
             <textarea id="content" name="content" required><?= Sanitize::html($editRow['content'] ?? '') ?></textarea>
+
+            <div style="margin-bottom: 14px;">
+                <label for="paper_cutting">RDPR Related Paper Cutting / News Clipping (ಪತ್ರಿಕಾ ತುಣುಕು ಭಾವಚಿತ್ರ)</label>
+                <input type="file" id="paper_cutting" name="paper_cutting" accept=".jpg,.jpeg,.png,.webp,.pdf">
+                <div style="font-size:0.8rem; color:#64748b; margin-top:4px;">Upload newspaper clipping, RDPR official communication, or event photo (JPG, PNG, WebP or PDF, Max 5MB).</div>
+
+                <?php if (!empty($editRow['featured_image'])): ?>
+                    <div style="margin-top: 10px; padding: 10px 14px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+                        <span style="font-size:0.85rem; font-weight:600; color:#334155;">Current Paper Cutting:</span>
+                        <?php if (preg_match('/\.(jpg|jpeg|png|webp)$/i', (string)$editRow['featured_image'])): ?>
+                            <a href="/<?= ltrim(Sanitize::attr($editRow['featured_image']), '/') ?>" target="_blank" title="Click to view full image">
+                                <img src="/<?= ltrim(Sanitize::attr($editRow['featured_image']), '/') ?>" alt="Paper Cutting" style="height:55px; max-width:120px; border-radius:4px; border:1px solid #94a3b8; object-fit:cover;">
+                            </a>
+                        <?php else: ?>
+                            <a href="/<?= ltrim(Sanitize::attr($editRow['featured_image']), '/') ?>" target="_blank" style="font-size:0.85rem; color:#2563eb; font-weight:600; text-decoration:underline;">View Attached Document (PDF)</a>
+                        <?php endif; ?>
+                        <label style="font-size:0.82rem; margin:0; display:inline-flex; align-items:center; gap:5px; color:#b91c1c; cursor:pointer;">
+                            <input type="checkbox" name="remove_attachment" value="1"> Remove current attachment
+                        </label>
+                    </div>
+                <?php endif; ?>
+            </div>
 
             <div class="row">
                 <div>
@@ -273,11 +334,24 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
         <h2>All News (<?= count($newsItems) ?>)</h2>
         <div class="table-wrap">
         <table>
-            <thead><tr><th>Title</th><th>Category</th><th>Language</th><th>Status</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Title</th><th>Attachment</th><th>Category</th><th>Language</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody>
                 <?php foreach ($newsItems as $item): ?>
                 <tr>
                     <td data-label="Title"><?= Sanitize::html($item['title']) ?></td>
+                    <td data-label="Attachment">
+                        <?php if (!empty($item['featured_image'])): ?>
+                            <?php if (preg_match('/\.(jpg|jpeg|png|webp)$/i', (string)$item['featured_image'])): ?>
+                                <a href="/<?= ltrim(Sanitize::attr($item['featured_image']), '/') ?>" target="_blank">
+                                    <img src="/<?= ltrim(Sanitize::attr($item['featured_image']), '/') ?>" alt="Paper Cutting" style="height:32px; width:45px; object-fit:cover; border-radius:3px; border:1px solid #cbd5e1;">
+                                </a>
+                            <?php else: ?>
+                                <a href="/<?= ltrim(Sanitize::attr($item['featured_image']), '/') ?>" target="_blank" style="font-size:0.8rem; color:#2563eb;">📎 PDF</a>
+                            <?php endif; ?>
+                        <?php else: ?>
+                            <span style="color:#94a3b8; font-size:0.8rem;">None</span>
+                        <?php endif; ?>
+                    </td>
                     <td data-label="Category"><?= Sanitize::html($item['category_name'] ?? '—') ?></td>
                     <td data-label="Language"><?= $item['language'] === 'kn' ? 'ಕನ್ನಡ' : 'English' ?></td>
                     <td data-label="Status"><span class="badge <?= Sanitize::html($item['status']) ?>"><?= Sanitize::html($item['status']) ?></span></td>

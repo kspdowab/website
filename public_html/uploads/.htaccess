@@ -1,23 +1,12 @@
-# KSPDOWA — uploads/ directory
-# Block direct HTTP access to all files. Uploaded files must be
-# served exclusively through an authorization-checked PHP endpoint.
-# Also disable PHP execution to prevent uploaded script execution.
-#
-# Apache 2.4 (mod_authz_core) uses "Require all denied"; the older
-# "Order/Deny" syntax is only honored if mod_access_compat is loaded and
-# is otherwise silently ignored, which would leave this directory
-# unprotected. Both forms are declared so this works on either version.
+# KSPDOWA — uploads/ directory security
+# Disable script and CGI execution to prevent uploaded malware execution.
+# Allow static media (images, webp, svg, pdf) to be rendered.
+# ============================================================
 
-<IfModule mod_authz_core.c>
-    Require all denied
-</IfModule>
-<IfModule !mod_authz_core.c>
-    Order Allow,Deny
-    Deny from all
-</IfModule>
+Options -Indexes -ExecCGI
 
-# Disable PHP execution even if the deny-all is bypassed
-<FilesMatch "\.php$">
+# Deny access to any executable scripts
+<FilesMatch "\.(php|phtml|php3|php4|php5|php7|php8|phps|phar|cgi|pl|py|sh|bash|exe|asp|aspx|jsp)$">
     <IfModule mod_authz_core.c>
         Require all denied
     </IfModule>
@@ -27,6 +16,15 @@
     </IfModule>
 </FilesMatch>
 
-# Disable CGI execution
-Options -ExecCGI
+# Only allow safe static extensions
+<FilesMatch "\.(jpg|jpeg|png|gif|webp|svg|ico|pdf)$">
+    <IfModule mod_authz_core.c>
+        Require all granted
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order Allow,Deny
+        Allow from all
+    </IfModule>
+</FilesMatch>
+
 AddType text/plain .php .php3 .php4 .php5 .phtml .phar

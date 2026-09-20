@@ -254,7 +254,7 @@ require_once dirname(__DIR__) . '/includes/partials/member-header.php';
                             currency: "INR",
                             order_id: <?= Sanitize::js($order['order_id']) ?>,
                             name: <?= Sanitize::js(APP_SHORT_NAME) ?>,
-                            description: "Annual Membership Fee FY <?= Sanitize::js($year['financial_year']) ?>",
+                            description: <?= Sanitize::js("Annual Membership Fee FY " . ($year['financial_year'] ?? '')) ?>,
                             prefill: {
                                 name: <?= Sanitize::js($order['member']['name'] ?? $portalMember['name'] ?? '') ?>,
                                 email: <?= Sanitize::js($order['member']['personal_email'] ?? $portalMember['personal_email'] ?? '') ?>,

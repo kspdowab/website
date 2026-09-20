@@ -36,8 +36,8 @@ ServerSignature Off
     # Block direct access to includes/
     RewriteRule ^includes(/.*)?$ - [F,L]
 
-    # Block direct access to uploads/ (served via authenticated PHP endpoint)
-    RewriteRule ^uploads(/.*)?$ - [F,L]
+    # Block direct access to private uploads/ subdirectories (served via authenticated PHP endpoints)
+    RewriteRule ^uploads/(documents|receipts|grievances|suggestions)(/.*)?$ - [F,L]
 </IfModule>
 
 # ----------------------------------------------------------

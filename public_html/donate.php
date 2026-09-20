@@ -52,7 +52,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     }
 
     if (empty($errors)) {
-        $result = Donation::create($clean['donor_name'], $clean['purpose'], (float) $amount);
+        $memberId = Auth::getCurrentMemberId();
+        $result = Donation::create($clean['donor_name'], $clean['purpose'], (float) $amount, $memberId);
 
         if ($result['success']) {
             Session::set('donation_id', $result['donation_id']);

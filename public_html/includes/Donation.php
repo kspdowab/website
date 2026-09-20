@@ -41,7 +41,7 @@ class Donation
      * @param float  $amount    Required, already validated (> 0) by the caller.
      * @return array{success:bool, donation_id?:int, error?:string}
      */
-    public static function create(string $donorName, string $purpose, float $amount): array
+    public static function create(string $donorName, string $purpose, float $amount, ?int $memberId = null): array
     {
         if ($donorName === '' || $amount <= 0) {
             return ['success' => false, 'error' => 'Please provide your name and a valid donation amount.'];
@@ -52,8 +52,8 @@ class Donation
 
             Database::execute(
                 "INSERT INTO donations (idempotency_key, member_id, donor_name, purpose, amount, status)
-                 VALUES (?, NULL, ?, ?, ?, 'pending')",
-                [$idempotencyKey, $donorName, $purpose, $amount]
+                 VALUES (?, ?, ?, ?, ?, 'pending')",
+                [$idempotencyKey, $memberId, $donorName, $purpose, $amount]
             );
             $donationId = (int) Database::lastInsertId();
 
