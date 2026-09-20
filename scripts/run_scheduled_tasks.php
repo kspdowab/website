@@ -43,12 +43,13 @@ task_log('Starting KSPDOWA Scheduled Automation Tasks...');
 task_log('Task 1: Evaluating grievance ageing and SLA backlog...');
 
 $openGrievances = Database::fetchAll(
-    "SELECT g.id, g.grievance_no, g.subject, g.status, g.created_at, g.member_id,
-            g.taluk_id, g.district_id, g.assigned_to,
-            DATEDIFF(NOW(), g.created_at) AS days_open
+    "SELECT g.id, g.grievance_no, g.subject, g.current_status AS status, g.submitted_at AS created_at, g.member_id,
+            m.taluk_id, m.district_id, g.current_assignee AS assigned_to,
+            DATEDIFF(NOW(), g.submitted_at) AS days_open
      FROM grievances g
-     WHERE g.status NOT IN ('Resolved', 'Rejected', 'Closed')
-     ORDER BY g.created_at ASC"
+     LEFT JOIN members m ON g.member_id = m.id
+     WHERE g.current_status NOT IN ('Resolved', 'Rejected', 'Closed')
+     ORDER BY g.submitted_at ASC"
 );
 
 $escalatedCount = 0;
@@ -96,22 +97,23 @@ task_log("Grievance evaluation completed: {$escalatedCount} ageing alerts dispat
 // ------------------------------------------------------------------
 task_log('Task 2: Checking membership renewal reminders...');
 
-$currentFy = Database::fetchOne("SELECT id, fy_name FROM financial_years WHERE is_current = 1 LIMIT 1");
+$currentFy = Membership::getCurrentYear();
 $reminderCount = 0;
 
 if ($currentFy) {
     $fyId = (int)$currentFy['id'];
-    $fyName = $currentFy['fy_name'];
+    $fyName = $currentFy['financial_year'];
 
     // Active members who have not paid for the current financial year
     $unpaidMembers = Database::fetchAll(
-        "SELECT m.id, m.full_name, m.email, m.phone, u.id AS user_id
+        "SELECT m.id, m.name AS full_name, mp.personal_email AS email, mp.personal_mobile AS phone, u.id AS user_id
          FROM members m
+         LEFT JOIN member_profiles mp ON m.id = mp.member_id
          LEFT JOIN users u ON m.id = u.member_id
-         WHERE m.status = 'active'
+         WHERE m.membership_status = 'active'
            AND m.id NOT IN (
                SELECT member_id FROM membership_payments
-               WHERE financial_year_id = ? AND payment_status = 'success'
+               WHERE membership_year_id = ? AND status = 'completed'
            )
          LIMIT 25",
         [$fyId]
@@ -125,7 +127,7 @@ if ($currentFy) {
         $recentNotif = Database::fetchOne(
             "SELECT id FROM notification_logs
              WHERE event_type = 'FEE_DUE_REMINDER'
-               AND related_module = 'financial_years' AND related_id = ?
+               AND related_module = 'membership_years' AND related_id = ?
                AND (recipient = ? OR recipient = ?)
                AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
              LIMIT 1",
@@ -137,12 +139,12 @@ if ($currentFy) {
             $message = "Dear {$mem['full_name']}, this is a friendly reminder that your KSPDOWA annual membership fee for FY {$fyName} is pending. Please log in to your portal to complete the renewal.";
 
             if ($userId) {
-                NotificationService::sendToUser($userId, 'FEE_DUE_REMINDER', $title, $message, 'financial_years', $fyId, [
+                NotificationService::sendToUser($userId, 'FEE_DUE_REMINDER', $title, $message, 'membership_years', $fyId, [
                     'action_url' => (defined('APP_URL') ? APP_URL : '') . '/member/index.php',
                     'action_label' => 'Renew Membership Fee'
                 ]);
             } else {
-                NotificationService::sendToMember($memberId, 'FEE_DUE_REMINDER', $title, $message, 'financial_years', $fyId);
+                NotificationService::sendToMember($memberId, 'FEE_DUE_REMINDER', $title, $message, 'membership_years', $fyId);
             }
             $reminderCount++;
         }

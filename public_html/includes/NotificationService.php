@@ -43,9 +43,10 @@ class NotificationService
 
             // Fetch user info (email, member link)
             $user = Database::fetchOne(
-                "SELECT u.id, u.email, u.member_id, m.phone, m.full_name, m.kgid
+                "SELECT u.id, u.email, u.mobile, u.member_id, m.name AS full_name, mp.personal_mobile, mp.personal_email, mp.kgid_no
                  FROM users u
                  LEFT JOIN members m ON u.member_id = m.id
+                 LEFT JOIN member_profiles mp ON m.id = mp.member_id
                  WHERE u.id = ? LIMIT 1",
                 [$userId]
             );
@@ -68,7 +69,7 @@ class NotificationService
             }
 
             // 2. Email Notification
-            $email = trim((string)($user['email'] ?? ''));
+            $email = trim((string)(!empty($user['email']) ? $user['email'] : ($user['personal_email'] ?? '')));
             if ($email !== '' && self::isEmailEnabled()) {
                 $recipientName = !empty($user['full_name']) ? (string)$user['full_name'] : 'Member / Officer';
                 $htmlBody = '<p>Dear <strong>' . htmlspecialchars($recipientName, ENT_QUOTES, 'UTF-8') . '</strong>,</p>'
@@ -95,7 +96,7 @@ class NotificationService
             }
 
             // 3. WhatsApp Notification
-            $phone = trim((string)($user['phone'] ?? ''));
+            $phone = trim((string)(!empty($user['mobile']) ? $user['mobile'] : ($user['personal_mobile'] ?? '')));
             if ($phone !== '' && self::isWhatsAppEnabled()) {
                 $shortName = class_exists('Settings') ? Settings::get('site_short_name', APP_SHORT_NAME) : APP_SHORT_NAME;
                 $waMessage = "📢 *{$shortName} Notification*\n\n"
@@ -137,8 +138,14 @@ class NotificationService
             return self::sendToUser((int)$u['id'], $eventType, $title, $message, $module, $recordId, $extra);
         }
 
-        // If no user account is linked, try direct phone/email from members table
-        $m = Database::fetchOne("SELECT email, phone, full_name FROM members WHERE id = ? LIMIT 1", [$memberId]);
+        // If no user account is linked, try direct phone/email from members and member_profiles
+        $m = Database::fetchOne(
+            "SELECT m.id, m.name AS full_name, mp.personal_email AS email, mp.personal_mobile AS phone
+             FROM members m
+             LEFT JOIN member_profiles mp ON m.id = mp.member_id
+             WHERE m.id = ? LIMIT 1",
+            [$memberId]
+        );
         if (!$m) {
             return ['in_app' => false, 'email' => false, 'whatsapp' => false];
         }
@@ -189,15 +196,19 @@ class NotificationService
                 FROM users u
                 JOIN user_roles ur ON u.id = ur.user_id
                 JOIN roles r ON ur.role_id = r.id
+                LEFT JOIN association_units au ON ur.association_unit_id = au.id
+                LEFT JOIN members m ON u.member_id = m.id
                 WHERE r.name = ? AND u.status = 'active'";
         $params = [$roleName];
 
         if ($districtId !== null) {
-            $sql .= " AND (u.district_id = ? OR u.district_id IS NULL)";
+            $sql .= " AND (au.district_id = ? OR m.district_id = ? OR (au.district_id IS NULL AND m.district_id IS NULL))";
+            $params[] = $districtId;
             $params[] = $districtId;
         }
         if ($talukId !== null) {
-            $sql .= " AND (u.taluk_id = ? OR u.taluk_id IS NULL)";
+            $sql .= " AND (au.taluk_id = ? OR m.taluk_id = ? OR (au.taluk_id IS NULL AND m.taluk_id IS NULL))";
+            $params[] = $talukId;
             $params[] = $talukId;
         }
 
