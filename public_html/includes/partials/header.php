@@ -413,6 +413,10 @@ function nav_active(string $path, string $current): string
             margin: 0 auto;
             padding: 24px 20px 64px;
         }
+        main.wide-portal-main {
+            max-width: 1540px;
+            padding: 20px 20px 64px;
+        }
         .page-title {
             color: var(--primary-navy);
             font-size: 1.85rem;
@@ -792,4 +796,4 @@ function nav_active(string $path, string $current): string
     });
 })();
 </script>
-<main>
+<main<?= !empty($mainClass) ? ' class="' . htmlspecialchars((string)$mainClass, ENT_QUOTES, 'UTF-8') . '"' : '' ?>>
