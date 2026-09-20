@@ -686,26 +686,29 @@ body {
 }
 main.wide-portal-main {
     background-color: transparent !important;
+    padding: 12px 14px 44px !important;
+    max-width: 1560px !important;
 }
 
 /* Portal Grid Layout (3 Column Desktop) */
 .home-portal-grid {
     display: grid;
     grid-template-columns: 290px minmax(0, 1fr) 290px;
-    gap: 22px;
+    gap: 12px;
     align-items: start;
     width: 100%;
-    margin-bottom: 24px;
+    margin-bottom: 12px;
 }
 .portal-sidebar {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 12px;
 }
 .portal-main-stream {
     min-width: 0;
     display: flex;
     flex-direction: column;
+    gap: 12px;
 }
 
 /* Sidebar Widgets — Distinct Styling Harmonized with Header */
@@ -1198,16 +1201,16 @@ main.wide-portal-main {
 
 /* Gallery Card */
 .gallery-card {
-    padding: 24px 28px 20px;
-    margin-bottom: 24px;
+    padding: 20px 24px 18px;
+    margin-bottom: 0;
 }
 .gallery-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
-    gap: 16px;
-    margin-bottom: 20px;
+    gap: 14px;
+    margin-bottom: 16px;
 }
 .gallery-title-area {
     display: flex;
@@ -1234,7 +1237,7 @@ main.wide-portal-main {
 }
 .gallery-track {
     display: flex;
-    gap: 16px;
+    gap: 14px;
     overflow-x: auto;
     scroll-behavior: smooth;
     padding: 6px 4px 12px;
@@ -1246,7 +1249,7 @@ main.wide-portal-main {
     display: none;
 }
 .gallery-item {
-    flex: 0 0 calc((100% - 18px) / 2);
+    flex: 0 0 calc((100% - 14px) / 2);
     display: flex;
     flex-direction: column;
     border-radius: var(--radius-md);
@@ -1341,17 +1344,17 @@ main.wide-portal-main {
 .stats-overview-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 20px;
-    margin-bottom: 24px;
+    gap: 12px;
+    margin-bottom: 0;
 }
 .stat-card-pro {
     background: #ffffff;
     border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
-    padding: 24px 22px;
+    padding: 20px 18px;
     display: flex;
     align-items: center;
-    gap: 18px;
+    gap: 16px;
     box-shadow: var(--shadow-sm);
     transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
@@ -1360,8 +1363,8 @@ main.wide-portal-main {
     border-color: #CBD5E1;
 }
 .icon-badge-pro {
-    width: 52px;
-    height: 52px;
+    width: 48px;
+    height: 48px;
     border-radius: 50%;
     display: inline-flex;
     align-items: center;
@@ -1385,27 +1388,27 @@ main.wide-portal-main {
     min-width: 0;
 }
 .stat-card-value {
-    font-size: 2.1rem;
+    font-size: 2rem;
     font-weight: 800;
     color: var(--primary-navy);
     line-height: 1.1;
 }
 .stat-card-label {
-    font-size: 0.95rem;
+    font-size: 0.92rem;
     font-weight: 700;
     color: var(--primary-navy);
     margin: 2px 0 2px;
 }
 .stat-card-desc {
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     color: var(--text-secondary);
     line-height: 1.35;
 }
 
 /* Section Cards */
 .section-card {
-    padding: 24px 28px;
-    margin-bottom: 24px;
+    padding: 20px 24px;
+    margin-bottom: 0;
 }
 .section-card-header {
     display: flex;
@@ -1504,9 +1507,9 @@ main.wide-portal-main {
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
-    gap: 20px;
-    padding: 24px 28px;
-    margin-bottom: 20px;
+    gap: 16px;
+    padding: 20px 24px;
+    margin-bottom: 0;
 }
 .contact-action-left {
     display: flex;
@@ -1536,13 +1539,13 @@ main.wide-portal-main {
 @media (max-width: 1280px) {
     .home-portal-grid {
         grid-template-columns: 260px minmax(0, 1fr) 260px;
-        gap: 16px;
+        gap: 12px;
     }
 }
 @media (max-width: 1040px) {
     .home-portal-grid {
         grid-template-columns: 1fr;
-        gap: 20px;
+        gap: 12px;
     }
     .portal-main-stream {
         order: 1;
@@ -1551,18 +1554,18 @@ main.wide-portal-main {
         order: 2;
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        gap: 16px;
+        gap: 12px;
     }
     .portal-sidebar-right {
         order: 3;
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        gap: 16px;
+        gap: 12px;
     }
 }
 @media (max-width: 992px) {
     .gallery-item {
-        flex: 0 0 calc((100% - 16px) / 2);
+        flex: 0 0 calc((100% - 14px) / 2);
     }
     .stats-overview-grid {
         grid-template-columns: 1fr;
