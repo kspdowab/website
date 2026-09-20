@@ -1977,14 +1977,9 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
 
         <form id="import-confirm-form" method="post" style="margin-top:24px; display:flex; gap:12px; align-items:center;">
             <?= CSRF::htmlField() ?>
-            <button type="button" id="btn-start-import" class="btn" style="background:#1e6b3a; padding:10px 24px;" <?= empty($previewData['valid']) ? 'disabled' : '' ?>>
+            <button type="submit" name="action" value="commit" id="btn-start-import" onclick="return startBatchImport(event);" class="btn" style="background:#1e6b3a; padding:10px 24px;" <?= empty($previewData['valid']) ? 'disabled' : '' ?>>
                 Confirm &amp; Import <?= count($previewData['valid']) ?> Rows
             </button>
-            <noscript>
-                <button type="submit" name="action" value="commit" class="btn" style="background:#1e6b3a; padding:10px 24px;" <?= empty($previewData['valid']) ? 'disabled' : '' ?>>
-                    Confirm &amp; Import <?= count($previewData['valid']) ?> Rows (Standard)
-                </button>
-            </noscript>
             <?php if (!empty($_SESSION['import_unmatched'])): ?>
                 <button type="submit" name="action" value="reopen_remap" class="btn" style="background:#2C6B67;">
                     ← Adjust Location Mappings
@@ -2101,124 +2096,148 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
 </style>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const btnStart = document.getElementById('btn-start-import');
-    if (!btnStart) return;
-
-    const progressCard = document.getElementById('import-progress-card');
-    const confirmForm  = document.getElementById('import-confirm-form');
-    const progressBar  = document.getElementById('progress-bar-fill');
-    const txtCurrent   = document.getElementById('progress-current');
-    const txtTotal     = document.getElementById('progress-total');
-    const txtPercent   = document.getElementById('progress-percent');
-    const statNew      = document.getElementById('stat-new');
-    const statPaid     = document.getElementById('stat-paid');
-    const statErrors   = document.getElementById('stat-errors');
-    const statusMsg    = document.getElementById('progress-status-msg');
-    const progressHeading = document.getElementById('progress-heading');
-    const progressSpinner = document.getElementById('progress-spinner');
-    const progressBadge   = document.getElementById('progress-badge');
-    const doneAction      = document.getElementById('progress-done-action');
-
-    const totalRows = <?= (int)count($previewData['valid'] ?? []) ?>;
-    const csrfToken = <?= json_encode(CSRF::token()) ?>;
-
-    btnStart.addEventListener('click', function(e) {
+window.startBatchImport = function(e) {
+    if (e && e.preventDefault) {
         e.preventDefault();
+    }
 
-        if (totalRows <= 0) return;
-        if (!confirm(`Are you sure you want to import ${totalRows} member rows?`)) return;
+    var totalRows = <?= (int)count($previewData['valid'] ?? []) ?>;
+    var csrfToken = <?= json_encode(CSRF::getToken()) ?>;
 
-        // Display progress card and lock controls
+    if (totalRows <= 0) {
+        return true;
+    }
+
+    var progressCard = document.getElementById('import-progress-card');
+    var btnStart     = document.getElementById('btn-start-import');
+    var confirmForm  = document.getElementById('import-confirm-form');
+    var progressBar  = document.getElementById('progress-bar-fill');
+    var txtCurrent   = document.getElementById('progress-current');
+    var txtTotal     = document.getElementById('progress-total');
+    var txtPercent   = document.getElementById('progress-percent');
+    var statNew      = document.getElementById('stat-new');
+    var statPaid     = document.getElementById('stat-paid');
+    var statErrors   = document.getElementById('stat-errors');
+    var statusMsg    = document.getElementById('progress-status-msg');
+    var progressHeading = document.getElementById('progress-heading');
+    var progressSpinner = document.getElementById('progress-spinner');
+    var progressBadge   = document.getElementById('progress-badge');
+    var doneAction      = document.getElementById('progress-done-action');
+
+    if (progressCard) {
         progressCard.style.display = 'block';
+        progressCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    if (btnStart) {
         btnStart.disabled = true;
         btnStart.style.opacity = '0.5';
         btnStart.style.cursor = 'not-allowed';
-        Array.from(confirmForm.querySelectorAll('button')).forEach(b => b.disabled = true);
-        progressCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
 
-        txtTotal.textContent = totalRows;
-        txtCurrent.textContent = '0';
-        txtPercent.textContent = '0%';
+    if (confirmForm) {
+        Array.from(confirmForm.querySelectorAll('button')).forEach(function(b) {
+            b.disabled = true;
+        });
+    }
 
-        let offset = 0;
-        const chunkSize = 50;
+    if (txtTotal) txtTotal.textContent = totalRows;
+    if (txtCurrent) txtCurrent.textContent = '0';
+    if (txtPercent) txtPercent.textContent = '0%';
 
-        function runNextChunk() {
-            const batchStart = offset + 1;
-            const batchEnd = Math.min(offset + chunkSize, totalRows);
-            statusMsg.textContent = `Processing members ${batchStart} to ${batchEnd} of ${totalRows}...`;
+    var offset = 0;
+    var chunkSize = 50;
 
-            const formData = new FormData();
-            formData.append('action', 'commit_chunk');
-            formData.append('csrf_token', csrfToken);
-            formData.append('offset', offset);
-            formData.append('chunk_size', chunkSize);
+    function runNextChunk() {
+        var batchStart = offset + 1;
+        var batchEnd = Math.min(offset + chunkSize, totalRows);
+        if (statusMsg) {
+            statusMsg.textContent = 'Processing members ' + batchStart + ' to ' + batchEnd + ' of ' + totalRows + '...';
+        }
 
-            fetch('/admin/members-import.php', {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-            .then(res => {
-                if (!res.ok) throw new Error(`Server returned HTTP ${res.status}`);
-                return res.json();
-            })
-            .then(data => {
-                if (!data.success) {
-                    throw new Error(data.error || 'Server error occurred during chunk import');
-                }
+        var formData = new FormData();
+        formData.append('action', 'commit_chunk');
+        formData.append('csrf_token', csrfToken);
+        formData.append('offset', offset);
+        formData.append('chunk_size', chunkSize);
 
-                const current = Math.min(data.offset, totalRows);
-                const percent = Math.min(100, Math.round((current / totalRows) * 100));
+        fetch('/admin/members-import.php', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(function(res) {
+            if (!res.ok) throw new Error('Server returned HTTP ' + res.status);
+            return res.json();
+        })
+        .then(function(data) {
+            if (!data.success) {
+                throw new Error(data.error || 'Server error occurred during chunk import');
+            }
 
-                txtCurrent.textContent = current;
-                txtPercent.textContent = percent + '%';
-                progressBar.style.width = percent + '%';
+            var current = Math.min(data.offset, totalRows);
+            var percent = Math.min(100, Math.round((current / totalRows) * 100));
 
-                if (data.new_members !== undefined) statNew.textContent = data.new_members;
-                if (data.paid !== undefined) statPaid.textContent = data.paid;
-                if (data.errors !== undefined) statErrors.textContent = data.errors;
+            if (txtCurrent) txtCurrent.textContent = current;
+            if (txtPercent) txtPercent.textContent = percent + '%';
+            if (progressBar) progressBar.style.width = percent + '%';
 
-                if (data.done || current >= totalRows) {
-                    // Upload 100% completed
-                    progressBar.style.width = '100%';
-                    txtCurrent.textContent = totalRows;
-                    txtPercent.textContent = '100%';
+            if (data.new_members !== undefined && statNew) statNew.textContent = data.new_members;
+            if (data.paid !== undefined && statPaid) statPaid.textContent = data.paid;
+            if (data.errors !== undefined && statErrors) statErrors.textContent = data.errors;
+
+            if (data.done || current >= totalRows) {
+                if (progressBar) progressBar.style.width = '100%';
+                if (txtCurrent) txtCurrent.textContent = totalRows;
+                if (txtPercent) txtPercent.textContent = '100%';
+                if (progressSpinner) {
                     progressSpinner.textContent = '✓';
                     progressSpinner.style.animation = 'none';
+                }
+                if (progressHeading) {
                     progressHeading.innerHTML = '<span style="color:#16a34a; font-size:1.3rem;">✓</span> Import Complete!';
+                }
+                if (progressBadge) {
                     progressBadge.style.background = '#dcfce7';
                     progressBadge.style.color = '#15803d';
                     progressBadge.textContent = 'Completed';
-                    statusMsg.textContent = `All ${totalRows} rows processed successfully! Redirecting to members list...`;
-                    doneAction.style.display = 'block';
-
-                    setTimeout(function() {
-                        window.location.href = '/admin/members.php';
-                    }, 2200);
-                } else {
-                    offset = data.offset;
-                    runNextChunk();
                 }
-            })
-            .catch(err => {
-                console.error('Import error:', err);
+                if (statusMsg) {
+                    statusMsg.textContent = 'All ' + totalRows + ' rows processed successfully! Redirecting to members list...';
+                }
+                if (doneAction) doneAction.style.display = 'block';
+
+                setTimeout(function() {
+                    window.location.href = '/admin/members.php';
+                }, 2000);
+            } else {
+                offset = data.offset;
+                runNextChunk();
+            }
+        })
+        .catch(function(err) {
+            console.error('Import error:', err);
+            if (statusMsg) {
                 statusMsg.style.color = '#b91c1c';
-                statusMsg.innerHTML = `<strong>Error during import:</strong> ${err.message}. <a href="javascript:void(0)" onclick="location.reload()" style="color:#1e40af; text-decoration:underline;">Reload to resume</a>`;
+                statusMsg.innerHTML = '<strong>Error during import:</strong> ' + err.message + '. <a href="javascript:void(0)" onclick="location.reload()" style="color:#1e40af; text-decoration:underline;">Reload to resume</a>';
+            }
+            if (progressSpinner) {
                 progressSpinner.textContent = '⚠️';
                 progressSpinner.style.animation = 'none';
+            }
+            if (progressBadge) {
                 progressBadge.style.background = '#fee2e2';
                 progressBadge.style.color = '#b91c1c';
                 progressBadge.textContent = 'Halted';
-            });
-        }
+            }
+        });
+    }
 
-        runNextChunk();
-    });
-});
+    runNextChunk();
+    return false;
+};
 </script>
 
 <?php

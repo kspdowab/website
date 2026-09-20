@@ -46,6 +46,14 @@ class CSRF
     }
 
     /**
+     * Alias for getToken().
+     */
+    public static function token(): string
+    {
+        return self::getToken();
+    }
+
+    /**
      * Replace the token with a freshly generated one.
      * Call after a successful form submission that changes sensitive state.
      */
