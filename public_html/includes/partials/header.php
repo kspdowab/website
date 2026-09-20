@@ -157,21 +157,43 @@ function nav_active(string $path, string $current): string
 
         /* ---------------- Header / Navigation ---------------- */
         .site-header {
-            background: linear-gradient(180deg, #F8FAFD 0%, #EAF1F8 100%);
-            border-bottom: 1px solid #CADAE8;
             position: sticky;
             top: 0;
             z-index: 100;
             box-shadow: 0 3px 12px rgba(16, 49, 84, 0.12);
         }
+        .header-brand-strip {
+            background: #ffffff;
+            border-bottom: 1px solid #E2E8F0;
+        }
+        .header-brand-inner {
+            max-width: var(--content-width);
+            margin: 0 auto;
+            padding: 14px 24px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .header-nav-strip {
+            background: linear-gradient(180deg, #F8FAFD 0%, #EAF1F8 100%);
+            border-bottom: 1px solid #CADAE8;
+        }
+        .header-nav-inner {
+            max-width: var(--content-width);
+            margin: 0 auto;
+            padding: 6px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
         .site-header-inner {
             max-width: var(--content-width);
             margin: 0 auto;
-            padding: 16px 24px 12px;
+            padding: 14px 24px 10px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
             text-align: center;
         }
         .brand {
@@ -242,9 +264,7 @@ function nav_active(string $path, string $current): string
             justify-content: center;
             gap: 4px;
             flex-wrap: wrap;
-            padding-top: 4px;
             width: 100%;
-            border-top: 1px solid #D5E2EE;
         }
         nav.main-nav a.nav-link {
             text-decoration: none;
@@ -654,7 +674,9 @@ function nav_active(string $path, string $current): string
 
         /* ---------------- Responsive Tweaks ---------------- */
         @media (max-width: 768px) {
-            .site-header-inner { padding: 12px 14px 10px; gap: 8px; }
+            .header-brand-inner { padding: 10px 14px 8px; }
+            .header-nav-inner { padding: 4px 10px; }
+            .site-header-inner { padding: 10px 14px 8px; gap: 8px; }
             .brand-mark { width: 56px; height: 56px; }
             .brand-mark img { height: 48px; width: 48px; }
             .brand-text .brand-eyebrow { font-size: 0.65rem; }
@@ -677,25 +699,30 @@ function nav_active(string $path, string $current): string
 </head>
 <body>
 <header class="site-header">
-    <div class="site-header-inner">
-        <a class="brand" href="/" title="<?= Sanitize::attr($siteFullName) ?>">
-            <span class="brand-mark">
-                <img src="/assets/images/logo.png" alt="<?= Sanitize::attr($siteShortName) ?> emblem">
-            </span>
-            <span class="brand-text">
-                <?php if ($siteTagline !== ''): ?>
-                    <span class="brand-eyebrow"><?= Sanitize::html($siteTagline) ?></span>
-                <?php endif; ?>
-                <span class="brand-full"><?= Sanitize::html($siteFullName) ?></span>
-                <?php if ($siteAddress !== ''): ?>
-                    <span class="brand-address"><?= Sanitize::html($siteAddress) ?></span>
-                <?php endif; ?>
-            </span>
-            <span class="brand-mark">
-                <img src="<?= Sanitize::attr($rightLogoRelative) ?>" alt="<?= Sanitize::attr($siteShortName) ?> emblem">
-            </span>
-        </a>
-        <nav class="main-nav">
+    <div class="header-brand-strip">
+        <div class="header-brand-inner">
+            <a class="brand" href="/" title="<?= Sanitize::attr($siteFullName) ?>">
+                <span class="brand-mark">
+                    <img src="/assets/images/logo.png" alt="<?= Sanitize::attr($siteShortName) ?> emblem">
+                </span>
+                <span class="brand-text">
+                    <?php if ($siteTagline !== ''): ?>
+                        <span class="brand-eyebrow"><?= Sanitize::html($siteTagline) ?></span>
+                    <?php endif; ?>
+                    <span class="brand-full"><?= Sanitize::html($siteFullName) ?></span>
+                    <?php if ($siteAddress !== ''): ?>
+                        <span class="brand-address"><?= Sanitize::html($siteAddress) ?></span>
+                    <?php endif; ?>
+                </span>
+                <span class="brand-mark">
+                    <img src="<?= Sanitize::attr($rightLogoRelative) ?>" alt="<?= Sanitize::attr($siteShortName) ?> emblem">
+                </span>
+            </a>
+        </div>
+    </div>
+    <div class="header-nav-strip">
+        <div class="header-nav-inner">
+            <nav class="main-nav">
             <a href="/" class="nav-link<?= nav_active('/', $currentPath) ? ' active' : '' ?>">
                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                 <span>Home</span>
@@ -769,6 +796,7 @@ function nav_active(string $path, string $current): string
                 </details>
             <?php endif; ?>
         </nav>
+        </div>
     </div>
 </header>
 <script>
