@@ -260,6 +260,29 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         ])));
         exit;
     }
+
+    if ($action === 'reset_password') {
+        $resetMemberId = Sanitize::positiveInt($_POST['member_id'] ?? null);
+        if ($resetMemberId) {
+            $member = Database::fetchOne("SELECT name FROM members WHERE id = ?", [$resetMemberId]);
+            if ($member) {
+                $res = Auth::resetMemberPasswordToDefault($resetMemberId);
+                if ($res['success']) {
+                    Session::flash('success', "Password for {$member['name']} (KGID: {$res['kgid']}) has been reset to: {$res['password']} with mandatory password change on first sign in.");
+                } else {
+                    Session::flash('error', $res['error'] ?? 'Could not reset password.');
+                }
+            }
+        }
+        header('Location: /admin/members.php?' . http_build_query(array_filter([
+            'fy_id'          => $_POST['redirect_fy']       ?? null,
+            'district_id'    => $_POST['redirect_district'] ?? null,
+            'taluk_id'       => $_POST['redirect_taluk']    ?? null,
+            'payment_status' => $_POST['redirect_ps']       ?? null,
+            'q'              => $_POST['redirect_q']        ?? null,
+        ])));
+        exit;
+    }
 }
 
 // ─── Filters ──────────────────────────────────────────────────────────────────
@@ -799,6 +822,7 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
                                 <option value="">Actions</option>
                                 <option value="view">View Details</option>
                                 <option value="edit">Edit</option>
+                                <option value="reset_pwd">🔑 Reset Password</option>
                                 <option value="make_office_bearer">🏛️ Add as Office Bearer</option>
                                 <?php if (!$m['payment_id'] && $selectedYear && in_array($m['membership_status'], ['active','inactive'])): ?>
                                     <option value="offline_pay">+ Offline Payment</option>
@@ -999,6 +1023,22 @@ function handleAction(sel, memberId, memberName, fyId, feeAmount) {
         window.location.href = '/admin/member-view.php?id=' + memberId;
     } else if (val === 'edit') {
         window.location.href = '/admin/members.php?edit=' + memberId;
+    } else if (val === 'reset_pwd') {
+        if (confirm('Reset password for ' + memberName + ' to default format (Kspdowa@KGID)?\n\nThe member will be required to choose a new password on their next sign-in.')) {
+            var f = document.createElement('form');
+            f.method = 'POST';
+            f.action = '/admin/members.php';
+            f.innerHTML = '<?= CSRF::htmlField() ?>' +
+                '<input type="hidden" name="action" value="reset_password">' +
+                '<input type="hidden" name="member_id" value="' + memberId + '">' +
+                '<input type="hidden" name="redirect_fy" value="<?= (int)$fyId ?>">' +
+                '<input type="hidden" name="redirect_district" value="<?= (int)$filterDistrictId ?>">' +
+                '<input type="hidden" name="redirect_taluk" value="<?= (int)$filterTalukId ?>">' +
+                '<input type="hidden" name="redirect_ps" value="<?= Sanitize::attr($paymentStatus) ?>">' +
+                '<input type="hidden" name="redirect_q" value="<?= Sanitize::attr($search) ?>">';
+            document.body.appendChild(f);
+            f.submit();
+        }
     } else if (val === 'make_office_bearer') {
         window.location.href = '/admin/office-bearers.php?member_id=' + memberId;
     } else if (val === 'offline_pay') {

@@ -35,13 +35,15 @@ class Auth
             return ['success' => false, 'error' => 'Identifier and password are required.'];
         }
 
-        // Look up user by any of the three identifier columns
+        // Look up user by email, mobile, username, KGID, or member_no
         $user = Database::fetchOne(
-            'SELECT id, member_id, username, email, mobile, password_hash, status
-             FROM users
-             WHERE (email = ? OR mobile = ? OR username = ?)
+            'SELECT u.id, u.member_id, u.username, u.email, u.mobile, u.password_hash, u.status
+             FROM users u
+             LEFT JOIN member_profiles mp ON mp.member_id = u.member_id
+             LEFT JOIN members m ON m.id = u.member_id
+             WHERE (u.email = ? OR u.mobile = ? OR u.username = ? OR mp.kgid_no = ? OR mp.personal_mobile = ? OR m.member_no = ?)
              LIMIT 1',
-            [$identifier, $identifier, $identifier]
+            [$identifier, $identifier, $identifier, $identifier, $identifier, $identifier]
         );
 
         // Constant-time failure path (prevents user enumeration via timing)
@@ -361,5 +363,136 @@ class Auth
         }
 
         return implode('', $chars);
+    }
+
+    // ------------------------------------------------------------------
+    // Password Reset Operations
+    // ------------------------------------------------------------------
+
+    /**
+     * Find a user for password reset by identifier (email, mobile, username, or KGID).
+     */
+    public static function findUserForReset(string $identifier): ?array
+    {
+        $identifier = trim($identifier);
+        if ($identifier === '') {
+            return null;
+        }
+
+        return Database::fetchOne(
+            'SELECT u.id, u.member_id, u.username, u.email, u.mobile, u.status, u.must_change_password,
+                    mp.kgid_no, mp.personal_mobile, mp.personal_email, m.name as member_name
+             FROM users u
+             LEFT JOIN member_profiles mp ON mp.member_id = u.member_id
+             LEFT JOIN members m ON m.id = u.member_id
+             WHERE (u.email = ? OR u.mobile = ? OR u.username = ? OR mp.kgid_no = ? OR mp.personal_mobile = ? OR m.member_no = ?)
+             LIMIT 1',
+            [$identifier, $identifier, $identifier, $identifier, $identifier, $identifier]
+        ) ?: null;
+    }
+
+    /**
+     * Create a password reset token for a user.
+     */
+    public static function createPasswordResetToken(int $userId): string
+    {
+        $rawToken = bin2hex(random_bytes(32));
+        $tokenHash = hash('sha256', $rawToken);
+        $expiresAt = date('Y-m-d H:i:s', time() + 3600); // 1 hour
+
+        Database::execute(
+            'INSERT INTO password_resets (user_id, token_hash, expires_at, created_at) VALUES (?, ?, ?, NOW())',
+            [$userId, $tokenHash, $expiresAt]
+        );
+
+        return $rawToken;
+    }
+
+    /**
+     * Verify a password reset token.
+     */
+    public static function verifyPasswordResetToken(string $rawToken): ?array
+    {
+        $tokenHash = hash('sha256', trim($rawToken));
+        $row = Database::fetchOne(
+            'SELECT r.id as reset_id, r.user_id, r.expires_at, u.email, u.username, u.member_id,
+                    mp.kgid_no, m.name as member_name
+             FROM password_resets r
+             JOIN users u ON u.id = r.user_id
+             LEFT JOIN member_profiles mp ON mp.member_id = u.member_id
+             LEFT JOIN members m ON m.id = u.member_id
+             WHERE r.token_hash = ? AND r.expires_at > NOW() AND r.used_at IS NULL
+             LIMIT 1',
+            [$tokenHash]
+        );
+
+        return $row ?: null;
+    }
+
+    /**
+     * Complete a password reset using a verified token.
+     */
+    public static function completePasswordReset(string $rawToken, string $newPassword): array
+    {
+        $reset = self::verifyPasswordResetToken($rawToken);
+        if (!$reset) {
+            return ['success' => false, 'error' => 'This password reset link is invalid or has expired. Please request a new one.'];
+        }
+
+        $pwdErrors = Sanitize::password($newPassword);
+        if (!empty($pwdErrors)) {
+            return ['success' => false, 'error' => implode(' ', $pwdErrors)];
+        }
+
+        $newHash = self::hashPassword($newPassword);
+        Database::transaction(function () use ($reset, $newHash) {
+            Database::execute(
+                'UPDATE users SET password_hash = ?, must_change_password = 0, updated_at = NOW() WHERE id = ?',
+                [$newHash, (int)$reset['user_id']]
+            );
+            Database::execute(
+                'UPDATE password_resets SET used_at = NOW() WHERE id = ?',
+                [(int)$reset['reset_id']]
+            );
+        });
+
+        AuditLogger::log('PASSWORD_RESET', 'users', (int)$reset['user_id']);
+        return ['success' => true, 'error' => null];
+    }
+
+    /**
+     * Reset a member's password to the standard default format: Kspdowa@<kgid_no>
+     */
+    public static function resetMemberPasswordToDefault(int $memberId): array
+    {
+        $profile = Database::fetchOne('SELECT kgid_no, personal_mobile, personal_email FROM member_profiles WHERE member_id = ?', [$memberId]);
+        if (!$profile || empty($profile['kgid_no'])) {
+            return ['success' => false, 'error' => 'Member profile or KGID not found.'];
+        }
+
+        $kgid = trim((string)$profile['kgid_no']);
+        $defaultPassword = 'Kspdowa@' . $kgid;
+        $hash = self::hashPassword($defaultPassword);
+
+        $user = Database::fetchOne('SELECT id FROM users WHERE member_id = ?', [$memberId]);
+        if ($user) {
+            Database::execute(
+                'UPDATE users SET password_hash = ?, username = ?, mobile = COALESCE(?, mobile), must_change_password = 1, updated_at = NOW() WHERE id = ?',
+                [$hash, $kgid, $profile['personal_mobile'] ?: null, (int)$user['id']]
+            );
+        } else {
+            Database::execute(
+                'INSERT INTO users (member_id, username, email, mobile, password_hash, status, must_change_password)
+                 VALUES (?, ?, ?, ?, ?, "active", 1)',
+                [$memberId, $kgid, $profile['personal_email'] ?: null, $profile['personal_mobile'] ?: null, $hash]
+            );
+            $newUserId = (int)Database::lastInsertId();
+            $role = Database::fetchOne("SELECT id FROM roles WHERE name = 'Regular Member'");
+            if ($role) {
+                Database::execute('INSERT IGNORE INTO user_roles (user_id, role_id) VALUES (?, ?)', [$newUserId, (int)$role['id']]);
+            }
+        }
+
+        return ['success' => true, 'password' => $defaultPassword, 'kgid' => $kgid];
     }
 }

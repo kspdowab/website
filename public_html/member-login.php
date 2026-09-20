@@ -215,7 +215,7 @@ require __DIR__ . '/includes/partials/header.php';
             <button type="submit" class="btn" style="width:100%; justify-content:center;">Continue</button>
         </form>
         <p class="form-hint" style="text-align:center; margin-top:var(--space-4);">
-            Already have a password? <a href="/login.php">Sign in here</a>.
+            Already have a password? <a href="/login.php">Sign in here</a> &bull; <a href="/forgot-password.php">Forgot password?</a>
         </p>
     <?php endif; ?>
 </div>

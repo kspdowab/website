@@ -311,15 +311,22 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 </button>
             </div>
 
-            <div class="remember-row">
+            <div class="remember-row" style="display:flex; justify-content:space-between; align-items:center;">
                 <label class="checkbox-label" for="remember">
                     <input type="checkbox" id="remember" name="remember" value="1" <?= $rememberChecked ? 'checked' : '' ?>>
                     <span>Remember password</span>
                 </label>
+                <a href="/forgot-password.php" style="color:#1769AA; text-decoration:none; font-size:0.85rem; font-weight:600;">Forgot password?</a>
             </div>
 
             <button type="submit">Sign In</button>
         </form>
+
+        <div style="margin-top:18px; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:6px; padding:10px 12px; font-size:0.82rem; color:#475569; text-align:center; line-height:1.45;">
+            <strong>Registered Member?</strong><br>
+            Sign in with your <strong>KGID Number</strong>, Mobile, or Email.<br>
+            <span style="color:#64748b; font-size:0.78rem;">Initial default password: <code>Kspdowa@&lt;YourKGID&gt;</code></span>
+        </div>
 
         <div class="back-link"><a href="/">&larr; Back to home</a></div>
     </div>

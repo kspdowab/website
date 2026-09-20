@@ -1382,9 +1382,9 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                         });
 
                         $memberRow = Database::fetchOne("SELECT id, name FROM members WHERE id = ?", [$memberId]);
-                        if ($memberRow && !empty($row['email'])) {
+                        if ($memberRow) {
                             try {
-                                Auth::activateMemberPortalAccess($memberRow, $row['email']);
+                                Auth::resetMemberPasswordToDefault($memberId);
                             } catch (\Throwable $e) {
                                 // Non-blocking if account already exists
                             }
@@ -1575,11 +1575,11 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                             MembershipNumber::assignIfPlaceholder($memberId);
                         });
 
-                        // 2. Activate member user account in users table if personal_email is provided
+                        // 2. Activate member user account in users table with default password Kspdowa@KGID
                         $memberRow = Database::fetchOne("SELECT id, name FROM members WHERE id = ?", [$memberId]);
-                        if ($memberRow && !empty($row['email'])) {
+                        if ($memberRow) {
                             try {
-                                Auth::activateMemberPortalAccess($memberRow, $row['email']);
+                                Auth::resetMemberPasswordToDefault($memberId);
                             } catch (\Throwable $e) {
                                 // Non-blocking if account already exists
                             }
