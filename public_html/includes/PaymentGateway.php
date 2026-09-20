@@ -100,24 +100,34 @@ class PaymentGateway
                     ];
                 }
 
-                // No order yet -- refresh to the exact current-year
-                // amount before creating one (see doc block above).
-                $year = Membership::getCurrentYear();
+                // Determine the financial year for this payment attempt.
+                $year = null;
+                if (!empty($row['membership_year_id'])) {
+                    $year = Membership::getYearById((int) $row['membership_year_id']);
+                }
                 if ($year === null) {
-                    return ['success' => false, 'error' => 'The current annual membership fee has not been configured yet. Please contact the Association.'];
+                    $year = Membership::getCurrentYear();
+                    if ($year !== null) {
+                        Database::execute(
+                            'UPDATE membership_payments SET membership_year_id = ?, amount = ? WHERE id = ?',
+                            [$year['id'], $year['fee_amount'], $paymentId]
+                        );
+                    }
+                }
+                if ($year === null) {
+                    return ['success' => false, 'error' => 'The annual membership fee has not been configured yet. Please contact the Association.'];
                 }
 
                 $amount = (float) $row['amount'];
-                if ((int) $row['membership_year_id'] !== (int) $year['id']) {
+                if ($amount <= 0 && (float) $year['fee_amount'] > 0) {
                     $amount = (float) $year['fee_amount'];
                     Database::execute(
-                        'UPDATE membership_payments SET membership_year_id = ?, amount = ? WHERE id = ?',
-                        [$year['id'], $amount, $paymentId]
+                        'UPDATE membership_payments SET amount = ? WHERE id = ?',
+                        [$amount, $paymentId]
                     );
-                    AuditLogger::log('UPDATE', 'membership_payments', $paymentId,
-                        ['membership_year_id' => $row['membership_year_id'], 'amount' => $row['amount']],
-                        ['membership_year_id' => $year['id'], 'amount' => $amount, 'reason' => 'financial_year_rolled_over_before_payment']
-                    );
+                }
+                if ($amount <= 0) {
+                    return ['success' => false, 'error' => 'The membership fee for FY ' . $year['financial_year'] . ' has not been configured yet (₹0.00). Please contact the Association.'];
                 }
 
                 $amountPaise = (int) round($amount * 100);
@@ -369,8 +379,8 @@ class PaymentGateway
         Registration::markPaymentFailed($paymentId, $reason);
     }
 
-    public static function startNewAttempt(int $memberId): array
+    public static function startNewAttempt(int $memberId, ?int $yearId = null, bool $forceFresh = false): array
     {
-        return Registration::startNewPaymentAttempt($memberId);
+        return Registration::startNewPaymentAttempt($memberId, $yearId, $forceFresh);
     }
 }

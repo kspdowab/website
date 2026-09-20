@@ -21,7 +21,9 @@ declare(strict_types=1);
 require_once __DIR__ . '/includes/bootstrap.php';
 
 if (Auth::isLoggedIn()) {
-    header('Location: /');
+    $yearId = (int)($_GET['year_id'] ?? 0);
+    $target = '/member/pay.php' . ($yearId > 0 ? '?year_id=' . $yearId : '');
+    header('Location: ' . $target);
     exit;
 }
 

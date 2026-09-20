@@ -109,4 +109,13 @@ class Membership
 
         return $member;
     }
+
+    /**
+     * Fetch a membership year by its ID, or null if not found.
+     */
+    public static function getYearById(int $yearId): ?array
+    {
+        $row = Database::fetchOne('SELECT * FROM membership_years WHERE id = ?', [$yearId]);
+        return $row !== false ? $row : null;
+    }
 }

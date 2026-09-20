@@ -627,32 +627,46 @@ class Registration
      *
      * @return array{success: bool, payment_id?: int, amount?: float, financial_year?: string, error?: string}
      */
-    public static function startNewPaymentAttempt(int $memberId): array
+    public static function startNewPaymentAttempt(int $memberId, ?int $yearId = null, bool $forceFresh = false): array
     {
-        $year = Membership::getCurrentYear();
+        $year = null;
+        if ($yearId !== null && $yearId > 0) {
+            $year = Membership::getYearById($yearId);
+        }
+        if ($year === null) {
+            $year = Membership::getCurrentYear();
+        }
         if ($year === null) {
             return [
                 'success' => false,
-                'error'   => 'The current annual membership fee has not been configured yet. Please contact the Association.',
+                'error'   => 'The annual membership fee has not been configured yet. Please contact the Association.',
             ];
         }
 
         try {
-            return Database::transaction(function () use ($memberId, $year) {
-                $pending = Database::fetchOne(
-                    "SELECT id, amount FROM membership_payments
-                     WHERE member_id = ? AND membership_year_id = ? AND status = 'pending'
-                     ORDER BY id DESC LIMIT 1",
-                    [$memberId, $year['id']]
-                );
+            return Database::transaction(function () use ($memberId, $year, $forceFresh) {
+                if ($forceFresh) {
+                    Database::execute(
+                        "UPDATE membership_payments SET status = 'failed'
+                         WHERE member_id = ? AND membership_year_id = ? AND status = 'pending'",
+                        [$memberId, $year['id']]
+                    );
+                } else {
+                    $pending = Database::fetchOne(
+                        "SELECT id, amount FROM membership_payments
+                         WHERE member_id = ? AND membership_year_id = ? AND status = 'pending'
+                         ORDER BY id DESC LIMIT 1",
+                        [$memberId, $year['id']]
+                    );
 
-                if ($pending !== false) {
-                    return [
-                        'success'        => true,
-                        'payment_id'     => (int) $pending['id'],
-                        'amount'         => (float) $pending['amount'],
-                        'financial_year' => $year['financial_year'],
-                    ];
+                    if ($pending !== false) {
+                        return [
+                            'success'        => true,
+                            'payment_id'     => (int) $pending['id'],
+                            'amount'         => (float) $pending['amount'],
+                            'financial_year' => $year['financial_year'],
+                        ];
+                    }
                 }
 
                 $idempotencyKey = self::newIdempotencyKey();

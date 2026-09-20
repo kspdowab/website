@@ -47,19 +47,29 @@ $isCurrentPaid = ($currentPayment !== null);
 // Fetch all membership years in descending order
 $allYears = Database::fetchAll("SELECT * FROM membership_years ORDER BY start_date DESC");
 
-// Fetch all completed payments for this member, indexed by membership_year_id
-$paymentsByYear = [];
-$completedPayments = Database::fetchAll(
+// Fetch all payments for this member, indexed by membership_year_id
+$completedPaymentsByYear = [];
+$latestPaymentByYear = [];
+
+$allMemberPayments = Database::fetchAll(
     "SELECT p.*, pr.receipt_no
      FROM membership_payments p
      LEFT JOIN payment_receipts pr ON pr.payment_id = p.id
-     WHERE p.member_id = ? AND p.status = 'completed'
-     ORDER BY p.paid_at DESC, p.id DESC",
+     WHERE p.member_id = ?
+     ORDER BY p.id DESC",
     [$currentMemberId]
 );
-foreach ($completedPayments as $cp) {
-    $paymentsByYear[(int)$cp['membership_year_id']] = $cp;
+
+foreach ($allMemberPayments as $p) {
+    $yId = (int)$p['membership_year_id'];
+    if ($p['status'] === 'completed' && !isset($completedPaymentsByYear[$yId])) {
+        $completedPaymentsByYear[$yId] = $p;
+    }
+    if (!isset($latestPaymentByYear[$yId])) {
+        $latestPaymentByYear[$yId] = $p;
+    }
 }
+$paymentsByYear = $completedPaymentsByYear;
 
 $totalYearsCount = count($allYears);
 $clearedYearsCount = count($paymentsByYear);
@@ -81,7 +91,7 @@ $clearedYearsCount = count($paymentsByYear);
                 Digital ID Card
             </a>
         <?php else: ?>
-            <a href="/payment.php?year_id=<?= (int)$fyId ?>" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:6px;">
+            <a href="/member/pay.php?year_id=<?= (int)$fyId ?>" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:6px;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
                 Pay Annual Dues Online (₹<?= number_format((float)($currentYear['fee_amount'] ?? 0), 2) ?>)
             </a>
@@ -184,7 +194,7 @@ $clearedYearsCount = count($paymentsByYear);
                 <span style="color:#7f1d1d; font-size:0.86rem;">Please pay your annual subscription of ₹<?= number_format((float)($currentYear['fee_amount'] ?? 0), 2) ?> for <?= Sanitize::html($currentYear['financial_year'] ?? '') ?> to maintain active portal and voting privileges.</span>
             </div>
             <div>
-                <a href="/payment.php?year_id=<?= (int)$fyId ?>" class="btn btn-primary" style="padding:10px 20px;">
+                <a href="/member/pay.php?year_id=<?= (int)$fyId ?>" class="btn btn-primary" style="padding:10px 20px;">
                     Pay Annual Dues Online →
                 </a>
             </div>
@@ -213,7 +223,7 @@ $clearedYearsCount = count($paymentsByYear);
                     <th>Dues Status</th>
                     <th>Payment Details</th>
                     <th>Paid Date</th>
-                    <th style="text-align:center;">Official Receipt</th>
+                    <th style="text-align:center;">Action / Official Receipt</th>
                 </tr>
             </thead>
             <tbody>
@@ -226,10 +236,12 @@ $clearedYearsCount = count($paymentsByYear);
                 <?php else: ?>
                     <?php foreach ($allYears as $yr): ?>
                         <?php
-                        $yrId   = (int)$yr['id'];
-                        $isPaid = isset($paymentsByYear[$yrId]);
-                        $pRow   = $paymentsByYear[$yrId] ?? null;
-                        $isCur  = ($yrId === (int)($currentYear['id'] ?? 0));
+                        $yrId    = (int)$yr['id'];
+                        $isPaid  = isset($paymentsByYear[$yrId]);
+                        $pRow    = $paymentsByYear[$yrId] ?? null;
+                        $latRow  = $latestPaymentByYear[$yrId] ?? null;
+                        $isCur   = ($yrId === (int)($currentYear['id'] ?? 0));
+                        $isPendingAttempt = (!$isPaid && $latRow && $latRow['status'] === 'pending');
                         ?>
                         <tr <?= $isCur ? 'style="background: #f8fafc;"' : '' ?>>
                             <td style="font-weight:700; color:var(--blue-700);">
@@ -247,6 +259,8 @@ $clearedYearsCount = count($paymentsByYear);
                             <td>
                                 <?php if ($isPaid): ?>
                                     <span class="badge badge-success">● Cleared</span>
+                                <?php elseif ($isPendingAttempt): ?>
+                                    <span class="badge badge-warning" style="background:#fef3c7; color:#92400e; border:1px solid #fcd34d;">⏳ Payment Pending</span>
                                 <?php else: ?>
                                     <span class="badge badge-danger">○ Pending</span>
                                 <?php endif; ?>
@@ -257,12 +271,20 @@ $clearedYearsCount = count($paymentsByYear);
                                     <code style="background:var(--blue-50); color:var(--blue-700); padding:2px 6px; border-radius:4px; font-size:0.8rem; margin-left:4px;">
                                         <?= Sanitize::html($pRow['receipt_no'] ?? $pRow['gateway_payment_id'] ?? $pRow['offline_reference'] ?? 'Verified') ?>
                                     </code>
+                                <?php elseif ($isPendingAttempt): ?>
+                                    <span style="color:#b45309; font-size:0.82rem; font-weight:600;">Attempt #<?= (int)$latRow['id'] ?></span> <span style="font-size:0.75rem; color:var(--text-muted);">(Pending Gateway)</span>
                                 <?php else: ?>
                                     <span style="color:var(--text-muted);">—</span>
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <?= $isPaid && !empty($pRow['paid_at']) ? date('d M Y, h:i A', strtotime((string)$pRow['paid_at'])) : '—' ?>
+                                <?php if ($isPaid && !empty($pRow['paid_at'])): ?>
+                                    <?= date('d M Y, h:i A', strtotime((string)$pRow['paid_at'])) ?>
+                                <?php elseif ($isPendingAttempt && !empty($latRow['created_at'])): ?>
+                                    <span style="color:var(--text-muted); font-size:0.8rem;">Initiated <?= date('d M Y', strtotime((string)$latRow['created_at'])) ?></span>
+                                <?php else: ?>
+                                    —
+                                <?php endif; ?>
                             </td>
                             <td style="text-align:center;">
                                 <?php if ($isPaid && !empty($pRow['id'])): ?>
@@ -270,12 +292,11 @@ $clearedYearsCount = count($paymentsByYear);
                                         <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                                         Receipt PDF
                                     </a>
-                                <?php elseif ($isCur): ?>
-                                    <a href="/payment.php?year_id=<?= (int)$yr['id'] ?>" class="btn btn-primary btn-sm">
-                                        Pay Online
-                                    </a>
                                 <?php else: ?>
-                                    <span style="color:var(--text-muted); font-size:0.85rem;">—</span>
+                                    <a href="/member/pay.php?year_id=<?= (int)$yr['id'] ?>" class="btn btn-primary btn-sm" style="display:inline-flex; align-items:center; gap:4px; text-decoration:none;">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+                                        <?= $isPendingAttempt ? 'Pay Again / Retry' : 'Pay Online' ?>
+                                    </a>
                                 <?php endif; ?>
                             </td>
                         </tr>
