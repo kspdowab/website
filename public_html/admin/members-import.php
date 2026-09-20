@@ -617,7 +617,15 @@ function validateImportRow(
     $fullName     = $get('full_name', 0);
     $fatherName   = $get('father_name', 1);
     $genderRaw    = strtolower($get('gender', 2));
-    $phone        = preg_replace('/\s+/', '', $get('phone', 3));
+    // Mobile normalization: strip spaces/dashes and optional country code (+91, 91, 0)
+    $phone = preg_replace('/[\s\-\(\)\.]/', '', (string)$get('phone', 3));
+    if (str_starts_with($phone, '+91')) {
+        $phone = substr($phone, 3);
+    } elseif (str_starts_with($phone, '91') && strlen($phone) === 12) {
+        $phone = substr($phone, 2);
+    } elseif (str_starts_with($phone, '0') && strlen($phone) === 11) {
+        $phone = substr($phone, 1);
+    }
     $email        = strtolower(trim($get('email', 4)));
     $kgid         = preg_replace('/\.0+$/', '', trim($get('kgid', 5)));
     $dobRaw       = $get('dob', 6);
@@ -1777,7 +1785,7 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
                     ['Full Name',              'Yes'],
                     ['Father / Husband Name',  'Yes'],
                     ['Gender',                 'Optional (male / female / other / blank)'],
-                    ['Phone',                  'Yes (10-digit)'],
+                    ['Phone',                  'Yes (10-digit, with or without +91)'],
                     ['Email',                  'Yes'],
                     ['KGID No.',               'Yes (Numeric digits only)'],
                     ['Date of Birth',          'Yes (DD-MM-YYYY or DD/MM/YYYY)'],
