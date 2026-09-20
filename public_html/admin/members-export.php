@@ -188,13 +188,28 @@ if ($reportType === 'detailed') {
                    mp.personal_mobile,
                    mp.personal_email,
                    mp.kgid_no,
-                   t.name  AS taluk_name,
+                   mp.date_of_birth,
+                   m.gp_working,
+                   m.organization_type,
+                   m.organization_name,
+                   m.organization_address,
+                   wd.name AS working_district_name,
+                   wt.name AS working_taluk_name,
+                   wgp.name AS working_gp_name,
                    d.name  AS district_name,
-                   p.paid_at
+                   t.name  AS taluk_name,
+                   p.payment_mode,
+                   COALESCE(p.gateway_payment_id, p.offline_reference) AS payment_reference,
+                   p.paid_at,
+                   p.amount AS received_amount,
+                   p.offline_remarks
             FROM members m
             LEFT JOIN member_profiles mp ON mp.member_id = m.id
             LEFT JOIN districts d ON d.id = m.district_id
             LEFT JOIN taluks   t ON t.id  = m.taluk_id
+            LEFT JOIN districts wd ON wd.id = m.working_district_id
+            LEFT JOIN taluks wt ON wt.id = m.working_taluk_id
+            LEFT JOIN gram_panchayatis wgp ON wgp.id = m.working_gp_id
             {$payJoin}
             WHERE " . implode(' AND ', $whereClause) . "
             ORDER BY d.name, t.name, m.name";
@@ -207,11 +222,40 @@ if ($reportType === 'detailed') {
         $row['_masked_phone']  = maskNumericDigits((string)($row['personal_mobile'] ?? ''));
         $row['_masked_email']  = maskNumericDigits((string)($row['personal_email']  ?? ''));
         $row['_payment_date']  = $row['paid_at'] ? date('d-m-Y', strtotime($row['paid_at'])) : '-';
+        $row['_payment_datetime'] = $row['paid_at'] ? date('d-m-Y H:i:s', strtotime($row['paid_at'])) : '-';
+        $row['_dob']           = !empty($row['date_of_birth']) ? date('d-m-Y', strtotime($row['date_of_birth'])) : '-';
     }
     unset($row);
 
     $data    = $rawData;
-    $columns = ['Sl.No', 'Name', 'Father Name', 'Gender', 'Phone', 'Email', 'KGID', 'Taluk', 'District', 'Date'];
+    if ($format === 'pdf') {
+        $columns = ['Sl.No', 'Name', 'Father Name', 'Gender', 'Phone', 'Email', 'KGID', 'Taluk', 'District', 'Date'];
+    } else {
+        $columns = [
+            'Sl.No',
+            'Full Name',
+            'Father / Husband Name',
+            'Gender',
+            'Phone',
+            'Email',
+            'KGID No.',
+            'Date of Birth',
+            'GP Working?',
+            'Organization Type',
+            'Organization Name',
+            'Organization Address',
+            'Working District',
+            'Working Taluk',
+            'Working GP',
+            'Membership District',
+            'Membership Taluk',
+            'Payment Mode',
+            'Payment Reference',
+            'Payment Date & Time',
+            'Received Amount',
+            'Payment Remarks',
+        ];
+    }
 
 } else {
     // Abstracts — no masking needed
@@ -417,7 +461,7 @@ if ($format === 'excel' || $format === 'xlsx' || $format === 'csv') {
     $gt = [0, 0, 0];
 
     if ($reportType === 'detailed') {
-        $colWidths = [8, 28, 24, 10, 16, 28, 14, 20, 20, 14];
+        $colWidths = [8, 25, 22, 10, 15, 25, 14, 14, 12, 18, 24, 25, 18, 18, 18, 18, 18, 14, 22, 20, 16, 22];
         foreach ($data as $row) {
             $rows[] = [
                 $i++,
@@ -427,9 +471,21 @@ if ($format === 'excel' || $format === 'xlsx' || $format === 'csv') {
                 $row['_masked_phone'],
                 $row['_masked_email'],
                 $row['_masked_kgid'],
-                (string)($row['taluk_name'] ?? ''),
-                (string)($row['district_name'] ?? ''),
-                $row['_payment_date'],
+                $row['_dob'],
+                strtoupper((string)($row['gp_working'] ?? 'yes')),
+                (string)($row['organization_type'] ?? '-'),
+                (string)($row['organization_name'] ?? '-'),
+                (string)($row['organization_address'] ?? '-'),
+                (string)($row['working_district_name'] ?? '-'),
+                (string)($row['working_taluk_name'] ?? '-'),
+                (string)($row['working_gp_name'] ?? '-'),
+                (string)($row['district_name'] ?? '-'),
+                (string)($row['taluk_name'] ?? '-'),
+                ucfirst((string)($row['payment_mode'] ?? '-')),
+                (string)($row['payment_reference'] ?? '-'),
+                $row['_payment_datetime'],
+                $row['received_amount'] ? number_format((float)$row['received_amount'], 2) : '0.00',
+                (string)($row['offline_remarks'] ?? '-'),
             ];
         }
     } elseif ($reportType === 'abstract_district') {

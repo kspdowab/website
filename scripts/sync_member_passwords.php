@@ -7,13 +7,20 @@
 
 declare(strict_types=1);
 
-require_once dirname(__DIR__) . '/public_html/includes/bootstrap.php';
+if (file_exists(__DIR__ . '/includes/bootstrap.php')) {
+    require_once __DIR__ . '/includes/bootstrap.php';
+} elseif (file_exists(dirname(__DIR__) . '/public_html/includes/bootstrap.php')) {
+    require_once dirname(__DIR__) . '/public_html/includes/bootstrap.php';
+} else {
+    require_once __DIR__ . '/../public_html/includes/bootstrap.php';
+}
 
 $members = Database::fetchAll(
     "SELECT m.id as member_id, mp.kgid_no, mp.personal_mobile, mp.personal_email
      FROM members m
      JOIN member_profiles mp ON mp.member_id = m.id
-     WHERE mp.kgid_no IS NOT NULL AND mp.kgid_no != ''"
+     WHERE mp.kgid_no IS NOT NULL AND mp.kgid_no != ''
+     ORDER BY m.id ASC"
 );
 
 $role = Database::fetchOne("SELECT id FROM roles WHERE name = 'Regular Member'");
@@ -28,6 +35,23 @@ foreach ($members as $m) {
     $kgid = trim((string)$m['kgid_no']);
     $mobile = !empty($m['personal_mobile']) ? trim((string)$m['personal_mobile']) : null;
     $email = !empty($m['personal_email']) ? trim((string)$m['personal_email']) : null;
+
+    // Sanitize duplicate check for email
+    if ($email !== null) {
+        $existingEmailUser = Database::fetchOne("SELECT id, member_id FROM users WHERE email = ?", [$email]);
+        if ($existingEmailUser && (int)$existingEmailUser['member_id'] !== $memberId) {
+            // Email already assigned to another user; cannot reuse in users.email unique index
+            $email = null;
+        }
+    }
+
+    // Sanitize duplicate check for mobile
+    if ($mobile !== null) {
+        $existingMobileUser = Database::fetchOne("SELECT id, member_id FROM users WHERE mobile = ?", [$mobile]);
+        if ($existingMobileUser && (int)$existingMobileUser['member_id'] !== $memberId) {
+            $mobile = null;
+        }
+    }
 
     $defaultPassword = 'Kspdowa@' . $kgid;
     $hash = Auth::hashPassword($defaultPassword);
@@ -51,6 +75,12 @@ foreach ($members as $m) {
             $skippedCustom++;
         }
     } else {
+        // Check if username already used
+        $existingUsernameUser = Database::fetchOne("SELECT id FROM users WHERE username = ?", [$kgid]);
+        if ($existingUsernameUser) {
+            $kgid = $kgid . '_' . $memberId;
+        }
+
         // Create new user account
         Database::execute(
             "INSERT INTO users (member_id, username, email, mobile, password_hash, status, must_change_password, created_at, updated_at)

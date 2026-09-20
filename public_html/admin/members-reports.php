@@ -206,15 +206,22 @@ if ($tab === 'detailed') {
     $totalDetailedCount = (int)($countRow['total'] ?? 0);
 
     $offset = ($page - 1) * $perPage;
-    $detailSql = "SELECT m.id, m.member_no, m.name, mp.gender, m.membership_status, m.created_at,
-                         mp.personal_mobile, mp.kgid_no,
+    $detailSql = "SELECT m.id, m.member_no, m.name, mp.father_spouse_name, mp.gender, mp.personal_mobile, mp.personal_email,
+                         mp.kgid_no, mp.date_of_birth, m.gp_working, m.organization_type, m.organization_name, m.organization_address,
+                         wd.name AS working_district_name, wt.name AS working_taluk_name, wgp.name AS working_gp_name,
                          d.name AS district_name, t.name AS taluk_name, gp.name AS gp_name,
-                         p.id AS payment_id, p.amount AS paid_amount, p.paid_at, p.payment_mode
+                         m.membership_status, m.created_at,
+                         p.id AS payment_id, p.payment_mode,
+                         COALESCE(p.gateway_payment_id, p.offline_reference) AS payment_reference,
+                         p.paid_at, p.amount AS paid_amount, p.offline_remarks
                   FROM members m
                   LEFT JOIN member_profiles mp ON mp.member_id = m.id
                   LEFT JOIN districts d ON d.id = m.district_id
                   LEFT JOIN taluks t    ON t.id = m.taluk_id
                   LEFT JOIN gram_panchayatis gp ON gp.id = m.gp_id
+                  LEFT JOIN districts wd ON wd.id = m.working_district_id
+                  LEFT JOIN taluks wt    ON wt.id = m.working_taluk_id
+                  LEFT JOIN gram_panchayatis wgp ON wgp.id = m.working_gp_id
                   LEFT JOIN membership_payments p ON p.member_id = m.id AND p.membership_year_id = " . ($fyId ?: 0) . " AND p.status = 'completed'
                   WHERE $dWhereSql
                   ORDER BY m.id DESC
@@ -521,39 +528,63 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
         <span>Detailed Member Records (<?= number_format($totalDetailedCount) ?> total)</span>
         <span style="font-size:0.8rem;color:#888;font-weight:400;">Showing page <?= $page ?> (50 per page)</span>
     </h2>
-    <div class="table-wrap">
+    <div class="table-wrap" style="overflow-x: auto;">
         <table>
             <thead>
                 <tr>
-                    <th>Sl.No</th>
-                    <th>Member ID</th>
-                    <th>Name</th>
-                    <th>KGID</th>
-                    <th>Mobile</th>
-                    <th>District</th>
-                    <th>Taluk</th>
-                    <th>Gram Panchayat</th>
-                    <th>Status</th>
-                    <th>FY <?= Sanitize::html($selectedYear['financial_year'] ?? '') ?> Dues</th>
+                    <th style="white-space:nowrap;">Sl.No</th>
+                    <th style="white-space:nowrap;">Full Name</th>
+                    <th style="white-space:nowrap;">Father / Husband Name</th>
+                    <th style="white-space:nowrap;">Gender</th>
+                    <th style="white-space:nowrap;">Phone</th>
+                    <th style="white-space:nowrap;">Email</th>
+                    <th style="white-space:nowrap;">KGID No.</th>
+                    <th style="white-space:nowrap;">Date of Birth</th>
+                    <th style="white-space:nowrap;">GP Working?</th>
+                    <th style="white-space:nowrap;">Organization Type</th>
+                    <th style="white-space:nowrap;">Organization Name</th>
+                    <th style="white-space:nowrap;">Organization Address</th>
+                    <th style="white-space:nowrap;">Working District</th>
+                    <th style="white-space:nowrap;">Working Taluk</th>
+                    <th style="white-space:nowrap;">Working GP</th>
+                    <th style="white-space:nowrap;">Membership District</th>
+                    <th style="white-space:nowrap;">Membership Taluk</th>
+                    <th style="white-space:nowrap;">Payment Mode</th>
+                    <th style="white-space:nowrap;">Payment Reference</th>
+                    <th style="white-space:nowrap;">Payment Date &amp; Time</th>
+                    <th style="white-space:nowrap;">Received Amount</th>
+                    <th style="white-space:nowrap;">Payment Remarks</th>
+                    <th style="white-space:nowrap;">Status</th>
                 </tr>
             </thead>
             <tbody>
                 <?php $sl = ($page - 1) * $perPage + 1; foreach ($detailedMembers as $dm): ?>
                 <tr>
                     <td><?= $sl++ ?></td>
-                    <td><strong><?= Sanitize::html($dm['member_no'] ?? 'Pending') ?></strong></td>
-                    <td><?= Sanitize::html($dm['name']) ?></td>
-                    <td><?= Sanitize::html($dm['kgid_no'] ?? '-') ?></td>
-                    <td><?= Sanitize::html($dm['personal_mobile'] ?? '-') ?></td>
-                    <td><?= Sanitize::html($dm['district_name'] ?? '-') ?></td>
-                    <td><?= Sanitize::html($dm['taluk_name'] ?? '-') ?></td>
-                    <td><?= Sanitize::html($dm['gp_name'] ?? '-') ?></td>
-                    <td>
-                        <span class="badge badge-active"><?= ucfirst(Sanitize::html($dm['membership_status'])) ?></span>
-                    </td>
+                    <td style="font-weight:600; white-space:nowrap;"><?= Sanitize::html($dm['name']) ?></td>
+                    <td style="white-space:nowrap;"><?= Sanitize::html($dm['father_spouse_name'] ?? '-') ?></td>
+                    <td><?= ucfirst(Sanitize::html($dm['gender'] ?? '-')) ?></td>
+                    <td style="white-space:nowrap;"><?= Sanitize::html($dm['personal_mobile'] ?? '-') ?></td>
+                    <td style="white-space:nowrap;"><?= Sanitize::html($dm['personal_email'] ?? '-') ?></td>
+                    <td style="font-weight:600; white-space:nowrap;"><?= Sanitize::html($dm['kgid_no'] ?? '-') ?></td>
+                    <td style="white-space:nowrap;"><?= !empty($dm['date_of_birth']) ? date('d-m-Y', strtotime($dm['date_of_birth'])) : '-' ?></td>
+                    <td><?= strtoupper(Sanitize::html($dm['gp_working'] ?? 'yes')) ?></td>
+                    <td style="white-space:nowrap;"><?= Sanitize::html($dm['organization_type'] ?? '-') ?></td>
+                    <td><?= Sanitize::html($dm['organization_name'] ?? '-') ?></td>
+                    <td><?= Sanitize::html($dm['organization_address'] ?? '-') ?></td>
+                    <td style="white-space:nowrap;"><?= Sanitize::html($dm['working_district_name'] ?? '-') ?></td>
+                    <td style="white-space:nowrap;"><?= Sanitize::html($dm['working_taluk_name'] ?? '-') ?></td>
+                    <td style="white-space:nowrap;"><?= Sanitize::html($dm['working_gp_name'] ?? '-') ?></td>
+                    <td style="white-space:nowrap;"><?= Sanitize::html($dm['district_name'] ?? '-') ?></td>
+                    <td style="white-space:nowrap;"><?= Sanitize::html($dm['taluk_name'] ?? '-') ?></td>
+                    <td style="white-space:nowrap;"><?= ucfirst(Sanitize::html($dm['payment_mode'] ?? '-')) ?></td>
+                    <td style="white-space:nowrap; font-family:monospace;"><?= Sanitize::html($dm['payment_reference'] ?? '-') ?></td>
+                    <td style="white-space:nowrap;"><?= !empty($dm['paid_at']) ? date('d-m-Y H:i', strtotime($dm['paid_at'])) : '-' ?></td>
+                    <td class="num" style="white-space:nowrap;"><?= $dm['paid_amount'] ? '₹' . number_format((float)$dm['paid_amount'], 2) : '-' ?></td>
+                    <td><?= Sanitize::html($dm['offline_remarks'] ?? '-') ?></td>
                     <td>
                         <?php if ($dm['payment_id']): ?>
-                            <span class="badge badge-paid">Paid (₹<?= number_format((float)$dm['paid_amount'], 2) ?>)</span>
+                            <span class="badge badge-paid">Paid</span>
                         <?php else: ?>
                             <span class="badge badge-unpaid">Unpaid</span>
                         <?php endif; ?>
@@ -561,7 +592,7 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
                 </tr>
                 <?php endforeach; ?>
                 <?php if (empty($detailedMembers)): ?>
-                <tr><td colspan="10" style="text-align:center;color:#888;padding:24px;">No member records found matching current criteria.</td></tr>
+                <tr><td colspan="23" style="text-align:center;color:#888;padding:24px;">No member records found matching current criteria.</td></tr>
                 <?php endif; ?>
             </tbody>
         </table>
