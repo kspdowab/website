@@ -1156,8 +1156,212 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         }
     }
 
-    // ── Commit Step: insert new members, member profiles, payments ───────────
+    // ── AJAX Commit Chunk: Process in batches with live progress bar ────────
+    if ($action === 'commit_chunk') {
+        header('Content-Type: application/json; charset=utf-8');
+        @set_time_limit(120);
+        @ini_set('max_execution_time', '120');
+
+        $data = $_SESSION['members_import_preview'] ?? null;
+        if (!$data || empty($data['valid'])) {
+            echo json_encode(['success' => false, 'error' => 'No valid rows found in session. Please re-upload.']);
+            exit;
+        }
+
+        $offset    = max(0, (int)($_POST['offset'] ?? 0));
+        $chunkSize = max(10, min(100, (int)($_POST['chunk_size'] ?? 50)));
+        $total     = count($data['valid']);
+        $importFyIdCommit = (int)($data['fy_id'] ?? $fyId);
+
+        if (!isset($_SESSION['import_stats']) || $offset === 0) {
+            $_SESSION['import_stats'] = [
+                'new_members' => 0,
+                'paid'        => 0,
+                'skipped'     => 0,
+                'errors'      => [],
+            ];
+        }
+
+        $slice = array_slice($data['valid'], $offset, $chunkSize);
+        $chunkNew = 0;
+        $chunkPaid = 0;
+        $chunkErrors = [];
+
+        foreach ($slice as $row) {
+            try {
+                // Duplicate rule: Strictly KGID only
+                $existingProfile = Database::fetchOne("SELECT member_id FROM member_profiles WHERE kgid_no = ?", [$row['kgid_no']]);
+                $memberId = null;
+
+                if ($existingProfile) {
+                    $memberId = (int)$existingProfile['member_id'];
+                } else {
+                    $tempMemberNo = 'PENDING-' . bin2hex(random_bytes(8));
+                    Database::execute(
+                        "INSERT INTO members
+                            (member_no, name, designation, gp_id, taluk_id, district_id,
+                             gp_working, organization_type, organization_name, organization_address,
+                             working_district_id, working_taluk_id, working_gp_id,
+                             joining_date, membership_status)
+                         VALUES (?, ?, 'PDO', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE(), 'active')",
+                        [
+                            $tempMemberNo,
+                            $row['full_name'],
+                            $row['working_gp_id'],
+                            $row['membership_taluk_id'],
+                            $row['membership_district_id'],
+                            $row['gp_working'],
+                            $row['organization_type'],
+                            $row['organization_name'],
+                            $row['organization_address'],
+                            $row['working_district_id'],
+                            $row['working_taluk_id'],
+                            $row['working_gp_id'],
+                        ]
+                    );
+                    $memberId = (int)Database::lastInsertId();
+
+                    $regPlaceholder = 'REG-' . str_pad((string)$memberId, 6, '0', STR_PAD_LEFT);
+                    Database::execute("UPDATE members SET member_no = ? WHERE id = ?", [$regPlaceholder, $memberId]);
+
+                    Database::execute(
+                        "INSERT INTO member_profiles
+                            (member_id, kgid_no, date_of_birth, gender, father_spouse_name, personal_email, personal_mobile)
+                         VALUES (?, ?, ?, ?, ?, ?, ?)",
+                        [
+                            $memberId,
+                            $row['kgid_no'],
+                            $row['dob'],
+                            $row['gender'],
+                            $row['father_spouse_name'],
+                            $row['email'],
+                            $row['phone'],
+                        ]
+                    );
+
+                    Database::transaction(function () use ($memberId) {
+                        MembershipNumber::assignIfPlaceholder($memberId);
+                    });
+                    $chunkNew++;
+                    $_SESSION['import_stats']['new_members']++;
+                }
+
+                if ($row['import_paid'] && $importFyIdCommit && $memberId) {
+                    $already = Database::fetchOne(
+                        "SELECT id FROM membership_payments WHERE member_id=? AND membership_year_id=? AND status='completed'",
+                        [$memberId, $importFyIdCommit]
+                    );
+                    if (!$already) {
+                        $fyRow = Database::fetchOne("SELECT fee_amount FROM membership_years WHERE id=?", [$importFyIdCommit]);
+                        $standardFee = $fyRow ? (float)$fyRow['fee_amount'] : 0.0;
+                        $feeAmt = (!empty($row['received_amount']) && (float)$row['received_amount'] > 0)
+                            ? (float)$row['received_amount']
+                            : $standardFee;
+
+                        $paidAt = !empty($row['payment_date']) ? $row['payment_date'] : date('Y-m-d H:i:s');
+                        $isOnline = ($row['payment_mode'] === 'online');
+                        $gatewayPaymentId = $isOnline ? ($row['payment_reference'] ?: null) : null;
+                        $offlineRef = !$isOnline ? ($row['payment_reference'] ?: null) : null;
+                        $remarks = $row['offline_remarks'] ?: ($isOnline && $gatewayPaymentId ? 'Imported legacy Razorpay payment' : null);
+
+                        Database::execute(
+                            "INSERT INTO membership_payments
+                                (member_id, membership_year_id, amount, status, payment_mode,
+                                 gateway_payment_id, offline_reference, offline_remarks, paid_at, created_at)
+                             VALUES (?, ?, ?, 'completed', ?, ?, ?, ?, ?, NOW())",
+                            [
+                                $memberId,
+                                $importFyIdCommit,
+                                $feeAmt,
+                                $row['payment_mode'],
+                                $gatewayPaymentId,
+                                $offlineRef,
+                                $remarks,
+                                $paidAt,
+                            ]
+                        );
+                        $paymentId = (int)Database::lastInsertId();
+
+                        Database::transaction(function () use ($memberId) {
+                            MembershipNumber::assignIfPlaceholder($memberId);
+                        });
+
+                        $memberRow = Database::fetchOne("SELECT id, name FROM members WHERE id = ?", [$memberId]);
+                        if ($memberRow && !empty($row['email'])) {
+                            try {
+                                Auth::activateMemberPortalAccess($memberRow, $row['email']);
+                            } catch (\Throwable $e) {
+                                // Non-blocking if account already exists
+                            }
+                        }
+
+                        // NOTE: Receipts are generated dynamically on-demand when viewed/downloaded.
+                        // Generating hundreds of PDFs in bulk import loop causes timeout in fpdf.php.
+                        $chunkPaid++;
+                        $_SESSION['import_stats']['paid']++;
+                    }
+                }
+            } catch (\Throwable $e) {
+                if (!empty($memberId) && empty($existingProfile)) {
+                    try {
+                        Database::execute("DELETE FROM member_profiles WHERE member_id = ?", [$memberId]);
+                        Database::execute("DELETE FROM members WHERE id = ?", [$memberId]);
+                    } catch (\Throwable $cleanupEx) {}
+                }
+                $errMsg = "KGID " . ($row['kgid_no'] ?? 'unknown') . ": " . $e->getMessage();
+                error_log("Members import chunk error: " . $errMsg);
+                $chunkErrors[] = $errMsg;
+                $_SESSION['import_stats']['errors'][] = $errMsg;
+            }
+        }
+
+        $nextOffset = $offset + count($slice);
+        $done = ($nextOffset >= $total || count($slice) === 0);
+
+        if ($done) {
+            $totalNew = $_SESSION['import_stats']['new_members'] ?? 0;
+            $totalPaid = $_SESSION['import_stats']['paid'] ?? 0;
+            $totalErrors = count($_SESSION['import_stats']['errors'] ?? []);
+
+            unset(
+                $_SESSION['members_import_preview'],
+                $_SESSION['import_raw_rows'],
+                $_SESSION['import_col_map'],
+                $_SESSION['import_fy_id'],
+                $_SESSION['import_remaps'],
+                $_SESSION['import_unmatched'],
+                $_SESSION['import_remap_step'],
+                $_SESSION['import_stats']
+            );
+
+            AuditLogger::log('CREATE', 'members', null, null, [
+                'action' => 'bulk_import_ajax',
+                'new_members' => $totalNew,
+                'paid_activated' => $totalPaid,
+                'errors' => $totalErrors
+            ]);
+
+            Session::flash('success', "Bulk import complete! Successfully uploaded and processed $total members ($totalNew new, $totalPaid paid/activated).");
+        }
+
+        echo json_encode([
+            'success'     => true,
+            'done'        => $done,
+            'processed'   => count($slice),
+            'offset'      => $nextOffset,
+            'total'       => $total,
+            'new_members' => $_SESSION['import_stats']['new_members'] ?? 0,
+            'paid'        => $_SESSION['import_stats']['paid'] ?? 0,
+            'errors'      => count($_SESSION['import_stats']['errors'] ?? []),
+        ]);
+        exit;
+    }
+
+    // ── Fallback Standard Commit Step (Non-JS) ──────────────────────────────
     if ($action === 'commit') {
+        @set_time_limit(300);
+        @ini_set('max_execution_time', '300');
+
         $data = $_SESSION['members_import_preview'] ?? null;
         if (!$data || empty($data['valid'])) {
             Session::flash('error', 'No valid rows to import.');
@@ -1286,15 +1490,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                             }
                         }
 
-                        // 3. Generate official receipt
-                        if ($paymentId > 0) {
-                            try {
-                                Receipt::forPayment($paymentId);
-                            } catch (\Throwable $e) {
-                                // Non-blocking if PDF generation encounters error
-                            }
-                        }
-
+                        // NOTE: Receipts are generated dynamically on-demand when viewed/downloaded.
                         $paidCount++;
                     }
                 }
@@ -1726,11 +1922,69 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
         </div>
         <?php endif; ?>
 
-        <form method="post" style="margin-top:24px; display:flex; gap:12px; align-items:center;">
+        <!-- Real-time Progress Bar Card -->
+        <div id="import-progress-card" class="panel" style="display:none; margin-top:20px; border:2px solid #1e40af; background:#f8fafc; border-radius:10px; padding:20px 24px; box-shadow:0 4px 12px rgba(0,0,0,0.06);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <h3 id="progress-heading" style="margin:0; color:#1e40af; font-size:1.15rem; display:flex; align-items:center; gap:10px;">
+                    <span id="progress-spinner" style="display:inline-block; animation:spin 1s linear infinite; font-size:1.2rem;">⏳</span>
+                    <span>Importing Members...</span>
+                </h3>
+                <span id="progress-badge" class="badge" style="background:#dbeafe; color:#1e40af; font-size:0.85rem; padding:4px 12px; border-radius:20px; font-weight:700;">
+                    In Progress
+                </span>
+            </div>
+
+            <div style="margin:14px 0 8px; display:flex; justify-content:space-between; align-items:baseline;">
+                <div style="font-size:1.05rem; font-weight:700; color:#1e293b;">
+                    Uploaded <span id="progress-current" style="color:#1e40af;">0</span> of <span id="progress-total"><?= count($previewData['valid'] ?? []) ?></span> members
+                </div>
+                <div id="progress-percent" style="font-size:1.15rem; font-weight:800; color:#1e40af;">
+                    0%
+                </div>
+            </div>
+
+            <!-- Progress Bar Track -->
+            <div style="width:100%; height:24px; background:#e2e8f0; border-radius:12px; overflow:hidden; position:relative; box-shadow:inset 0 1px 3px rgba(0,0,0,0.12);">
+                <div id="progress-bar-fill" style="width:0%; height:100%; background:linear-gradient(90deg, #1e40af 0%, #0284c7 60%, #16a34a 100%); transition:width 0.25s ease; border-radius:12px;"></div>
+            </div>
+
+            <!-- Stats grid -->
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:12px; margin-top:16px; padding:12px 14px; background:#fff; border-radius:8px; border:1px solid #e2e8f0;">
+                <div>
+                    <div style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:uppercase;">New Members Added</div>
+                    <div id="stat-new" style="font-size:1.2rem; font-weight:800; color:#15803d; margin-top:2px;">0</div>
+                </div>
+                <div>
+                    <div style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:uppercase;">Paid / Activated</div>
+                    <div id="stat-paid" style="font-size:1.2rem; font-weight:800; color:#0284c7; margin-top:2px;">0</div>
+                </div>
+                <div>
+                    <div style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:uppercase;">Errors / Skipped</div>
+                    <div id="stat-errors" style="font-size:1.2rem; font-weight:800; color:#b91c1c; margin-top:2px;">0</div>
+                </div>
+            </div>
+
+            <div id="progress-status-msg" style="margin-top:12px; font-size:0.85rem; color:#64748b; font-style:italic;">
+                Starting upload batch...
+            </div>
+            
+            <div id="progress-done-action" style="display:none; margin-top:18px;">
+                <a href="/admin/members.php" class="btn" style="background:#16a34a; padding:10px 24px; font-size:0.95rem;">
+                    ✓ View Members List
+                </a>
+            </div>
+        </div>
+
+        <form id="import-confirm-form" method="post" style="margin-top:24px; display:flex; gap:12px; align-items:center;">
             <?= CSRF::htmlField() ?>
-            <button type="submit" name="action" value="commit" class="btn" style="background:#1e6b3a; padding:10px 24px;" <?= empty($previewData['valid']) ? 'disabled' : '' ?>>
+            <button type="button" id="btn-start-import" class="btn" style="background:#1e6b3a; padding:10px 24px;" <?= empty($previewData['valid']) ? 'disabled' : '' ?>>
                 Confirm &amp; Import <?= count($previewData['valid']) ?> Rows
             </button>
+            <noscript>
+                <button type="submit" name="action" value="commit" class="btn" style="background:#1e6b3a; padding:10px 24px;" <?= empty($previewData['valid']) ? 'disabled' : '' ?>>
+                    Confirm &amp; Import <?= count($previewData['valid']) ?> Rows (Standard)
+                </button>
+            </noscript>
             <?php if (!empty($_SESSION['import_unmatched'])): ?>
                 <button type="submit" name="action" value="reopen_remap" class="btn" style="background:#2C6B67;">
                     ← Adjust Location Mappings
@@ -1838,6 +2092,135 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
         </div>
     </div>
     <?php endif; ?>
+
+<style>
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const btnStart = document.getElementById('btn-start-import');
+    if (!btnStart) return;
+
+    const progressCard = document.getElementById('import-progress-card');
+    const confirmForm  = document.getElementById('import-confirm-form');
+    const progressBar  = document.getElementById('progress-bar-fill');
+    const txtCurrent   = document.getElementById('progress-current');
+    const txtTotal     = document.getElementById('progress-total');
+    const txtPercent   = document.getElementById('progress-percent');
+    const statNew      = document.getElementById('stat-new');
+    const statPaid     = document.getElementById('stat-paid');
+    const statErrors   = document.getElementById('stat-errors');
+    const statusMsg    = document.getElementById('progress-status-msg');
+    const progressHeading = document.getElementById('progress-heading');
+    const progressSpinner = document.getElementById('progress-spinner');
+    const progressBadge   = document.getElementById('progress-badge');
+    const doneAction      = document.getElementById('progress-done-action');
+
+    const totalRows = <?= (int)count($previewData['valid'] ?? []) ?>;
+    const csrfToken = <?= json_encode(CSRF::token()) ?>;
+
+    btnStart.addEventListener('click', function(e) {
+        e.preventDefault();
+
+        if (totalRows <= 0) return;
+        if (!confirm(`Are you sure you want to import ${totalRows} member rows?`)) return;
+
+        // Display progress card and lock controls
+        progressCard.style.display = 'block';
+        btnStart.disabled = true;
+        btnStart.style.opacity = '0.5';
+        btnStart.style.cursor = 'not-allowed';
+        Array.from(confirmForm.querySelectorAll('button')).forEach(b => b.disabled = true);
+        progressCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        txtTotal.textContent = totalRows;
+        txtCurrent.textContent = '0';
+        txtPercent.textContent = '0%';
+
+        let offset = 0;
+        const chunkSize = 50;
+
+        function runNextChunk() {
+            const batchStart = offset + 1;
+            const batchEnd = Math.min(offset + chunkSize, totalRows);
+            statusMsg.textContent = `Processing members ${batchStart} to ${batchEnd} of ${totalRows}...`;
+
+            const formData = new FormData();
+            formData.append('action', 'commit_chunk');
+            formData.append('csrf_token', csrfToken);
+            formData.append('offset', offset);
+            formData.append('chunk_size', chunkSize);
+
+            fetch('/admin/members-import.php', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(res => {
+                if (!res.ok) throw new Error(`Server returned HTTP ${res.status}`);
+                return res.json();
+            })
+            .then(data => {
+                if (!data.success) {
+                    throw new Error(data.error || 'Server error occurred during chunk import');
+                }
+
+                const current = Math.min(data.offset, totalRows);
+                const percent = Math.min(100, Math.round((current / totalRows) * 100));
+
+                txtCurrent.textContent = current;
+                txtPercent.textContent = percent + '%';
+                progressBar.style.width = percent + '%';
+
+                if (data.new_members !== undefined) statNew.textContent = data.new_members;
+                if (data.paid !== undefined) statPaid.textContent = data.paid;
+                if (data.errors !== undefined) statErrors.textContent = data.errors;
+
+                if (data.done || current >= totalRows) {
+                    // Upload 100% completed
+                    progressBar.style.width = '100%';
+                    txtCurrent.textContent = totalRows;
+                    txtPercent.textContent = '100%';
+                    progressSpinner.textContent = '✓';
+                    progressSpinner.style.animation = 'none';
+                    progressHeading.innerHTML = '<span style="color:#16a34a; font-size:1.3rem;">✓</span> Import Complete!';
+                    progressBadge.style.background = '#dcfce7';
+                    progressBadge.style.color = '#15803d';
+                    progressBadge.textContent = 'Completed';
+                    statusMsg.textContent = `All ${totalRows} rows processed successfully! Redirecting to members list...`;
+                    doneAction.style.display = 'block';
+
+                    setTimeout(function() {
+                        window.location.href = '/admin/members.php';
+                    }, 2200);
+                } else {
+                    offset = data.offset;
+                    runNextChunk();
+                }
+            })
+            .catch(err => {
+                console.error('Import error:', err);
+                statusMsg.style.color = '#b91c1c';
+                statusMsg.innerHTML = `<strong>Error during import:</strong> ${err.message}. <a href="javascript:void(0)" onclick="location.reload()" style="color:#1e40af; text-decoration:underline;">Reload to resume</a>`;
+                progressSpinner.textContent = '⚠️';
+                progressSpinner.style.animation = 'none';
+                progressBadge.style.background = '#fee2e2';
+                progressBadge.style.color = '#b91c1c';
+                progressBadge.textContent = 'Halted';
+            });
+        }
+
+        runNextChunk();
+    });
+});
+</script>
+
 <?php
 require_once dirname(__DIR__) . '/includes/partials/admin-footer.php';
 
