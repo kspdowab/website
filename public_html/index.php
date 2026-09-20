@@ -27,11 +27,6 @@ $officeBearerHighlights = Database::fetchAll(
      ORDER BY sort_order LIMIT 4"
 );
 
-$officeBearerCount = Database::fetchOne("SELECT COUNT(*) c FROM office_bearers WHERE status = 'active'");
-$publishedNewsCount = Database::fetchOne(
-    "SELECT COUNT(*) c FROM news WHERE status = 'published' AND published_at IS NOT NULL"
-);
-
 // Fetch gallery photos configured for the home page carousel
 $galleryItems = [];
 try {
@@ -394,46 +389,6 @@ require __DIR__ . '/includes/partials/header.php';
     <?php endif; ?>
 </section>
 
-<!-- ═══════════════════════════════════════════════════════════════════
-     KEY METRICS / STATS CARDS (3-Column Layout)
-     ═══════════════════════════════════════════════════════════════════ -->
-<section class="stats-overview-grid" aria-label="Association Overview">
-    <!-- Stat 1: Active Office Bearers -->
-    <div class="stat-card-pro">
-        <span class="icon-badge-pro blue" aria-hidden="true">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        </span>
-        <div class="stat-card-text">
-            <div class="stat-card-value"><?= (int) ($officeBearerCount['c'] ?? 0) ?></div>
-            <div class="stat-card-label">Active Office Bearers</div>
-            <div class="stat-card-desc">Working for a stronger PDO community</div>
-        </div>
-    </div>
-
-    <!-- Stat 2: News Updates Published -->
-    <div class="stat-card-pro">
-        <span class="icon-badge-pro saffron" aria-hidden="true">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-        </span>
-        <div class="stat-card-text">
-            <div class="stat-card-value"><?= (int) ($publishedNewsCount['c'] ?? 0) ?></div>
-            <div class="stat-card-label">News Updates Published</div>
-            <div class="stat-card-desc">Latest activities and announcements</div>
-        </div>
-    </div>
-
-    <!-- Stat 3: Recognized -->
-    <div class="stat-card-pro">
-        <span class="icon-badge-pro purple" aria-hidden="true">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>
-        </span>
-        <div class="stat-card-text">
-            <div class="stat-card-value" style="font-size: 1.55rem; line-height: 1.15;">Recognized</div>
-            <div class="stat-card-label">Govt. of Karnataka, RDPR Dept.</div>
-            <div class="stat-card-desc" style="font-size: 0.74rem;">Under the Karnataka Civil Services (Recognition of Service Associations) Rules, 2015.</div>
-        </div>
-    </div>
-</section>
 
 <!-- ═══════════════════════════════════════════════════════════════════
      LATEST NEWS SECTION
@@ -1340,71 +1295,6 @@ main.wide-portal-main {
     height: 10px;
 }
 
-/* Stats Overview (3 Column) */
-.stats-overview-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-    margin-bottom: 0;
-}
-.stat-card-pro {
-    background: #ffffff;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-lg);
-    padding: 20px 18px;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    box-shadow: var(--shadow-sm);
-    transition: box-shadow 0.2s ease, border-color 0.2s ease;
-}
-.stat-card-pro:hover {
-    box-shadow: var(--shadow-md);
-    border-color: #CBD5E1;
-}
-.icon-badge-pro {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-.icon-badge-pro.blue {
-    background: var(--light-blue);
-    color: var(--prof-blue);
-}
-.icon-badge-pro.saffron {
-    background: var(--amber-100);
-    color: var(--accent-saffron);
-}
-.icon-badge-pro.purple {
-    background: var(--lavender-100);
-    color: var(--accent-purple);
-}
-.stat-card-text {
-    flex: 1;
-    min-width: 0;
-}
-.stat-card-value {
-    font-size: 2rem;
-    font-weight: 800;
-    color: var(--primary-navy);
-    line-height: 1.1;
-}
-.stat-card-label {
-    font-size: 0.92rem;
-    font-weight: 700;
-    color: var(--primary-navy);
-    margin: 2px 0 2px;
-}
-.stat-card-desc {
-    font-size: 0.78rem;
-    color: var(--text-secondary);
-    line-height: 1.35;
-}
-
 /* Section Cards */
 .section-card {
     padding: 20px 24px;
@@ -1566,9 +1456,6 @@ main.wide-portal-main {
 @media (max-width: 992px) {
     .gallery-item {
         flex: 0 0 calc((100% - 14px) / 2);
-    }
-    .stats-overview-grid {
-        grid-template-columns: 1fr;
     }
 }
 @media (max-width: 600px) {
