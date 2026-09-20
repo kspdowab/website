@@ -680,9 +680,9 @@ require __DIR__ . '/includes/partials/header.php';
      HOMEPAGE INTERACTION STYLES & CAROUSEL SCRIPT
      ═══════════════════════════════════════════════════════════════════ -->
 <style>
-/* Page Background - subtle darker slate tone per user request */
+/* Page Background - dark blue per user request */
 body {
-    background-color: #DFE7F0 !important;
+    background-color: #103154 !important;
 }
 main.wide-portal-main {
     background-color: transparent !important;
