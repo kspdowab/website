@@ -16,10 +16,11 @@ if (Auth::isLoggedIn()) {
     exit;
 }
 
-$error   = null;
-$success = null;
-$tip     = null;
-$maskedEmail = null;
+$error           = null;
+$success         = null;
+$tip             = null;
+$maskedEmail     = null;
+$directResetLink = null;
 
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     CSRF::requireValid();
@@ -58,14 +59,17 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 $maskedEmail = $masked;
             }
 
-            $success = 'A password reset link has been generated.';
-            if ($maskedEmail) {
-                $success .= ' An email has been sent to ' . Sanitize::html($maskedEmail) . '.';
+            $mailCfg = Mailer::getConfig();
+            if ($mailSent) {
+                $success = 'A password reset link has been sent to ' . Sanitize::html($maskedEmail ?? 'your registered email') . '. Please check your inbox.';
+            } else {
+                $success = 'A secure password reset link has been generated.';
+                $directResetLink = $resetLink;
             }
 
             // If the member still has default initial password flag
             if (!empty($user['kgid_no']) && (int)($user['must_change_password'] ?? 0) === 1) {
-                $tip = 'Default Member Password: Your account is currently configured with the default temporary password: Kspdowa@' . Sanitize::html((string)$user['kgid_no']) . '. You can also sign in directly using this password at the Sign In page.';
+                $tip = 'Your account has an active default temporary password: Kspdowa@' . Sanitize::html((string)$user['kgid_no']) . '. You can sign in immediately using this password at the Sign In page without resetting.';
             }
         } else {
             // Keep message generic to prevent account harvesting
@@ -202,6 +206,18 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         <?php if ($success !== null): ?>
             <div class="success" role="alert">
                 <?= Sanitize::html($success) ?>
+            </div>
+        <?php endif; ?>
+
+        <?php if ($directResetLink !== null): ?>
+            <div style="background:#FFFBEB; border:1px solid #FCD34D; border-radius:8px; padding:16px; margin-bottom:18px; text-align:center;">
+                <div style="font-weight:700; color:#B45309; font-size:0.95rem; margin-bottom:6px;">⚡ Direct Instant Password Reset</div>
+                <p style="margin:0 0 12px; font-size:0.85rem; color:#92400E; line-height:1.4;">
+                    Your account has been verified. Click the button below to set a new password right away:
+                </p>
+                <a href="<?= Sanitize::attr($directResetLink) ?>" style="background:#D97706; color:#ffffff; font-weight:700; text-decoration:none; padding:10px 20px; border-radius:6px; display:inline-block; font-size:0.92rem; box-shadow:0 2px 6px rgba(217, 119, 6, 0.3);">
+                    Set New Password Now &rarr;
+                </a>
             </div>
         <?php endif; ?>
 
