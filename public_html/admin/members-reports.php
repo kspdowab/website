@@ -206,10 +206,10 @@ if ($tab === 'detailed') {
     $totalDetailedCount = (int)($countRow['total'] ?? 0);
 
     $offset = ($page - 1) * $perPage;
-    $detailSql = "SELECT m.id, m.member_no, m.name, m.gender, m.membership_status, m.created_at,
+    $detailSql = "SELECT m.id, m.member_no, m.name, mp.gender, m.membership_status, m.created_at,
                          mp.personal_mobile, mp.kgid_no,
                          d.name AS district_name, t.name AS taluk_name, gp.name AS gp_name,
-                         p.id AS payment_id, p.amount AS paid_amount, p.paid_at, p.payment_method
+                         p.id AS payment_id, p.amount AS paid_amount, p.paid_at, p.payment_mode
                   FROM members m
                   LEFT JOIN member_profiles mp ON mp.member_id = m.id
                   LEFT JOIN districts d ON d.id = m.district_id

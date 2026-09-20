@@ -84,7 +84,7 @@ if ($dateTo) {
     $params[]   = $dateTo . ' 23:59:59';
 }
 if ($paymentMode !== 'all') {
-    $wClauses[] = "p.payment_method = ?";
+    $wClauses[] = "p.payment_mode = ?";
     $params[]   = $paymentMode;
 }
 if ($statusFilter !== 'all') {
@@ -117,8 +117,8 @@ $kpiRow = Database::fetchOne(
             COUNT(CASE WHEN p.status = 'completed' THEN p.id END) AS completed_txns,
             COUNT(CASE WHEN p.status = 'pending' THEN p.id END) AS pending_txns,
             COUNT(CASE WHEN p.status = 'failed' THEN p.id END) AS failed_txns,
-            COALESCE(SUM(CASE WHEN p.payment_method = 'online' AND p.status = 'completed' THEN p.amount ELSE 0 END), 0) AS online_collected,
-            COALESCE(SUM(CASE WHEN p.payment_method = 'offline' AND p.status = 'completed' THEN p.amount ELSE 0 END), 0) AS offline_collected
+            COALESCE(SUM(CASE WHEN p.payment_mode = 'online' AND p.status = 'completed' THEN p.amount ELSE 0 END), 0) AS online_collected,
+            COALESCE(SUM(CASE WHEN p.payment_mode = 'offline' AND p.status = 'completed' THEN p.amount ELSE 0 END), 0) AS offline_collected
      FROM members m
      LEFT JOIN membership_payments p ON p.member_id = m.id AND p.membership_year_id = ?
      WHERE $wSql",
@@ -164,8 +164,8 @@ $geoBreakdown = Database::fetchAll(
 $monthlyTrend = Database::fetchAll(
     "SELECT DATE_FORMAT(p.paid_at, '%Y-%m') AS month_key,
             COUNT(p.id) AS txn_count,
-            COALESCE(SUM(CASE WHEN p.payment_method = 'online' THEN p.amount ELSE 0 END), 0) AS online_amt,
-            COALESCE(SUM(CASE WHEN p.payment_method = 'offline' THEN p.amount ELSE 0 END), 0) AS offline_amt,
+            COALESCE(SUM(CASE WHEN p.payment_mode = 'online' THEN p.amount ELSE 0 END), 0) AS online_amt,
+            COALESCE(SUM(CASE WHEN p.payment_mode = 'offline' THEN p.amount ELSE 0 END), 0) AS offline_amt,
             COALESCE(SUM(p.amount), 0) AS month_total
      FROM membership_payments p
      JOIN members m ON m.id = p.member_id
