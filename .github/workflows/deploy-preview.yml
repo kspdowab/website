@@ -65,5 +65,7 @@ jobs:
             --exclude='uploads/suggestions/*' \
             --exclude='uploads/news/*' \
             --exclude='uploads/temp/*' \
+            --exclude='assets/images/gallery/*' \
+            --exclude='assets/images/office-bearers/*' \
             -e "ssh -i ~/.ssh/deploy_key -p $SSH_PORT -o StrictHostKeyChecking=no" \
             ./public_html/ $SSH_USER@$SSH_HOST:/home/u278446798/domains/kspdowa.in/public_html/preview/
