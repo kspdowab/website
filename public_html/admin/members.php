@@ -21,7 +21,12 @@ require_once dirname(__DIR__) . '/includes/MembershipNumber.php';
 
 Auth::requireLogin();
 $currentUserId = Auth::getCurrentUserId();
-RBAC::requirePermission($currentUserId, 'members', 'manage');
+
+if (!RBAC::can($currentUserId, 'members', 'view') && !RBAC::can($currentUserId, 'members', 'manage')) {
+    ErrorHandler::abort(403, 'You do not have permission to view members.');
+}
+
+$canManage = RBAC::can($currentUserId, 'members', 'manage');
 
 $successMsg = Session::getFlash('success');
 $errorMsg   = Session::getFlash('error');
@@ -59,6 +64,9 @@ $membershipTypes = Database::fetchAll("SELECT id, name FROM membership_types WHE
 
 // ─── POST handlers ────────────────────────────────────────────────────────────
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    if (!$canManage) {
+        ErrorHandler::abort(403, 'You do not have permission to modify member records.');
+    }
     CSRF::requireValid();
     $action = Sanitize::string($_POST['action'] ?? '', 30);
 
@@ -317,7 +325,7 @@ if ($editId !== false && $editId) {
     }
 }
 
-$showAddForm = isset($_GET['add']) || $editRow;
+$showAddForm = (isset($_GET['add']) || $editRow) && $canManage;
 $pageTitle   = 'Members Management';
 $activeMenu  = isset($_GET['add']) ? 'members_add' : 'members';
 $breadcrumbs = [
@@ -390,8 +398,10 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
 
 <div class="sub-nav">
     <a href="/admin/members.php" class="<?= !$showAddForm ? 'active' : '' ?>">Members List</a>
+    <?php if ($canManage): ?>
     <a href="/admin/members.php?add=1" class="<?= $showAddForm && !$editRow ? 'active' : '' ?>">+ Add Member</a>
     <a href="/admin/members-import.php">Bulk Import</a>
+    <?php endif; ?>
     <a href="/admin/members-reports.php">Abstract Reports</a>
 </div>
 
