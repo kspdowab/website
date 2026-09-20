@@ -1169,131 +1169,147 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         $paidCount = 0;
         $importFyIdCommit = (int)($data['fy_id'] ?? $fyId);
 
+        $failedRows = [];
+
         foreach ($data['valid'] as $row) {
-            // Check KGID duplicate status
-            $existingProfile = Database::fetchOne("SELECT member_id FROM member_profiles WHERE kgid_no = ?", [$row['kgid_no']]);
-            $memberId = null;
+            try {
+                // Check KGID duplicate status
+                $existingProfile = Database::fetchOne("SELECT member_id FROM member_profiles WHERE kgid_no = ?", [$row['kgid_no']]);
+                $memberId = null;
 
-            if ($existingProfile) {
-                // Existing member — do NOT re-insert, add FY payment if applicable
-                $memberId = (int)$existingProfile['member_id'];
-            } else {
-                // Insert new member into members table with temporary member_no
-                $tempMemberNo = 'PENDING-' . bin2hex(random_bytes(8));
-                Database::execute(
-                    "INSERT INTO members
-                        (member_no, name, designation, gp_id, taluk_id, district_id,
-                         gp_working, organization_type, organization_name, organization_address,
-                         working_district_id, working_taluk_id, working_gp_id,
-                         joining_date, membership_status)
-                     VALUES (?, ?, 'PDO', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE(), 'active')",
-                    [
-                        $tempMemberNo,
-                        $row['full_name'],
-                        $row['working_gp_id'],
-                        $row['membership_taluk_id'],
-                        $row['membership_district_id'],
-                        $row['gp_working'],
-                        $row['organization_type'],
-                        $row['organization_name'],
-                        $row['organization_address'],
-                        $row['working_district_id'],
-                        $row['working_taluk_id'],
-                        $row['working_gp_id'],
-                    ]
-                );
-                $memberId = (int)Database::lastInsertId();
-
-                // Set standard REG- placeholder so MembershipNumber recognizes it
-                $regPlaceholder = 'REG-' . str_pad((string)$memberId, 6, '0', STR_PAD_LEFT);
-                Database::execute("UPDATE members SET member_no = ? WHERE id = ?", [$regPlaceholder, $memberId]);
-
-                // Insert into member_profiles table (gender can be null)
-                Database::execute(
-                    "INSERT INTO member_profiles
-                        (member_id, kgid_no, date_of_birth, gender, father_spouse_name, personal_email, personal_mobile)
-                     VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    [
-                        $memberId,
-                        $row['kgid_no'],
-                        $row['dob'],
-                        $row['gender'],
-                        $row['father_spouse_name'],
-                        $row['email'],
-                        $row['phone'],
-                    ]
-                );
-
-                // Assign provisional / official district-coded member number
-                Database::transaction(function () use ($memberId) {
-                    MembershipNumber::assignIfPlaceholder($memberId);
-                });
-                $count++;
-            }
-
-            // Payment processing (offline or Razorpay / online)
-            if ($row['import_paid'] && $importFyIdCommit && $memberId) {
-                $already = Database::fetchOne(
-                    "SELECT id FROM membership_payments WHERE member_id=? AND membership_year_id=? AND status='completed'",
-                    [$memberId, $importFyIdCommit]
-                );
-                if (!$already) {
-                    $fyRow = Database::fetchOne("SELECT fee_amount FROM membership_years WHERE id=?", [$importFyIdCommit]);
-                    $standardFee = $fyRow ? (float)$fyRow['fee_amount'] : 0.0;
-                    $feeAmt = (!empty($row['received_amount']) && (float)$row['received_amount'] > 0)
-                        ? (float)$row['received_amount']
-                        : $standardFee;
-
-                    $paidAt = !empty($row['payment_date']) ? $row['payment_date'] : date('Y-m-d H:i:s');
-                    $isOnline = ($row['payment_mode'] === 'online');
-                    $gatewayPaymentId = $isOnline ? ($row['payment_reference'] ?: null) : null;
-                    $offlineRef = !$isOnline ? ($row['payment_reference'] ?: null) : null;
-                    $remarks = $row['offline_remarks'] ?: ($isOnline && $gatewayPaymentId ? 'Imported legacy Razorpay payment' : null);
-
+                if ($existingProfile) {
+                    // Existing member — do NOT re-insert, add FY payment if applicable
+                    $memberId = (int)$existingProfile['member_id'];
+                } else {
+                    // Insert new member into members table with temporary member_no
+                    $tempMemberNo = 'PENDING-' . bin2hex(random_bytes(8));
                     Database::execute(
-                        "INSERT INTO membership_payments
-                            (member_id, membership_year_id, amount, status, payment_mode,
-                             gateway_payment_id, offline_reference, offline_remarks, paid_at, created_at)
-                         VALUES (?, ?, ?, 'completed', ?, ?, ?, ?, ?, NOW())",
+                        "INSERT INTO members
+                            (member_no, name, designation, gp_id, taluk_id, district_id,
+                             gp_working, organization_type, organization_name, organization_address,
+                             working_district_id, working_taluk_id, working_gp_id,
+                             joining_date, membership_status)
+                         VALUES (?, ?, 'PDO', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE(), 'active')",
                         [
-                            $memberId,
-                            $importFyIdCommit,
-                            $feeAmt,
-                            $row['payment_mode'],
-                            $gatewayPaymentId,
-                            $offlineRef,
-                            $remarks,
-                            $paidAt,
+                            $tempMemberNo,
+                            $row['full_name'],
+                            $row['working_gp_id'],
+                            $row['membership_taluk_id'],
+                            $row['membership_district_id'],
+                            $row['gp_working'],
+                            $row['organization_type'],
+                            $row['organization_name'],
+                            $row['organization_address'],
+                            $row['working_district_id'],
+                            $row['working_taluk_id'],
+                            $row['working_gp_id'],
                         ]
                     );
-                    $paymentId = (int)Database::lastInsertId();
+                    $memberId = (int)Database::lastInsertId();
 
-                    // 1. Assign official permanent membership number
+                    // Set standard REG- placeholder so MembershipNumber recognizes it
+                    $regPlaceholder = 'REG-' . str_pad((string)$memberId, 6, '0', STR_PAD_LEFT);
+                    Database::execute("UPDATE members SET member_no = ? WHERE id = ?", [$regPlaceholder, $memberId]);
+
+                    // Insert into member_profiles table (gender can be null)
+                    Database::execute(
+                        "INSERT INTO member_profiles
+                            (member_id, kgid_no, date_of_birth, gender, father_spouse_name, personal_email, personal_mobile)
+                         VALUES (?, ?, ?, ?, ?, ?, ?)",
+                        [
+                            $memberId,
+                            $row['kgid_no'],
+                            $row['dob'],
+                            $row['gender'],
+                            $row['father_spouse_name'],
+                            $row['email'],
+                            $row['phone'],
+                        ]
+                    );
+
+                    // Assign provisional / official district-coded member number
                     Database::transaction(function () use ($memberId) {
                         MembershipNumber::assignIfPlaceholder($memberId);
                     });
-
-                    // 2. Activate member user account in users table if personal_email is provided
-                    $memberRow = Database::fetchOne("SELECT id, name FROM members WHERE id = ?", [$memberId]);
-                    if ($memberRow && !empty($row['email'])) {
-                        try {
-                            Auth::activateMemberPortalAccess($memberRow, $row['email']);
-                        } catch (Exception $e) {
-                            // Non-blocking if account already exists
-                        }
-                    }
-
-                    // 3. Generate official receipt
-                    if ($paymentId > 0) {
-                        try {
-                            Receipt::forPayment($paymentId);
-                        } catch (Exception $e) {
-                            // Non-blocking if PDF generation encounters error
-                        }
-                    }
-
-                    $paidCount++;
+                    $count++;
                 }
+
+                // Payment processing (offline or Razorpay / online)
+                if ($row['import_paid'] && $importFyIdCommit && $memberId) {
+                    $already = Database::fetchOne(
+                        "SELECT id FROM membership_payments WHERE member_id=? AND membership_year_id=? AND status='completed'",
+                        [$memberId, $importFyIdCommit]
+                    );
+                    if (!$already) {
+                        $fyRow = Database::fetchOne("SELECT fee_amount FROM membership_years WHERE id=?", [$importFyIdCommit]);
+                        $standardFee = $fyRow ? (float)$fyRow['fee_amount'] : 0.0;
+                        $feeAmt = (!empty($row['received_amount']) && (float)$row['received_amount'] > 0)
+                            ? (float)$row['received_amount']
+                            : $standardFee;
+
+                        $paidAt = !empty($row['payment_date']) ? $row['payment_date'] : date('Y-m-d H:i:s');
+                        $isOnline = ($row['payment_mode'] === 'online');
+                        $gatewayPaymentId = $isOnline ? ($row['payment_reference'] ?: null) : null;
+                        $offlineRef = !$isOnline ? ($row['payment_reference'] ?: null) : null;
+                        $remarks = $row['offline_remarks'] ?: ($isOnline && $gatewayPaymentId ? 'Imported legacy Razorpay payment' : null);
+
+                        Database::execute(
+                            "INSERT INTO membership_payments
+                                (member_id, membership_year_id, amount, status, payment_mode,
+                                 gateway_payment_id, offline_reference, offline_remarks, paid_at, created_at)
+                             VALUES (?, ?, ?, 'completed', ?, ?, ?, ?, ?, NOW())",
+                            [
+                                $memberId,
+                                $importFyIdCommit,
+                                $feeAmt,
+                                $row['payment_mode'],
+                                $gatewayPaymentId,
+                                $offlineRef,
+                                $remarks,
+                                $paidAt,
+                            ]
+                        );
+                        $paymentId = (int)Database::lastInsertId();
+
+                        // 1. Assign official permanent membership number
+                        Database::transaction(function () use ($memberId) {
+                            MembershipNumber::assignIfPlaceholder($memberId);
+                        });
+
+                        // 2. Activate member user account in users table if personal_email is provided
+                        $memberRow = Database::fetchOne("SELECT id, name FROM members WHERE id = ?", [$memberId]);
+                        if ($memberRow && !empty($row['email'])) {
+                            try {
+                                Auth::activateMemberPortalAccess($memberRow, $row['email']);
+                            } catch (\Throwable $e) {
+                                // Non-blocking if account already exists
+                            }
+                        }
+
+                        // 3. Generate official receipt
+                        if ($paymentId > 0) {
+                            try {
+                                Receipt::forPayment($paymentId);
+                            } catch (\Throwable $e) {
+                                // Non-blocking if PDF generation encounters error
+                            }
+                        }
+
+                        $paidCount++;
+                    }
+                }
+            } catch (\Throwable $e) {
+                // If a new member record was created but profile insert or number assignment failed, remove orphan
+                if (!empty($memberId) && empty($existingProfile)) {
+                    try {
+                        Database::execute("DELETE FROM member_profiles WHERE member_id = ?", [$memberId]);
+                        Database::execute("DELETE FROM members WHERE id = ?", [$memberId]);
+                    } catch (\Throwable $cleanupEx) {
+                        // ignore cleanup exception
+                    }
+                }
+                error_log("Members import failed on KGID " . ($row['kgid_no'] ?? 'unknown') . ": " . $e->getMessage());
+                $failedRows[] = "KGID " . ($row['kgid_no'] ?? 'unknown') . ": " . $e->getMessage();
             }
         }
 
@@ -1308,8 +1324,13 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $_SESSION['import_remap_step']
         );
 
-        AuditLogger::log('CREATE', 'members', null, null, ['action' => 'bulk_import', 'new_members' => $count, 'paid_activated' => $paidCount]);
-        Session::flash('success', "Bulk import complete. New members: $count. Paid/activated: $paidCount.");
+        AuditLogger::log('CREATE', 'members', null, null, ['action' => 'bulk_import', 'new_members' => $count, 'paid_activated' => $paidCount, 'errors' => count($failedRows)]);
+
+        if (!empty($failedRows)) {
+            Session::flash('warning', "Bulk import finished with warnings. Successfully imported: $count new members ($paidCount paid). Skipped " . count($failedRows) . " row(s) due to errors. First error: " . htmlspecialchars($failedRows[0]));
+        } else {
+            Session::flash('success', "Bulk import complete. New members: $count. Paid/activated: $paidCount.");
+        }
         header('Location: /admin/members.php');
         exit;
     }
