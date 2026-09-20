@@ -266,7 +266,7 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
     </div>
     <div class="config-card-body">
         <form method="POST" action="/admin/integrations.php">
-            <?= CSRF::field() ?>
+            <?= CSRF::htmlField() ?>
             <input type="hidden" name="action" value="save_settings">
             <input type="hidden" name="current_tab" value="email">
 
@@ -347,7 +347,7 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
                 Dispatch an immediate test email to verify your mail server handshake, STARTTLS encryption, and authentication credentials.
             </p>
             <form method="POST" action="/admin/integrations.php" style="display: flex; gap: 10px; max-width: 500px; flex-wrap: wrap;">
-                <?= CSRF::field() ?>
+                <?= CSRF::htmlField() ?>
                 <input type="hidden" name="action" value="test_email">
                 <input type="email" name="test_email_recipient" class="form-control" style="flex: 1; min-width: 220px;" placeholder="recipient@example.com" required>
                 <button type="submit" class="btn" style="background:#15803d; color:#fff; border:none; padding:9px 18px; border-radius:6px; font-weight:600; cursor:pointer;">
@@ -373,7 +373,7 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
     </div>
     <div class="config-card-body">
         <form method="POST" action="/admin/integrations.php">
-            <?= CSRF::field() ?>
+            <?= CSRF::htmlField() ?>
             <input type="hidden" name="action" value="save_settings">
             <input type="hidden" name="current_tab" value="whatsapp">
 
@@ -428,7 +428,7 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
                 Send a test WhatsApp message to verify phone normalization and provider connectivity.
             </p>
             <form method="POST" action="/admin/integrations.php" style="display: flex; gap: 10px; max-width: 500px; flex-wrap: wrap;">
-                <?= CSRF::field() ?>
+                <?= CSRF::htmlField() ?>
                 <input type="hidden" name="action" value="test_whatsapp">
                 <input type="text" name="test_wa_phone" class="form-control" style="flex: 1; min-width: 220px;" placeholder="10-digit mobile (e.g. 9845012345)" required>
                 <button type="submit" class="btn" style="background:#15803d; color:#fff; border:none; padding:9px 18px; border-radius:6px; font-weight:600; cursor:pointer;">
@@ -451,7 +451,7 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
     </div>
     <div class="config-card-body">
         <form method="POST" action="/admin/integrations.php">
-            <?= CSRF::field() ?>
+            <?= CSRF::htmlField() ?>
             <input type="hidden" name="action" value="save_settings">
             <input type="hidden" name="current_tab" value="automation">
 
@@ -494,7 +494,7 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
                 Trigger the background SLA ageing checks, overdue grievance alerts, and membership fee renewal checks immediately.
             </p>
             <form method="POST" action="/admin/integrations.php">
-                <?= CSRF::field() ?>
+                <?= CSRF::htmlField() ?>
                 <input type="hidden" name="action" value="run_scheduled">
                 <button type="submit" class="btn" style="background:#2563eb; color:#fff; border:none; padding:9px 18px; border-radius:6px; font-weight:600; cursor:pointer;">
                     Run Scheduled Automation Now

@@ -130,6 +130,14 @@ class CSRF
     }
 
     /**
+     * Alias for htmlField().
+     */
+    public static function field(): string
+    {
+        return self::htmlField();
+    }
+
+    /**
      * Return the token for use in a JavaScript meta tag or JSON payload.
      */
     public static function metaTag(): string
