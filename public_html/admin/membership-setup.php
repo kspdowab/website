@@ -35,7 +35,11 @@ require_once dirname(__DIR__) . '/includes/bootstrap.php';
 Auth::requireLogin();
 
 $currentUserId = Auth::getCurrentUserId();
-RBAC::requirePermission($currentUserId, 'membership', 'manage');
+if (!RBAC::can($currentUserId, 'membership', 'view') && !RBAC::can($currentUserId, 'membership', 'manage')) {
+    ErrorHandler::abort(403, 'You do not have permission to view membership setup.');
+}
+
+$canManage = RBAC::can($currentUserId, 'membership', 'manage');
 
 $successMsg = Session::getFlash('success');
 $errorMsg   = Session::getFlash('error');
@@ -44,6 +48,9 @@ $errorMsg   = Session::getFlash('error');
 // POST handlers
 // ---------------------------------------------------------------------------
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    if (!$canManage) {
+        ErrorHandler::abort(403, 'You do not have permission to modify membership setup.');
+    }
     CSRF::requireValid();
 
     $action = Sanitize::string($_POST['action'] ?? '', 40);
@@ -173,10 +180,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 // ---------------------------------------------------------------------------
 // Load data
 // ---------------------------------------------------------------------------
-$editTypeId = Sanitize::positiveInt($_GET['edit_type'] ?? null);
+$editTypeId = $canManage ? Sanitize::positiveInt($_GET['edit_type'] ?? null) : false;
 $editType   = $editTypeId !== false ? Database::fetchOne('SELECT * FROM membership_types WHERE id = ?', [$editTypeId]) : null;
 
-$editYearId = Sanitize::positiveInt($_GET['edit_year'] ?? null);
+$editYearId = $canManage ? Sanitize::positiveInt($_GET['edit_year'] ?? null) : false;
 $editYear   = $editYearId !== false ? Database::fetchOne('SELECT * FROM membership_years WHERE id = ?', [$editYearId]) : null;
 
 $membershipTypes = Database::fetchAll('SELECT * FROM membership_types ORDER BY name');
@@ -237,9 +244,16 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
     <div class="msg notice" role="status">
         Current financial year:
         <strong><?= $currentYear ? Sanitize::html($currentYear['financial_year']) . ' (fee ₹' . Sanitize::html(number_format((float) $currentYear['fee_amount'], 2)) . ')' : 'not set' ?></strong>
-        <?php if (!$currentYear): ?> — add one below and mark it Active so member login eligibility has a year to check against.<?php endif; ?>
+        <?php if (!$currentYear && $canManage): ?> — add one below and mark it Active so member login eligibility has a year to check against.<?php endif; ?>
     </div>
 
+    <?php if (!$canManage): ?>
+    <div class="msg notice" style="background:#eff6ff; border-left:4px solid #3b82f6; color:#1e40af; margin-bottom:16px;">
+        <strong>Read-Only Mode:</strong> You have permission to view membership configuration. Only State Administrators can add or modify membership types and financial years.
+    </div>
+    <?php endif; ?>
+
+    <?php if ($canManage): ?>
     <div class="panel">
         <h2><?= $editType ? 'Edit Membership Type' : 'Add Membership Type' ?></h2>
         <form method="post" action="/admin/membership-setup.php">
@@ -271,27 +285,31 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
             <?php if ($editType): ?><a class="btn" style="background:#888; text-decoration:none; display:inline-block;" href="/admin/membership-setup.php">Cancel</a><?php endif; ?>
         </form>
     </div>
+    <?php endif; ?>
 
     <div class="panel">
         <h2>Membership Types (<?= count($membershipTypes) ?>)</h2>
         <div class="table-wrap">
         <table>
-            <thead><tr><th>Name</th><th>Fee</th><th>Status</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Name</th><th>Fee</th><th>Status</th><?php if ($canManage): ?><th>Actions</th><?php endif; ?></tr></thead>
             <tbody>
                 <?php foreach ($membershipTypes as $t): ?>
                 <tr>
                     <td data-label="Name"><?= Sanitize::html($t['name']) ?><?php if ($t['description']): ?><div style="color:#888; font-size:0.78rem;"><?= Sanitize::html($t['description']) ?></div><?php endif; ?></td>
                     <td data-label="Fee">&#8377;<?= Sanitize::html(number_format((float) $t['fee_amount'], 2)) ?></td>
                     <td data-label="Status"><span class="badge <?= Sanitize::html($t['status']) ?>"><?= Sanitize::html($t['status']) ?></span></td>
+                    <?php if ($canManage): ?>
                     <td data-label="Actions" class="actions"><a href="/admin/membership-setup.php?edit_type=<?= (int) $t['id'] ?>">Edit</a></td>
+                    <?php endif; ?>
                 </tr>
                 <?php endforeach; ?>
-                <?php if (empty($membershipTypes)): ?><tr><td colspan="4">No membership types added yet.</td></tr><?php endif; ?>
+                <?php if (empty($membershipTypes)): ?><tr><td colspan="<?= $canManage ? 4 : 3 ?>">No membership types added yet.</td></tr><?php endif; ?>
             </tbody>
         </table>
         </div>
     </div>
 
+    <?php if ($canManage): ?>
     <div class="panel">
         <h2><?= $editYear ? 'Edit Financial Year' : 'Add Financial Year' ?></h2>
         <p class="section-hint">Marking a year Active automatically sets any other currently-active year to Inactive — only one year is ever "current" at a time.</p>
@@ -335,12 +353,13 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
             <?php if ($editYear): ?><a class="btn" style="background:#888; text-decoration:none; display:inline-block;" href="/admin/membership-setup.php">Cancel</a><?php endif; ?>
         </form>
     </div>
+    <?php endif; ?>
 
     <div class="panel">
         <h2>Financial Years (<?= count($membershipYears) ?>)</h2>
         <div class="table-wrap">
         <table>
-            <thead><tr><th>Year</th><th>Period</th><th>Fee</th><th>Status</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Year</th><th>Period</th><th>Fee</th><th>Status</th><?php if ($canManage): ?><th>Actions</th><?php endif; ?></tr></thead>
             <tbody>
                 <?php foreach ($membershipYears as $y): ?>
                 <tr>
@@ -348,10 +367,12 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
                     <td data-label="Period"><?= Sanitize::html($y['start_date']) ?> &ndash; <?= Sanitize::html($y['end_date']) ?></td>
                     <td data-label="Fee">&#8377;<?= Sanitize::html(number_format((float) $y['fee_amount'], 2)) ?></td>
                     <td data-label="Status"><span class="badge <?= Sanitize::html($y['status']) ?>"><?= Sanitize::html($y['status']) ?></span></td>
+                    <?php if ($canManage): ?>
                     <td data-label="Actions" class="actions"><a href="/admin/membership-setup.php?edit_year=<?= (int) $y['id'] ?>">Edit</a></td>
+                    <?php endif; ?>
                 </tr>
                 <?php endforeach; ?>
-                <?php if (empty($membershipYears)): ?><tr><td colspan="5">No financial years added yet.</td></tr><?php endif; ?>
+                <?php if (empty($membershipYears)): ?><tr><td colspan="<?= $canManage ? 5 : 4 ?>">No financial years added yet.</td></tr><?php endif; ?>
             </tbody>
         </table>
         </div>

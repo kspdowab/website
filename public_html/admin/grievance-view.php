@@ -35,14 +35,18 @@ if (!$id) {
 // Fetch grievance with joined member and master data
 $grievance = Database::fetchOne(
     "SELECT g.*,
-            m.name AS member_name, m.member_no, m.phone AS member_phone, m.email AS member_email,
-            m.kgid_no, m.designation AS member_designation,
+            m.name AS member_name, m.member_no, m.designation AS member_designation,
+            COALESCE(mp.personal_mobile, u_member.mobile) AS member_phone,
+            COALESCE(mp.personal_email, u_member.email) AS member_email,
+            mp.kgid_no,
             d.name AS district_name, t.name AS taluk_name, gp.name AS gp_name,
             gc.name AS category_name, gs.name AS service_name,
             ga.name AS authority_name, ga.code AS authority_code,
             u_assignee.username AS assignee_username, u_assignee.email AS assignee_email
      FROM grievances g
      INNER JOIN members m ON m.id = g.member_id
+     LEFT JOIN member_profiles mp ON mp.member_id = m.id
+     LEFT JOIN users u_member ON u_member.member_id = m.id
      LEFT JOIN districts d ON d.id = m.district_id
      LEFT JOIN taluks t    ON t.id = m.taluk_id
      LEFT JOIN gram_panchayatis gp ON gp.id = m.gp_id

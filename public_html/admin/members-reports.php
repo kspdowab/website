@@ -20,7 +20,14 @@ require_once dirname(__DIR__) . '/includes/bootstrap.php';
 
 Auth::requireLogin();
 $currentUserId = Auth::getCurrentUserId();
-RBAC::requirePermission($currentUserId, 'members', 'manage');
+
+if (!RBAC::can($currentUserId, 'reports', 'view') && !RBAC::can($currentUserId, 'members', 'manage') && !RBAC::can($currentUserId, 'members', 'view')) {
+    ErrorHandler::abort(403, 'You do not have permission to view member reports.');
+}
+
+$canManageMembers = RBAC::can($currentUserId, 'members', 'manage');
+$highestScope     = RBAC::getHighestScopeType($currentUserId);
+$isStateAdmin     = ($highestScope === 'state');
 
 // ─── Geographic scope locking ─────────────────────────────────────────────────
 $associationUnitId = RBAC::getUserAssociationUnit($currentUserId);
@@ -197,8 +204,12 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
 
 <div class="sub-nav">
     <a href="/admin/members.php">Members List</a>
+    <?php if ($canManageMembers): ?>
     <a href="/admin/members.php?add=1">+ Add Member</a>
+    <?php endif; ?>
+    <?php if ($isStateAdmin && $canManageMembers): ?>
     <a href="/admin/members-import.php">Bulk Import</a>
+    <?php endif; ?>
     <a href="/admin/members-reports.php" class="active">Abstract Reports</a>
 </div>
     <div class="panel">

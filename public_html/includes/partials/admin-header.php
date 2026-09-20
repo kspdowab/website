@@ -150,10 +150,12 @@ if (!function_exists('admin_can')) {
                         <a href="/admin/members.php" class="nav-sublink <?= $activeMenu === 'members' ? 'active' : '' ?>">Members List</a>
                         <?php if (admin_can($currentUserId, 'members', 'manage')): ?>
                             <a href="/admin/members.php?add=1" class="nav-sublink <?= $activeMenu === 'members_add' ? 'active' : '' ?>">Add Member</a>
-                            <a href="/admin/members-import.php" class="nav-sublink <?= $activeMenu === 'members_import' ? 'active' : '' ?>">Bulk Import</a>
+                            <?php if ($highestScope === 'state'): ?>
+                                <a href="/admin/members-import.php" class="nav-sublink <?= $activeMenu === 'members_import' ? 'active' : '' ?>">Bulk Import</a>
+                            <?php endif; ?>
                         <?php endif; ?>
                     <?php endif; ?>
-                    <?php if (admin_can($currentUserId, 'membership', 'view') || admin_can($currentUserId, 'membership', 'manage')): ?>
+                    <?php if (admin_can($currentUserId, 'membership', 'manage')): ?>
                         <a href="/admin/membership-setup.php" class="nav-sublink <?= $activeMenu === 'membership' ? 'active' : '' ?>">Membership Setup</a>
                     <?php endif; ?>
                     <?php if (admin_can($currentUserId, 'reports', 'view') || admin_can($currentUserId, 'members', 'manage')): ?>

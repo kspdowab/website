@@ -24,6 +24,15 @@ if (php_sapi_name() !== 'cli') {
     Auth::requireLogin();
     $currentUserId = Auth::getCurrentUserId();
     RBAC::requirePermission($currentUserId, 'members', 'manage');
+    $highestScope = RBAC::getHighestScopeType($currentUserId);
+    if ($highestScope !== 'state') {
+        AuditLogger::log('ACCESS_DENIED', 'members', null, null, [
+            'action'  => 'import',
+            'user_id' => $currentUserId,
+            'reason'  => 'Bulk import restricted to State Administrators only',
+        ]);
+        ErrorHandler::abort(403, 'Bulk import of members is restricted to State Administrators only.');
+    }
 } else {
     $currentUserId = 1;
 }

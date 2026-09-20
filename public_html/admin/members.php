@@ -27,6 +27,8 @@ if (!RBAC::can($currentUserId, 'members', 'view') && !RBAC::can($currentUserId, 
 }
 
 $canManage = RBAC::can($currentUserId, 'members', 'manage');
+$highestScope = RBAC::getHighestScopeType($currentUserId);
+$isStateAdmin = ($highestScope === 'state');
 
 $successMsg = Session::getFlash('success');
 $errorMsg   = Session::getFlash('error');
@@ -400,7 +402,9 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
     <a href="/admin/members.php" class="<?= !$showAddForm ? 'active' : '' ?>">Members List</a>
     <?php if ($canManage): ?>
     <a href="/admin/members.php?add=1" class="<?= $showAddForm && !$editRow ? 'active' : '' ?>">+ Add Member</a>
+    <?php if ($isStateAdmin): ?>
     <a href="/admin/members-import.php">Bulk Import</a>
+    <?php endif; ?>
     <?php endif; ?>
     <a href="/admin/members-reports.php">Abstract Reports</a>
 </div>

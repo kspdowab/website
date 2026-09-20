@@ -143,7 +143,7 @@ class RBAC
      */
     public static function requirePermission(int $userId, string $module, string $action): void
     {
-        if (!self::hasPermission($userId, $module, $action)) {
+        if (!self::can($userId, $module, $action)) {
             AuditLogger::log('ACCESS_DENIED', $module, null, null, [
                 'action'  => $action,
                 'user_id' => $userId,
