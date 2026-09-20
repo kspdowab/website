@@ -559,32 +559,11 @@ require __DIR__ . '/includes/partials/header.php';
     </div> <!-- /.portal-main-stream -->
 
     <!-- ═══════════════════════════════════════════════════════════════════
-         RIGHT SIDEBAR: Govt Portals, Circulars, Events, Mobile App
+         RIGHT SIDEBAR: Govt Portals, Events, Mobile App
          ═══════════════════════════════════════════════════════════════════ -->
     <aside class="portal-sidebar portal-sidebar-right" aria-label="ಸರ್ಕಾರಿ ಕೊಂಡಿಗಳು ಮತ್ತು ಆದೇಶಗಳು">
 
-        <!-- 1. Govt Recognition Spotlight Widget -->
-        <div class="card sidebar-widget recognition-widget">
-            <div class="sidebar-widget-header">
-                <span class="icon-badge purple" aria-hidden="true">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>
-                </span>
-                <h3 class="sidebar-widget-title">ಸರ್ಕಾರಿ ಮಾನ್ಯತೆ</h3>
-            </div>
-            <div class="recog-spotlight-content">
-                <span class="recog-tag">RDPR ಇಲಾಖೆ ಆದೇಶ</span>
-                <div class="recog-order-num">ಆದೇಶ ಸಂ: ಗ್ರಾಅಪ 181 ಜಿಪಂಸ 2017</div>
-                <p class="recog-desc">
-                    ಕರ್ನಾಟಕ ನಾಗರಿಕ ಸೇವಾ (ಸೇವಾ ಸಂಘಗಳ ಮಾನ್ಯತೆ) ನಿಯಮಗಳು, 2015 ರಡಿಯಲ್ಲಿ ಕರ್ನಾಟಕ ಸರ್ಕಾರದಿಂದ ಅಧಿಕೃತ ಮಾನ್ಯತೆ ಪಡೆದ ಸಂಘ.
-                </p>
-                <a href="/recognition.php" class="btn btn-secondary btn-sm btn-block">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                    <span>ಮಾನ್ಯತೆ ವಿವರ & ಆದೇಶ (PDF)</span>
-                </a>
-            </div>
-        </div>
-
-        <!-- 2. Useful Karnataka Govt Portals (Exact User List) -->
+        <!-- 1. Useful Karnataka Govt Portals (Exact User List) -->
         <div class="card sidebar-widget govt-portals-widget">
             <div class="sidebar-widget-header">
                 <span class="icon-badge blue" aria-hidden="true">
@@ -701,6 +680,14 @@ require __DIR__ . '/includes/partials/header.php';
      HOMEPAGE INTERACTION STYLES & CAROUSEL SCRIPT
      ═══════════════════════════════════════════════════════════════════ -->
 <style>
+/* Page Background - subtle darker slate tone per user request */
+body {
+    background-color: #DFE7F0 !important;
+}
+main.wide-portal-main {
+    background-color: transparent !important;
+}
+
 /* Portal Grid Layout (3 Column Desktop) */
 .home-portal-grid {
     display: grid;
@@ -721,33 +708,44 @@ require __DIR__ . '/includes/partials/header.php';
     flex-direction: column;
 }
 
-/* Sidebar Widgets Common */
-.sidebar-widget {
+/* Sidebar Widgets — Distinct Styling Harmonized with Header */
+.portal-sidebar .sidebar-widget {
     padding: 20px 20px 18px;
     margin-bottom: 0;
     border-radius: var(--radius-lg);
-    background: var(--surface-card);
-    border: 1px solid var(--border-color);
-    box-shadow: var(--shadow-sm);
-    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+    border: 1px solid #C5D8EA;
+    box-shadow: 0 3px 12px rgba(23, 63, 103, 0.08);
+    transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+    overflow: hidden;
 }
-.sidebar-widget:hover {
-    border-color: #CBD5E1;
-    box-shadow: var(--shadow-md);
+.portal-sidebar-left .sidebar-widget {
+    border-top: 4px solid #173F67; /* Primary Navy accent on left */
+    background: linear-gradient(180deg, #FFFFFF 0%, #F1F6FB 100%);
 }
-.sidebar-widget-header {
+.portal-sidebar-right .sidebar-widget {
+    border-top: 4px solid #1769AA; /* Professional Blue accent on right */
+    background: linear-gradient(180deg, #FFFFFF 0%, #F1F6FB 100%);
+}
+.portal-sidebar .sidebar-widget:hover {
+    border-color: #1769AA;
+    box-shadow: 0 6px 20px rgba(23, 63, 103, 0.14);
+}
+.portal-sidebar .sidebar-widget-header {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-bottom: 14px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid var(--border-soft);
+    margin: -20px -20px 14px -20px;
+    padding: 12px 18px;
+    background: #EAF2F9;
+    border-bottom: 1px solid #D2E2F0;
+    border-top-left-radius: var(--radius-lg);
+    border-top-right-radius: var(--radius-lg);
 }
-.sidebar-widget-title {
+.portal-sidebar .sidebar-widget-title {
     margin: 0;
-    font-size: 1.05rem;
+    font-size: 1.02rem;
     font-weight: 700;
-    color: var(--primary-navy);
+    color: #173F67;
     line-height: 1.25;
 }
 .sidebar-widget-footer-link {
@@ -1248,7 +1246,7 @@ require __DIR__ . '/includes/partials/header.php';
     display: none;
 }
 .gallery-item {
-    flex: 0 0 calc((100% - 48px) / 4);
+    flex: 0 0 calc((100% - 18px) / 2);
     display: flex;
     flex-direction: column;
     border-radius: var(--radius-md);
@@ -1256,11 +1254,11 @@ require __DIR__ . '/includes/partials/header.php';
 }
 .gallery-image-wrap {
     width: 100%;
-    aspect-ratio: 16 / 10;
+    height: 270px;
     overflow: hidden;
     border-radius: var(--radius-md);
     background: var(--light-blue);
-    box-shadow: 0 2px 6px rgba(23, 63, 103, 0.08);
+    box-shadow: 0 4px 12px rgba(23, 63, 103, 0.12);
 }
 .gallery-image-wrap img {
     width: 100%;
@@ -1273,18 +1271,18 @@ require __DIR__ . '/includes/partials/header.php';
     transform: scale(1.04);
 }
 .gallery-item-meta {
-    padding: 10px 2px 4px;
+    padding: 12px 4px 4px;
 }
 .gallery-item-title {
-    font-size: 0.94rem;
+    font-size: 1.05rem;
     font-weight: 700;
     color: var(--prof-blue);
-    margin: 0 0 3px;
+    margin: 0 0 4px;
     line-height: 1.35;
     font-family: var(--font-sans);
 }
 .gallery-item-date {
-    font-size: 0.8rem;
+    font-size: 0.84rem;
     color: var(--text-secondary);
     display: block;
 }
@@ -1292,15 +1290,15 @@ require __DIR__ . '/includes/partials/header.php';
 /* Nav Buttons */
 .gallery-nav-btn {
     position: absolute;
-    top: 38%;
+    top: 42%;
     transform: translateY(-50%);
-    width: 36px;
-    height: 36px;
+    width: 42px;
+    height: 42px;
     border-radius: 50%;
     background: var(--primary-navy);
     color: #ffffff;
     border: 2px solid #ffffff;
-    box-shadow: 0 3px 8px rgba(23, 63, 103, 0.22);
+    box-shadow: 0 3px 10px rgba(23, 63, 103, 0.25);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1573,6 +1571,9 @@ require __DIR__ . '/includes/partials/header.php';
 @media (max-width: 600px) {
     .gallery-item {
         flex: 0 0 100%;
+    }
+    .gallery-image-wrap {
+        height: 220px;
     }
     .gallery-card, .section-card, .contact-action-card, .sidebar-widget {
         padding: 16px 14px;
