@@ -23,9 +23,9 @@ $params = [];
 $whereClause = "1=1";
 
 if ($search !== '') {
-    $whereClause .= " AND (d.donor_name LIKE ? OR d.purpose LIKE ? OR d.receipt_no LIKE ? OR d.gateway_payment_id LIKE ?)";
+    $whereClause .= " AND (d.donor_name LIKE ? OR d.donor_mobile LIKE ? OR d.donor_address LIKE ? OR d.purpose LIKE ? OR d.receipt_no LIKE ? OR d.gateway_payment_id LIKE ?)";
     $like = '%' . $search . '%';
-    $params = [$like, $like, $like, $like];
+    $params = [$like, $like, $like, $like, $like, $like];
 }
 
 if ($status !== '' && in_array($status, ['pending', 'completed', 'failed'], true)) {
@@ -138,6 +138,16 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
                     </td>
                     <td data-label="Donor Name">
                         <strong><?= Sanitize::html($d['donor_name']) ?></strong>
+                        <?php if (!empty($d['donor_mobile'])): ?>
+                            <div style="font-size:0.78rem; color:#475569; margin-top:3px;">
+                                📞 <?= Sanitize::html($d['donor_mobile']) ?>
+                            </div>
+                        <?php endif; ?>
+                        <?php if (!empty($d['donor_address'])): ?>
+                            <div style="font-size:0.75rem; color:#64748b; margin-top:2px; max-width:240px; white-space:normal; line-height:1.25;">
+                                📍 <?= Sanitize::html($d['donor_address']) ?>
+                            </div>
+                        <?php endif; ?>
                     </td>
                     <td data-label="Purpose">
                         <?= Sanitize::html($d['purpose'] ?: 'General Donation') ?>

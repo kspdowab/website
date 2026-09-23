@@ -36,31 +36,50 @@ class Donation
      * reusing the old one -- same "preserve previous failed attempts"
      * convention as Registration.php's membership_payments handling.
      *
-     * @param string $donorName Required, already validated by the caller.
-     * @param string $purpose   Optional free text (may be '').
-     * @param float  $amount    Required, already validated (> 0) by the caller.
+     * @param string      $donorName    Required, already validated by the caller.
+     * @param string      $donorMobile  Required, validated 10-digit mobile.
+     * @param string      $donorAddress Optional postal address.
+     * @param string      $purpose      Optional free text (may be '').
+     * @param float       $amount       Required, already validated (> 0) by the caller.
+     * @param int|null    $memberId     Optional logged-in member ID.
      * @return array{success:bool, donation_id?:int, error?:string}
      */
-    public static function create(string $donorName, string $purpose, float $amount, ?int $memberId = null): array
-    {
-        if ($donorName === '' || $amount <= 0) {
-            return ['success' => false, 'error' => 'Please provide your name and a valid donation amount.'];
+    public static function create(
+        string $donorName,
+        string $donorMobile,
+        string $donorAddress,
+        string $purpose,
+        float $amount,
+        ?int $memberId = null
+    ): array {
+        if ($donorName === '' || $donorMobile === '' || $amount <= 0) {
+            return ['success' => false, 'error' => 'Please provide your name, mobile number, and a valid donation amount.'];
         }
 
         try {
             $idempotencyKey = self::newIdempotencyKey();
 
             Database::execute(
-                "INSERT INTO donations (idempotency_key, member_id, donor_name, purpose, amount, status)
-                 VALUES (?, ?, ?, ?, ?, 'pending')",
-                [$idempotencyKey, $memberId, $donorName, $purpose, $amount]
+                "INSERT INTO donations (idempotency_key, member_id, donor_name, donor_mobile, donor_address, purpose, amount, status)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')",
+                [
+                    $idempotencyKey,
+                    $memberId,
+                    $donorName,
+                    $donorMobile,
+                    $donorAddress !== '' ? $donorAddress : null,
+                    $purpose,
+                    $amount
+                ]
             );
             $donationId = (int) Database::lastInsertId();
 
             AuditLogger::log('CREATE', 'donations', $donationId, null, [
-                'donor_name' => $donorName,
-                'purpose'    => $purpose,
-                'amount'     => $amount,
+                'donor_name'    => $donorName,
+                'donor_mobile'  => $donorMobile,
+                'donor_address' => $donorAddress,
+                'purpose'       => $purpose,
+                'amount'        => $amount,
             ]);
 
             return ['success' => true, 'donation_id' => $donationId];
@@ -72,17 +91,26 @@ class Donation
 
     /**
      * Start a fresh attempt after a failed/cancelled one, reusing the
-     * same donor_name/purpose/amount already on record for the
-     * existing row -- the donor is not asked to re-type the form.
+     * same donor_name/donor_mobile/donor_address/purpose/amount already on
+     * record for the existing row -- the donor is not asked to re-type the form.
      */
     public static function startNewAttempt(int $existingDonationId): array
     {
-        $existing = Database::fetchOne('SELECT donor_name, purpose, amount FROM donations WHERE id = ?', [$existingDonationId]);
+        $existing = Database::fetchOne(
+            'SELECT donor_name, donor_mobile, donor_address, purpose, amount FROM donations WHERE id = ?',
+            [$existingDonationId]
+        );
         if ($existing === false) {
             return ['success' => false, 'error' => 'Original donation attempt not found.'];
         }
 
-        return self::create((string) $existing['donor_name'], (string) $existing['purpose'], (float) $existing['amount']);
+        return self::create(
+            (string) $existing['donor_name'],
+            (string) ($existing['donor_mobile'] ?? ''),
+            (string) ($existing['donor_address'] ?? ''),
+            (string) $existing['purpose'],
+            (float) $existing['amount']
+        );
     }
 
     /**

@@ -177,10 +177,19 @@ class DonationReceipt
 
         $rows = [
             ['Donor Name',        (string) $donation['donor_name']],
-            ['Purpose',           $purpose !== '' ? $purpose : 'General Donation'],
-            ['Amount Received',   'Rs. ' . number_format((float) $donation['amount'], 2)],
-            ['Payment Reference', (string) ($donation['gateway_payment_id'] ?? '')],
         ];
+
+        if (!empty($donation['donor_mobile'])) {
+            $rows[] = ['Mobile Number', (string) $donation['donor_mobile']];
+        }
+
+        if (!empty($donation['donor_address'])) {
+            $rows[] = ['Address / Place', (string) $donation['donor_address']];
+        }
+
+        $rows[] = ['Purpose',           $purpose !== '' ? $purpose : 'General Donation'];
+        $rows[] = ['Amount Received',   'Rs. ' . number_format((float) $donation['amount'], 2)];
+        $rows[] = ['Payment Reference', (string) ($donation['gateway_payment_id'] ?? '')];
 
         $pdf->SetFont('Arial', '', 11);
         foreach ($rows as [$label, $value]) {

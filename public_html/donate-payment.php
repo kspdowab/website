@@ -103,6 +103,9 @@ require __DIR__ . '/includes/partials/header.php';
     <?php elseif ($order !== null && $order['success']): ?>
         <table class="reg-review-table" style="margin-bottom:16px;">
             <tr><td>Donor Name</td><td><strong><?= Sanitize::html($order['donor_name']) ?></strong></td></tr>
+            <?php if (!empty($order['donor_mobile'])): ?>
+                <tr><td>Mobile Number</td><td><strong><?= Sanitize::html($order['donor_mobile']) ?></strong></td></tr>
+            <?php endif; ?>
             <tr><td>Donation Amount</td><td><strong>&#8377;<?= Sanitize::html(number_format((float) $order['amount'], 2)) ?></strong></td></tr>
             <tr><td>Convenience Charges</td><td>As per Razorpay</td></tr>
         </table>
@@ -139,7 +142,8 @@ require __DIR__ . '/includes/partials/header.php';
                     name: <?= Sanitize::js(APP_SHORT_NAME) ?>,
                     description: "Donation",
                     prefill: {
-                        name: <?= Sanitize::js($order['donor_name']) ?>
+                        name: <?= Sanitize::js($order['donor_name']) ?>,
+                        contact: <?= Sanitize::js($order['donor_mobile'] ?? '') ?>
                     },
                     handler: function (response) {
                         paymentHandled = true;

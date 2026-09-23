@@ -65,6 +65,7 @@ class DonationGateway
                         'key_id'       => RAZORPAY_KEY_ID,
                         'amount'       => (float) $row['amount'],
                         'donor_name'   => (string) $row['donor_name'],
+                        'donor_mobile' => (string) ($row['donor_mobile'] ?? ''),
                     ];
                 }
 
@@ -72,8 +73,9 @@ class DonationGateway
                 $amountPaise = (int) round($amount * 100);
 
                 $created = RazorpayClient::createOrder($amountPaise, (string) $row['idempotency_key'], [
-                    'donor_name' => (string) $row['donor_name'],
-                    'purpose'    => (string) $row['purpose'],
+                    'donor_name'   => (string) $row['donor_name'],
+                    'donor_mobile' => (string) ($row['donor_mobile'] ?? ''),
+                    'purpose'      => (string) $row['purpose'],
                 ]);
 
                 if (!$created['success']) {
@@ -102,6 +104,7 @@ class DonationGateway
                     'key_id'       => RAZORPAY_KEY_ID,
                     'amount'       => $amount,
                     'donor_name'   => (string) $row['donor_name'],
+                    'donor_mobile' => (string) ($row['donor_mobile'] ?? ''),
                 ];
             });
         } catch (Throwable $e) {

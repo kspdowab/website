@@ -33,17 +33,32 @@ require_once __DIR__ . '/includes/bootstrap.php';
 
 $pageTitle = 'Donate';
 $errors    = [];
-$clean     = ['donor_name' => '', 'purpose' => '', 'amount' => ''];
+$clean     = [
+    'donor_name'    => '',
+    'donor_mobile'  => '',
+    'donor_address' => '',
+    'purpose'       => '',
+    'amount'        => '',
+];
 
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     CSRF::requireValid();
 
-    $clean['donor_name'] = Sanitize::string($_POST['donor_name'] ?? '', 200);
-    $clean['purpose']    = Sanitize::string($_POST['purpose'] ?? '', 255);
-    $clean['amount']     = (string) ($_POST['amount'] ?? '');
+    $clean['donor_name']    = Sanitize::string($_POST['donor_name'] ?? '', 200);
+    $clean['donor_mobile']  = trim((string) ($_POST['donor_mobile'] ?? ''));
+    $clean['donor_address'] = Sanitize::string($_POST['donor_address'] ?? '', 500);
+    $clean['purpose']       = Sanitize::string($_POST['purpose'] ?? '', 255);
+    $clean['amount']        = (string) ($_POST['amount'] ?? '');
 
     if ($clean['donor_name'] === '') {
-        $errors[] = 'Please enter your name.';
+        $errors[] = 'Please enter your full name.';
+    }
+
+    $validatedMobile = Sanitize::mobileStrict($clean['donor_mobile']);
+    if ($validatedMobile === false) {
+        $errors[] = 'Please enter a valid 10-digit Indian mobile number (digits only, starting with 6, 7, 8, or 9).';
+    } else {
+        $clean['donor_mobile'] = $validatedMobile;
     }
 
     $amount = Sanitize::amount($_POST['amount'] ?? null);
@@ -53,7 +68,14 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
     if (empty($errors)) {
         $memberId = Auth::getCurrentMemberId();
-        $result = Donation::create($clean['donor_name'], $clean['purpose'], (float) $amount, $memberId);
+        $result = Donation::create(
+            $clean['donor_name'],
+            $clean['donor_mobile'],
+            $clean['donor_address'],
+            $clean['purpose'],
+            (float) $amount,
+            $memberId
+        );
 
         if ($result['success']) {
             Session::set('donation_id', $result['donation_id']);
@@ -62,6 +84,23 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         }
 
         $errors[] = $result['error'] ?? 'Could not start your donation. Please try again.';
+    }
+} elseif (Auth::isLoggedIn()) {
+    $currentMemberId = Auth::getCurrentMemberId();
+    if ($currentMemberId !== null) {
+        $mem = Database::fetchOne(
+            "SELECT m.name, mp.personal_mobile, mp.personal_address, mp.city, mp.pin_code
+             FROM members m
+             LEFT JOIN member_profiles mp ON mp.member_id = m.id
+             WHERE m.id = ?",
+            [$currentMemberId]
+        );
+        if ($mem) {
+            $clean['donor_name']   = (string) ($mem['name'] ?? '');
+            $clean['donor_mobile'] = (string) ($mem['personal_mobile'] ?? '');
+            $addrParts = array_filter([$mem['personal_address'] ?? '', $mem['city'] ?? '', $mem['pin_code'] ?? '']);
+            $clean['donor_address'] = implode(', ', $addrParts);
+        }
     }
 }
 
@@ -92,15 +131,24 @@ require __DIR__ . '/includes/partials/header.php';
     <form method="post" action="/donate.php" autocomplete="off">
         <?= CSRF::htmlField() ?>
         <div class="form-group">
-            <label for="donor_name">Your Full Name (ಪೂರ್ಣ ಹೆಸರು)</label>
-            <input type="text" id="donor_name" name="donor_name" required maxlength="200" value="<?= Sanitize::attr($clean['donor_name']) ?>" placeholder="Enter donor name">
+            <label for="donor_name">Your Full Name (ಪೂರ್ಣ ಹೆಸರು) <span style="color:var(--brand-red, #dc2626);">*</span></label>
+            <input type="text" id="donor_name" name="donor_name" required maxlength="200" value="<?= Sanitize::attr($clean['donor_name']) ?>" placeholder="Enter donor full name">
+        </div>
+        <div class="form-group">
+            <label for="donor_mobile">Mobile Number (ಮೊಬೈಲ್ ಸಂಖ್ಯೆ) <span style="color:var(--brand-red, #dc2626);">*</span></label>
+            <input type="tel" id="donor_mobile" name="donor_mobile" required maxlength="10" inputmode="numeric" pattern="[6-9][0-9]{9}" title="Please enter a valid 10-digit Indian mobile number" value="<?= Sanitize::attr($clean['donor_mobile']) ?>" placeholder="10-digit mobile number (e.g. 9876543210)">
+            <p class="form-hint" style="margin-top:4px; font-size:0.8rem; color:var(--text-muted, #64748b);">Mandatory 10-digit mobile number for transaction notifications and official receipt.</p>
+        </div>
+        <div class="form-group">
+            <label for="donor_address">Address / Place (ವಿಳಾಸ / ಸ್ಥಳ)</label>
+            <textarea id="donor_address" name="donor_address" rows="2" maxlength="500" placeholder="Postal address, city, or district (optional)"><?= Sanitize::html($clean['donor_address']) ?></textarea>
         </div>
         <div class="form-group">
             <label for="purpose">Purpose / Remarks (ಉದ್ದೇಶ - ಐಚ್ಛಿಕ)</label>
-            <input type="text" id="purpose" name="purpose" maxlength="255" placeholder="e.g. General Welfare Fund" value="<?= Sanitize::attr($clean['purpose']) ?>">
+            <input type="text" id="purpose" name="purpose" maxlength="255" placeholder="e.g. Welfare Fund / Legal Corpus / Building Fund" value="<?= Sanitize::attr($clean['purpose']) ?>">
         </div>
         <div class="form-group">
-            <label for="amount">Donation Amount (ದೇಣಿಗೆ ಮೊತ್ತ - &#8377;)</label>
+            <label for="amount">Donation Amount (ದೇಣಿಗೆ ಮೊತ್ತ - &#8377;) <span style="color:var(--brand-red, #dc2626);">*</span></label>
             <input type="number" id="amount" name="amount" required min="1" step="0.01" value="<?= Sanitize::attr($clean['amount']) ?>" placeholder="Amount in INR">
         </div>
         <p class="form-hint" style="display:flex; align-items:center; gap:6px; margin:12px 0 18px;">
