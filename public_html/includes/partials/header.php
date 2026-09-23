@@ -175,8 +175,9 @@ function nav_active(string $path, string $current): string
             justify-content: center;
         }
         .header-nav-strip {
-            background: linear-gradient(180deg, #F8FAFD 0%, #EAF1F8 100%);
-            border-bottom: 1px solid #CADAE8;
+            background: linear-gradient(180deg, #E1EBF5 0%, #CDDFEE 100%);
+            border-bottom: 1px solid #B0C7DD;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
         }
         .header-nav-inner {
             max-width: var(--content-width);
@@ -268,7 +269,7 @@ function nav_active(string $path, string $current): string
         }
         nav.main-nav a.nav-link {
             text-decoration: none;
-            color: var(--primary-navy);
+            color: #103154;
             font-size: 0.88rem;
             font-weight: 600;
             padding: 8px 12px;
@@ -282,11 +283,13 @@ function nav_active(string $path, string $current): string
         nav.main-nav a.nav-link:hover {
             background: #ffffff;
             color: var(--prof-blue);
-            box-shadow: 0 1px 4px rgba(23, 63, 103, 0.08);
+            box-shadow: 0 1px 4px rgba(16, 49, 84, 0.12);
         }
         nav.main-nav a.nav-link.active {
             color: var(--prof-blue);
             font-weight: 700;
+            background: rgba(255, 255, 255, 0.85);
+            box-shadow: 0 1px 3px rgba(16, 49, 84, 0.08);
         }
         nav.main-nav a.nav-link.active::after {
             content: '';
