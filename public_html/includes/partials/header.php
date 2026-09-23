@@ -607,10 +607,13 @@ function nav_active(string $path, string $current): string
             margin-bottom: 6px;
         }
         .form-group input[type="text"],
+        .form-group input[type="tel"],
         .form-group input[type="email"],
         .form-group input[type="password"],
         .form-group input[type="number"],
         .form-group input[type="date"],
+        .form-group input[type="url"],
+        .form-group input[type="search"],
         .form-group select,
         .form-group textarea {
             width: 100%;
