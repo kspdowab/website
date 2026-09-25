@@ -195,7 +195,7 @@ require __DIR__ . '/includes/partials/header.php';
                 </div>
                 <div class="president-meta">
                     <h4 class="president-name"><?= Sanitize::html($statePresident['name']) ?></h4>
-                    <span class="president-title"><?= Sanitize::html($statePresident['association_designation'] ?? 'ರಾಜ್ಯಾಧ್ಯಕ್ಷರು') ?></span>
+                    <span class="president-title"><?= Sanitize::html(str_replace('ಅಧ್ಯಕ್ಷರ', 'ರಾಜ್ಯಾಧ್ಯಕ್ಷರು', $statePresident['association_designation'] ?? 'ರಾಜ್ಯಾಧ್ಯಕ್ಷರು')) ?></span>
                 </div>
             </div>
             <blockquote class="president-quote">
