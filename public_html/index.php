@@ -115,7 +115,7 @@ if (Session::get('logged_in') && Session::get('member_id')) {
 // State President details
 $statePresident = Database::fetchOne(
     "SELECT name, association_designation, photo_path FROM office_bearers 
-     WHERE (association_designation LIKE '%ಅಧ್ಯಕ್ಷ%' OR association_designation LIKE '%President%')
+     WHERE (association_designation LIKE '%ಅಧ್ಯಕ್ಷ%' OR association_designation LIKE '%ರಾಜ್ಯಾಧ್ಯಕ್ಷರು%' OR association_designation LIKE '%President%')
        AND association_designation NOT LIKE '%ಕಾರ್ಯಾಧ್ಯಕ್ಷ%' 
        AND association_designation NOT LIKE '%ಉಪಾಧ್ಯಕ್ಷ%'
        AND association_designation NOT LIKE '%ಗೌರವಾಧ್ಯಕ್ಷ%'
