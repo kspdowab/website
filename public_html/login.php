@@ -169,11 +169,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         }
         input[type="text"], input[type="password"] {
             width: 100%;
-            padding: 10px 12px;
+            padding: 11px 13px;
             border: 1px solid #cbd5e1;
-            border-radius: 6px;
-            font-size: 1rem;
+            border-radius: 8px;
+            font-size: 0.95rem;
             margin-bottom: 18px;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
         }
         input[type="text"]:focus, input[type="password"]:focus {
             outline: none;
@@ -217,6 +218,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         }
         .remember-row {
             display: flex;
+            justify-content: space-between;
             align-items: center;
             margin: 0 0 20px;
         }
@@ -238,12 +240,22 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             cursor: pointer;
             accent-color: #173F67;
         }
+        .forgot-link {
+            color: #1769AA;
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .forgot-link:hover {
+            color: #0F4C81;
+            text-decoration: underline;
+        }
         button[type="submit"] {
             width: 100%;
             background: #173F67;
             color: #fff;
             border: none;
-            border-radius: 6px;
+            border-radius: 8px;
             padding: 12px;
             font-size: 0.95rem;
             font-weight: 600;
@@ -255,10 +267,41 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             background: #FDE8E8;
             color: #C00000;
             border: 1px solid #FECACA;
-            border-radius: 6px;
+            border-radius: 8px;
             padding: 10px 14px;
             font-size: 0.85rem;
             margin-bottom: 18px;
+        }
+        .member-help-card {
+            margin-top: 20px;
+            background: #F8FAFC;
+            border: 1px solid #E2E8F0;
+            border-radius: 8px;
+            padding: 12px 14px;
+            font-size: 0.82rem;
+            color: #475569;
+            text-align: center;
+            line-height: 1.5;
+        }
+        .member-help-title {
+            font-weight: 700;
+            color: #1E293B;
+            margin-bottom: 2px;
+        }
+        .member-help-desc {
+            margin: 0 0 3px;
+        }
+        .member-help-pwd {
+            font-size: 0.78rem;
+            color: #64748B;
+        }
+        .member-help-pwd code {
+            background: #E2E8F0;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.76rem;
+            color: #0F172A;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
         }
         .back-link {
             display: block;
@@ -297,18 +340,15 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             <label for="identifier">KGID No., Mobile, or Email Address</label>
             <input type="text" id="identifier" name="identifier" required
                    autocomplete="username"
-                   placeholder="e.g. 2227325 or 9036880026 or email@example.com"
+                   placeholder="Enter KGID No., Mobile, or Email"
                    <?= $identifierFromQuery ? 'readonly' : 'autofocus' ?>
                    value="<?= Sanitize::attr($identifierValue) ?>">
 
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                <label for="password" style="margin-bottom:0;">Password</label>
-                <span style="font-size:0.75rem; color:#0369a1;">Initial Default: <code>Kspdowa@&lt;KGID&gt;</code></span>
-            </div>
+            <label for="password">Password</label>
             <div class="password-field-wrap">
                 <input type="password" id="password" name="password" required class="has-toggle"
                        autocomplete="current-password"
-                       placeholder="e.g. Kspdowa@2227325"
+                       placeholder="Enter your password"
                        <?= $identifierFromQuery ? 'autofocus' : '' ?>>
                 <button type="button" class="password-toggle-btn" data-target="password" aria-label="Show password" aria-pressed="false" title="Show password">
                     <svg class="icon-eye" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -316,21 +356,21 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 </button>
             </div>
 
-            <div class="remember-row" style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="remember-row">
                 <label class="checkbox-label" for="remember">
                     <input type="checkbox" id="remember" name="remember" value="1" <?= $rememberChecked ? 'checked' : '' ?>>
                     <span>Remember password</span>
                 </label>
-                <a href="/forgot-password.php" style="color:#1769AA; text-decoration:none; font-size:0.85rem; font-weight:600;">Forgot password?</a>
+                <a href="/forgot-password.php" class="forgot-link">Forgot password?</a>
             </div>
 
             <button type="submit">Sign In</button>
         </form>
 
-        <div style="margin-top:18px; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:6px; padding:10px 12px; font-size:0.82rem; color:#475569; text-align:center; line-height:1.45;">
-            <strong>Registered Member?</strong><br>
-            Sign in with your <strong>KGID Number</strong>, Mobile, or Email.<br>
-            <span style="color:#64748b; font-size:0.78rem;">Initial default password: <code>Kspdowa@&lt;YourKGID&gt;</code></span>
+        <div class="member-help-card">
+            <div class="member-help-title">Registered Member?</div>
+            <div class="member-help-desc">Sign in with your <strong>KGID Number</strong>, Mobile, or Email.</div>
+            <div class="member-help-pwd">Initial default password: <code>Kspdowa@&lt;YourKGID&gt;</code></div>
         </div>
 
         <div class="back-link"><a href="/">&larr; Back to home</a></div>

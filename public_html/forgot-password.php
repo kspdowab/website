@@ -133,9 +133,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             width: 100%;
             padding: 11px 13px;
             border: 1px solid #cbd5e1;
-            border-radius: 6px;
-            font-size: 1rem;
+            border-radius: 8px;
+            font-size: 0.95rem;
             margin-bottom: 18px;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
         }
         input[type="text"]:focus {
             outline: none;
@@ -147,7 +148,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             background: #173F67;
             color: #fff;
             border: none;
-            border-radius: 6px;
+            border-radius: 8px;
             padding: 12px;
             font-size: 0.95rem;
             font-weight: 600;
@@ -234,15 +235,15 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
             <label for="identifier">Registered Email, Mobile Number, or KGID</label>
             <input type="text" id="identifier" name="identifier" required autofocus
-                   placeholder="e.g. 123456 or 9845012345 or user@email.com"
+                   placeholder="Enter KGID No., Mobile No., or Email"
                    value="<?= Sanitize::attr($_POST['identifier'] ?? '') ?>">
 
             <button type="submit">Send Reset Instructions</button>
         </form>
 
-        <div style="margin-top:20px; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:6px; padding:12px; font-size:0.82rem; color:#475569; line-height:1.5;">
+        <div style="margin-top:20px; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:8px; padding:12px; font-size:0.82rem; color:#475569; line-height:1.5;">
             <strong>New / Imported Member?</strong><br>
-            All registered members have an initial default password formatted as: <code>Kspdowa@&lt;KGID&gt;</code> (e.g. <code>Kspdowa@123456</code>). On your first sign in, you will be asked to set your personal password.
+            All registered members have an initial default password formatted as: <code>Kspdowa@&lt;YourKGID&gt;</code>. On your first sign in, you will be prompted to set your personal password.
         </div>
 
         <div class="back-link">

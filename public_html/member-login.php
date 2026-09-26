@@ -190,7 +190,7 @@ require __DIR__ . '/includes/partials/header.php';
             <div class="form-group">
                 <label for="kgid_no">Enter Your KGID No.</label>
                 <input type="text" id="kgid_no" name="kgid_no" required autofocus maxlength="50" inputmode="numeric" pattern="[0-9]+" title="KGID No. must contain only numeric digits"
-                       value="<?= Sanitize::attr($_POST['kgid_no'] ?? '') ?>" placeholder="e.g. 2227325">
+                       value="<?= Sanitize::attr($_POST['kgid_no'] ?? '') ?>" placeholder="Enter your KGID number">
             </div>
             <p class="form-hint">
                 Enter your <strong>KGID No.</strong> to locate your membership records and activate access.
@@ -209,7 +209,7 @@ require __DIR__ . '/includes/partials/header.php';
                 <label for="identifier">KGID No., Mobile No., or Registered Email</label>
                 <input type="text" id="identifier" name="identifier" required autofocus maxlength="190"
                        value="<?= Sanitize::attr($_POST['identifier'] ?? $_POST['email'] ?? '') ?>"
-                       placeholder="e.g. 2227325 or 9036880026 or email@example.com">
+                       placeholder="Enter KGID No., Mobile No., or Email">
             </div>
             <button type="submit" class="btn" style="width:100%; justify-content:center;">Continue &rarr;</button>
         </form>
