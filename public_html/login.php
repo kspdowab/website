@@ -368,9 +368,9 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         </form>
 
         <div class="member-help-card">
-            <div class="member-help-title">Registered Member?</div>
-            <div class="member-help-desc">Sign in with your <strong>KGID Number</strong>, Mobile, or Email.</div>
-            <div class="member-help-pwd">Initial default password: <code>Kspdowa@&lt;YourKGID&gt;</code></div>
+            <div class="member-help-title">First Time or Need to Set Password?</div>
+            <div class="member-help-desc">Registered members can securely create or reset their password using their KGID or Registered Email.</div>
+            <div style="margin-top: 6px;"><a href="/forgot-password.php" style="color: #1769AA; font-weight: 600; text-decoration: none;">Create / Reset Password &rarr;</a></div>
         </div>
 
         <div class="back-link"><a href="/">&larr; Back to home</a></div>

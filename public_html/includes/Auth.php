@@ -370,7 +370,71 @@ class Auth
     // ------------------------------------------------------------------
 
     /**
+     * Mask an email address for safe public/semi-public display (e.g. k****@gmail.com).
+     */
+    public static function maskEmail(?string $email): string
+    {
+        $email = trim((string)$email);
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return '';
+        }
+        $parts = explode('@', $email);
+        $namePart = $parts[0];
+        $domainPart = $parts[1] ?? '';
+        $len = strlen($namePart);
+        if ($len <= 2) {
+            $masked = substr($namePart, 0, 1) . '*';
+        } else {
+            $masked = substr($namePart, 0, 1) . str_repeat('*', min(6, $len - 2)) . substr($namePart, -1);
+        }
+        return $masked . '@' . $domainPart;
+    }
+
+    /**
+     * Ensure a member has an active `users` authentication record.
+     * Generates a cryptographically unguessable random hash so no default
+     * predictable password is ever assigned.
+     */
+    public static function ensureUserAccountForMember(int $memberId): ?int
+    {
+        $existing = Database::fetchOne('SELECT id FROM users WHERE member_id = ?', [$memberId]);
+        if ($existing) {
+            return (int)$existing['id'];
+        }
+
+        $profile = Database::fetchOne('SELECT kgid_no, personal_mobile, personal_email FROM member_profiles WHERE member_id = ?', [$memberId]);
+        $kgid    = trim((string)($profile['kgid_no'] ?? ''));
+        $mobile  = trim((string)($profile['personal_mobile'] ?? ''));
+        $email   = trim((string)($profile['personal_email'] ?? ''));
+
+        // Generate an unguessable random password hash so the account cannot be accessed
+        // until the member creates their own password via the secure reset token.
+        $randomSecret = bin2hex(random_bytes(24));
+        $hash = self::hashPassword($randomSecret);
+
+        try {
+            Database::execute(
+                'INSERT INTO users (member_id, username, email, mobile, password_hash, status, must_change_password)
+                 VALUES (?, ?, ?, ?, ?, "active", 1)',
+                [$memberId, $kgid ?: null, $email ?: null, $mobile ?: null, $hash]
+            );
+            $newUserId = (int)Database::lastInsertId();
+
+            $role = Database::fetchOne("SELECT id FROM roles WHERE name = 'Regular Member'");
+            if ($role) {
+                Database::execute('INSERT IGNORE INTO user_roles (user_id, role_id) VALUES (?, ?)', [$newUserId, (int)$role['id']]);
+            }
+
+            return $newUserId;
+        } catch (\Throwable $e) {
+            error_log('[Auth::ensureUserAccountForMember] Error creating user: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
      * Find a user for password reset by identifier (email, mobile, username, or KGID).
+     * If member exists in members/profiles but not yet in users table, initializes their account.
      */
     public static function findUserForReset(string $identifier): ?array
     {
@@ -379,7 +443,7 @@ class Auth
             return null;
         }
 
-        return Database::fetchOne(
+        $user = Database::fetchOne(
             'SELECT u.id, u.member_id, u.username, u.email, u.mobile, u.status, u.must_change_password,
                     mp.kgid_no, mp.personal_mobile, mp.personal_email, m.name as member_name
              FROM users u
@@ -388,7 +452,38 @@ class Auth
              WHERE (u.email = ? OR u.mobile = ? OR u.username = ? OR mp.kgid_no = ? OR mp.personal_mobile = ? OR m.member_no = ?)
              LIMIT 1',
             [$identifier, $identifier, $identifier, $identifier, $identifier, $identifier]
-        ) ?: null;
+        );
+
+        if ($user) {
+            return $user;
+        }
+
+        // Check if member exists in members/member_profiles table without a users row yet
+        $member = Database::fetchOne(
+            'SELECT m.id as member_id, m.name as member_name, mp.kgid_no, mp.personal_mobile, mp.personal_email
+             FROM members m
+             JOIN member_profiles mp ON mp.member_id = m.id
+             WHERE mp.kgid_no = ? OR mp.personal_mobile = ? OR mp.personal_email = ? OR m.member_no = ?
+             LIMIT 1',
+            [$identifier, $identifier, $identifier, $identifier]
+        );
+
+        if ($member) {
+            $userId = self::ensureUserAccountForMember((int)$member['member_id']);
+            if ($userId) {
+                return Database::fetchOne(
+                    'SELECT u.id, u.member_id, u.username, u.email, u.mobile, u.status, u.must_change_password,
+                            mp.kgid_no, mp.personal_mobile, mp.personal_email, m.name as member_name
+                     FROM users u
+                     LEFT JOIN member_profiles mp ON mp.member_id = u.member_id
+                     LEFT JOIN members m ON m.id = u.member_id
+                     WHERE u.id = ? LIMIT 1',
+                    [$userId]
+                ) ?: null;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -406,6 +501,83 @@ class Auth
         );
 
         return $rawToken;
+    }
+
+    /**
+     * Generate and dispatch a secure password setup / reset link for a member.
+     */
+    public static function sendPasswordResetLinkForMember(int $memberId, ?string $overrideEmail = null): array
+    {
+        $userId = self::ensureUserAccountForMember($memberId);
+        if (!$userId) {
+            return ['success' => false, 'error' => 'Could not locate or initialize member account.'];
+        }
+
+        $user = Database::fetchOne(
+            'SELECT u.id, u.email, mp.kgid_no, mp.personal_email, mp.personal_mobile, m.name as member_name
+             FROM users u
+             JOIN members m ON m.id = u.member_id
+             JOIN member_profiles mp ON mp.member_id = m.id
+             WHERE u.id = ? LIMIT 1',
+            [$userId]
+        );
+        if (!$user) {
+            return ['success' => false, 'error' => 'Member profile not found.'];
+        }
+
+        $token = self::createPasswordResetToken($userId);
+        $baseUrl = defined('BASE_URL') ? rtrim(BASE_URL, '/') : 'https://kspdowa.in';
+        $resetLink = $baseUrl . '/reset-password.php?token=' . urlencode($token);
+
+        $recipientEmail = trim((string)($overrideEmail ?: ($user['email'] ?: ($user['personal_email'] ?? ''))));
+        $recipientMobile = trim((string)($user['personal_mobile'] ?? ''));
+        $memberName = trim((string)($user['member_name'] ?? 'Member'));
+        $siteShort = class_exists('Settings') ? Settings::get('site_short_name', APP_SHORT_NAME) : APP_SHORT_NAME;
+
+        $emailSent = false;
+        $maskedEmail = self::maskEmail($recipientEmail);
+
+        if ($recipientEmail !== '' && filter_var($recipientEmail, FILTER_VALIDATE_EMAIL)) {
+            $subject = 'Password Setup / Reset Request — ' . $siteShort;
+            $plainText = "Dear {$memberName},\n\n"
+                . "A request has been made to set up or reset your password for the {$siteShort} member portal.\n\n"
+                . "Click the link below to set your password:\n"
+                . "{$resetLink}\n\n"
+                . "This link is valid for 1 hour. If you did not request this, you can safely ignore this email.\n\n"
+                . "Regards,\n{$siteShort}";
+
+            $htmlBody = '<p>Dear <strong>' . htmlspecialchars($memberName, ENT_QUOTES, 'UTF-8') . '</strong>,</p>'
+                . '<p>A request was received to set up or reset your password for the <strong>' . htmlspecialchars($siteShort, ENT_QUOTES, 'UTF-8') . '</strong> member portal.</p>'
+                . '<p>Please click the button below to create your secure password:</p>'
+                . '<p style="margin:24px 0;"><a href="' . htmlspecialchars($resetLink, ENT_QUOTES, 'UTF-8') . '" style="background:#173F67; color:#ffffff; padding:12px 24px; text-decoration:none; border-radius:6px; font-weight:bold; display:inline-block;">Set Your Password</a></p>'
+                . '<p style="font-size:0.85rem; color:#64748b;">This secure link is valid for 1 hour. If you did not make this request, please contact the association office.</p>';
+
+            if (class_exists('EmailTemplates')) {
+                $fullHtml = EmailTemplates::wrap($subject, $htmlBody, $resetLink, 'Set Your Password');
+            } else {
+                $fullHtml = $htmlBody;
+            }
+
+            $emailSent = Mailer::send($recipientEmail, $subject, $plainText, $fullHtml);
+        }
+
+        // WhatsApp notification alert if enabled
+        $waSent = false;
+        if ($recipientMobile !== '' && class_exists('WhatsApp') && class_exists('Settings') && Settings::get('notif_whatsapp_enabled', '0') === '1') {
+            $waMsg = "*{$siteShort} Security Alert*\n\nDear {$memberName},\n\nClick the link below to set your secure member portal password (valid for 1 hour):\n{$resetLink}";
+            $waErr = null;
+            $waSent = WhatsApp::send($recipientMobile, $waMsg, $waErr);
+        }
+
+        return [
+            'success'       => true,
+            'email_sent'    => $emailSent,
+            'whatsapp_sent' => $waSent,
+            'email'         => $recipientEmail,
+            'masked_email'  => $maskedEmail,
+            'name'          => $memberName,
+            'reset_link'    => $resetLink,
+        ];
     }
 
     /**
@@ -461,38 +633,10 @@ class Auth
     }
 
     /**
-     * Reset a member's password to the standard default format: Kspdowa@<kgid_no>
+     * Deprecated: replaced with secure token reset links via sendPasswordResetLinkForMember().
      */
     public static function resetMemberPasswordToDefault(int $memberId): array
     {
-        $profile = Database::fetchOne('SELECT kgid_no, personal_mobile, personal_email FROM member_profiles WHERE member_id = ?', [$memberId]);
-        if (!$profile || empty($profile['kgid_no'])) {
-            return ['success' => false, 'error' => 'Member profile or KGID not found.'];
-        }
-
-        $kgid = trim((string)$profile['kgid_no']);
-        $defaultPassword = 'Kspdowa@' . $kgid;
-        $hash = self::hashPassword($defaultPassword);
-
-        $user = Database::fetchOne('SELECT id FROM users WHERE member_id = ?', [$memberId]);
-        if ($user) {
-            Database::execute(
-                'UPDATE users SET password_hash = ?, username = ?, mobile = COALESCE(?, mobile), must_change_password = 1, updated_at = NOW() WHERE id = ?',
-                [$hash, $kgid, $profile['personal_mobile'] ?: null, (int)$user['id']]
-            );
-        } else {
-            Database::execute(
-                'INSERT INTO users (member_id, username, email, mobile, password_hash, status, must_change_password)
-                 VALUES (?, ?, ?, ?, ?, "active", 1)',
-                [$memberId, $kgid, $profile['personal_email'] ?: null, $profile['personal_mobile'] ?: null, $hash]
-            );
-            $newUserId = (int)Database::lastInsertId();
-            $role = Database::fetchOne("SELECT id FROM roles WHERE name = 'Regular Member'");
-            if ($role) {
-                Database::execute('INSERT IGNORE INTO user_roles (user_id, role_id) VALUES (?, ?)', [$newUserId, (int)$role['id']]);
-            }
-        }
-
-        return ['success' => true, 'password' => $defaultPassword, 'kgid' => $kgid];
+        return self::sendPasswordResetLinkForMember($memberId);
     }
 }

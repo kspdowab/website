@@ -266,11 +266,15 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         if ($resetMemberId) {
             $member = Database::fetchOne("SELECT name FROM members WHERE id = ?", [$resetMemberId]);
             if ($member) {
-                $res = Auth::resetMemberPasswordToDefault($resetMemberId);
+                $res = Auth::sendPasswordResetLinkForMember($resetMemberId);
                 if ($res['success']) {
-                    Session::flash('success', "Password for {$member['name']} (KGID: {$res['kgid']}) has been reset to: {$res['password']} with mandatory password change on first sign in.");
+                    if (!empty($res['email_sent'])) {
+                        Session::flash('success', "A secure password reset link has been dispatched to {$member['name']}'s registered email ({$res['masked_email']}).");
+                    } else {
+                        Session::flash('success', "Secure password reset link generated for {$member['name']}: {$res['reset_link']}");
+                    }
                 } else {
-                    Session::flash('error', $res['error'] ?? 'Could not reset password.');
+                    Session::flash('error', $res['error'] ?? 'Could not generate reset link.');
                 }
             }
         }
@@ -822,7 +826,7 @@ require_once dirname(__DIR__) . '/includes/partials/admin-header.php';
                                 <option value="">Actions</option>
                                 <option value="view">View Details</option>
                                 <option value="edit">Edit</option>
-                                <option value="reset_pwd">🔑 Reset Password</option>
+                                <option value="reset_pwd">🔑 Send Password Reset Link</option>
                                 <option value="make_office_bearer">🏛️ Add as Office Bearer</option>
                                 <?php if (!$m['payment_id'] && $selectedYear && in_array($m['membership_status'], ['active','inactive'])): ?>
                                     <option value="offline_pay">+ Offline Payment</option>
@@ -1024,7 +1028,7 @@ function handleAction(sel, memberId, memberName, fyId, feeAmount) {
     } else if (val === 'edit') {
         window.location.href = '/admin/members.php?edit=' + memberId;
     } else if (val === 'reset_pwd') {
-        if (confirm('Reset password for ' + memberName + ' to default format (Kspdowa@KGID)?\n\nThe member will be required to choose a new password on their next sign-in.')) {
+        if (confirm('Send a secure password reset link to ' + memberName + '?\n\nA one-time 1-hour link will be generated and dispatched to their registered email.')) {
             var f = document.createElement('form');
             f.method = 'POST';
             f.action = '/admin/members.php';
