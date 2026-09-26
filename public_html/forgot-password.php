@@ -41,13 +41,14 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $mailSent = false;
 
             if (!empty($recipientEmail) && filter_var($recipientEmail, FILTER_VALIDATE_EMAIL)) {
-                $subject = 'Password Reset Request — ' . APP_SHORT_NAME;
+                $siteShort = Settings::get('site_short_name', APP_SHORT_NAME);
+                $subject = 'Password Reset Request — ' . $siteShort;
                 $bodyText = "Dear " . ($user['member_name'] ?: 'Member') . ",\n\n"
-                    . "We received a request to reset your password for the " . APP_SHORT_NAME . " portal.\n\n"
+                    . "We received a request to reset your password for the " . $siteShort . " portal.\n\n"
                     . "Click the link below to set a new password:\n"
                     . $resetLink . "\n\n"
                     . "This link is valid for 1 hour. If you did not request this, you can safely ignore this email.\n\n"
-                    . "Regards,\n" . APP_SHORT_NAME;
+                    . "Regards,\n" . $siteShort;
 
                 $mailSent = Mailer::send($recipientEmail, $subject, $bodyText);
 
@@ -83,7 +84,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Forgot Password — <?= Sanitize::html(APP_SHORT_NAME) ?></title>
+    <title>Forgot Password — <?= Sanitize::html(Settings::get('site_short_name', APP_SHORT_NAME)) ?></title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Kannada:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -197,7 +198,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 </head>
 <body>
     <div class="card">
-        <h1><?= Sanitize::html(APP_SHORT_NAME) ?></h1>
+        <h1><?= Sanitize::html(Settings::get('site_short_name', APP_SHORT_NAME)) ?></h1>
         <p class="subtitle">Reset Your Account Password</p>
 
         <?php if ($error !== null): ?>

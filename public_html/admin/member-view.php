@@ -146,7 +146,7 @@ $lifecycleEvents = Database::fetchAll(
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Member View — Admin — <?= Sanitize::html(APP_SHORT_NAME) ?></title>
+    <title>Member View — Admin — <?= Sanitize::html(Settings::get('site_short_name', APP_SHORT_NAME)) ?></title>
     <style>
         * { box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f7fa; color: #1a1a2e; margin: 0; padding: 0 0 60px; }
@@ -186,7 +186,7 @@ $lifecycleEvents = Database::fetchAll(
 </head>
 <body>
 <header>
-    <h1><?= Sanitize::html(APP_SHORT_NAME) ?> — Member View</h1>
+    <h1><?= Sanitize::html(Settings::get('site_short_name', APP_SHORT_NAME)) ?> — Member View</h1>
     <nav>
         <a href="/admin/members.php">← Back to Members List</a>
     </nav>

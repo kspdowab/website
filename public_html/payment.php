@@ -166,7 +166,7 @@ require __DIR__ . '/includes/partials/header.php';
                     amount: <?= (int) $order['amount_paise'] ?>,
                     currency: "INR",
                     order_id: <?= Sanitize::js($order['order_id']) ?>,
-                    name: <?= Sanitize::js(APP_SHORT_NAME) ?>,
+                    name: <?= Sanitize::js(Settings::get('site_short_name', APP_SHORT_NAME)) ?>,
                     description: "Annual Membership Fee",
                     prefill: {
                         name: <?= Sanitize::js($order['member']['name'] ?? '') ?>,

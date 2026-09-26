@@ -121,7 +121,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign In — <?= Sanitize::html(APP_SHORT_NAME) ?></title>
+    <title>Sign In — <?= Sanitize::html(Settings::get('site_short_name', APP_SHORT_NAME)) ?></title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Kannada:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -315,7 +315,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 </head>
 <body>
     <div class="card">
-        <h1><?= Sanitize::html(APP_SHORT_NAME) ?></h1>
+        <h1><?= Sanitize::html(Settings::get('site_short_name', APP_SHORT_NAME)) ?></h1>
         <p class="subtitle">Officer / Admin Sign In</p>
 
         <?php if ($error !== null): ?>
