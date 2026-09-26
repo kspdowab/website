@@ -74,7 +74,7 @@ $breadcrumbs = $breadcrumbs ?? [
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= Sanitize::html($pageTitle) ?> — Member Portal — <?= Sanitize::html(APP_SHORT_NAME) ?></title>
+    <title><?= Sanitize::html($pageTitle) ?> — Member Portal — <?= Sanitize::html(Settings::get('site_short_name', APP_SHORT_NAME)) ?></title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Kannada:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -90,7 +90,7 @@ $breadcrumbs = $breadcrumbs ?? [
         <div class="sidebar-header">
             <div class="sidebar-brand-logo" style="background: linear-gradient(135deg, #10b981, #2563eb);">K</div>
             <div class="sidebar-brand-text">
-                <span class="sidebar-brand-title"><?= Sanitize::html(APP_SHORT_NAME) ?></span>
+                <span class="sidebar-brand-title"><?= Sanitize::html(Settings::get('site_short_name', APP_SHORT_NAME)) ?></span>
                 <span class="sidebar-brand-subtitle">Member Portal</span>
             </div>
         </div>

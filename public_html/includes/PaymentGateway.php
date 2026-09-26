@@ -359,12 +359,13 @@ class PaymentGateway
         $activation = Auth::activateMemberPortalAccess($member, $member['personal_email']);
 
         if ($activation['created'] && $activation['temp_password'] !== null) {
+            $siteShort = class_exists('Settings') ? Settings::get('site_short_name', APP_SHORT_NAME) : APP_SHORT_NAME;
             $mailSent = Mailer::send(
                 $member['personal_email'],
-                'Payment Received -- Your ' . APP_SHORT_NAME . ' Member Portal Access',
+                'Payment Received -- Your ' . $siteShort . ' Member Portal Access',
                 "Dear " . $member['name'] . ",\n\n"
                     . "Your annual membership fee payment has been received and verified.\n\n"
-                    . "Your " . APP_SHORT_NAME . " member portal account has been activated.\n\n"
+                    . "Your " . $siteShort . " member portal account has been activated.\n\n"
                     . "Registered email: " . $member['personal_email'] . "\n"
                     . "Temporary password: " . $activation['temp_password'] . "\n\n"
                     . "Sign in at " . (defined('BASE_URL') ? BASE_URL : '') . "login.php and you will be "
