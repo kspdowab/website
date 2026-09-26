@@ -17,7 +17,7 @@ INSERT IGNORE INTO `system_settings`
    'Karnataka State Panchayat Development Officer Welfare Association (R)',
    'string'),
 
-  ('site_short_name', 'KSPDOWA', 'string'),
+  ('site_short_name', 'KSPDOWA BENGALURU', 'string'),
 
   ('site_tagline',
    'Serving Panchayat Development Officers across Karnataka',

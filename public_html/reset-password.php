@@ -107,10 +107,11 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && $resetUser) {
         }
         input[type="password"] {
             width: 100%;
-            padding: 10px 12px;
+            padding: 11px 13px;
             border: 1px solid #cbd5e1;
-            border-radius: 6px;
-            font-size: 1rem;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
         }
         input[type="password"]:focus {
             outline: none;
@@ -152,7 +153,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && $resetUser) {
             background: #173F67;
             color: #fff;
             border: none;
-            border-radius: 6px;
+            border-radius: 8px;
             padding: 12px;
             font-size: 0.95rem;
             font-weight: 600;
@@ -228,7 +229,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && $resetUser) {
                 <label for="new_password">New Password</label>
                 <div class="password-field-wrap">
                     <input type="password" id="new_password" name="new_password" required class="has-toggle" autofocus
-                           autocomplete="new-password">
+                           autocomplete="new-password" placeholder="Enter new password (min. 8 characters)">
                     <button type="button" class="password-toggle-btn" data-target="new_password" aria-label="Toggle password visibility">
                         <svg class="icon-eye" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
                         <svg class="icon-eye-off" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a21.8 21.8 0 0 1 5.06-6.06M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 7 11 7a21.7 21.7 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
@@ -238,14 +239,14 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && $resetUser) {
                 <label for="confirm_password">Confirm New Password</label>
                 <div class="password-field-wrap">
                     <input type="password" id="confirm_password" name="confirm_password" required class="has-toggle"
-                           autocomplete="new-password">
+                           autocomplete="new-password" placeholder="Re-enter new password">
                     <button type="button" class="password-toggle-btn" data-target="confirm_password" aria-label="Toggle password visibility">
                         <svg class="icon-eye" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
                         <svg class="icon-eye-off" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a21.8 21.8 0 0 1 5.06-6.06M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 7 11 7a21.7 21.7 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
                     </button>
                 </div>
 
-                <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:6px; padding:10px 12px; margin-bottom:16px; font-size:0.8rem; color:#64748b;">
+                <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:8px; padding:10px 12px; margin-bottom:16px; font-size:0.8rem; color:#64748b;">
                     Password must be at least <strong>8 characters</strong> and include uppercase (A-Z), lowercase (a-z), and a number (0-9).
                 </div>
 

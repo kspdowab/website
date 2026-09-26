@@ -21,7 +21,7 @@ define('APP_ENV', 'development');
 // ------------------------------------------------------------------
 define('APP_NAME', 'KSPDOWA Digital Association Platform');
 define('APP_FULL_NAME', 'Karnataka State Panchayat Development Officer Welfare Association (R)');
-define('APP_SHORT_NAME', 'KSPDOWA');
+define('APP_SHORT_NAME', 'KSPDOWA BENGALURU');
 define('APP_VERSION', '1.0.0');
 
 // Set to your actual domain (with trailing slash) once confirmed.

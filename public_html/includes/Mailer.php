@@ -57,7 +57,7 @@ class Mailer
 
         $fromName = defined('MAIL_FROM_NAME') && MAIL_FROM_NAME !== ''
             ? (string) MAIL_FROM_NAME
-            : (class_exists('Settings') ? Settings::get('mail_from_name', defined('APP_SHORT_NAME') ? APP_SHORT_NAME : 'KSPDOWA') : 'KSPDOWA');
+            : (class_exists('Settings') ? Settings::get('mail_from_name', defined('APP_SHORT_NAME') ? APP_SHORT_NAME : 'KSPDOWA BENGALURU') : 'KSPDOWA BENGALURU');
 
         return [
             'driver'            => $driver,

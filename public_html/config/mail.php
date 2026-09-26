@@ -39,7 +39,7 @@ if (!defined('MAIL_FROM_ADDRESS')) {
     define('MAIL_FROM_ADDRESS', 'no-reply@kspdowa.local');
 }
 if (!defined('MAIL_FROM_NAME')) {
-    define('MAIL_FROM_NAME', defined('APP_SHORT_NAME') ? APP_SHORT_NAME : 'KSPDOWA');
+    define('MAIL_FROM_NAME', defined('APP_SHORT_NAME') ? APP_SHORT_NAME : 'KSPDOWA BENGALURU');
 }
 if (!defined('MAIL_LOG_PATH')) {
     // Outside PUBLIC_HTML deliberately -- this log can contain

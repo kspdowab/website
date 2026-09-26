@@ -131,7 +131,7 @@ $talukName  = (string)($portalMember['taluk_name'] ?? '—');
 $districtName = (string)($portalMember['district_name'] ?? '—');
 $locationStr = strtoupper(trim(($talukName !== '—' ? $talukName : '') . ($districtName !== '—' ? ($talukName !== '—' ? ', ' : '') . $districtName : '—')));
 $bloodGroup = (string)($profile['blood_group'] ?? '—');
-$mobileNumber = (string)($profile['personal_mobile'] ?? $portalMember['mobile'] ?? '9036880026');
+$mobileNumber = (string)($profile['personal_mobile'] ?? $portalMember['mobile'] ?? '—');
 $nativeDistrict = (string)($profile['native_district'] ?? '—');
 ?>
 
